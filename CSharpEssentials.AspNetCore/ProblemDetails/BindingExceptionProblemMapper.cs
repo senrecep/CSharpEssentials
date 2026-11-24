@@ -9,10 +9,13 @@ namespace CSharpEssentials.AspNetCore;
 
 /// <summary>
 /// Added by <see cref="Extensions.AddEnhancedProblemDetails(Microsoft.Extensions.DependencyInjection.IServiceCollection)"/>:
-/// a <see cref="JsonException"/> (also inside a <see cref="BadHttpRequestException"/>) becomes a 400 with one
+/// a <see cref="BadHttpRequestException"/> whose inner exception is a <see cref="JsonException"/> (a request body that
+/// failed to bind) becomes a 400 with one
 /// <see cref="ErrorType.Validation"/> error per field, keyed by the JSON path without <c>$.</c> (for example
 /// <c>items[2].quantity</c>) and described by a fixed message. A missing required member gives one error per member.
-/// An <see cref="EnumValueJsonException"/> is left to the enum conventions mapper.
+/// An <see cref="EnumValueJsonException"/> is left to the enum conventions mapper. Any other <see cref="JsonException"/>
+/// is a server fault and falls through to the 500 of <see cref="DefaultExceptionProblemMapper"/>.
+/// <see cref="GlobalExceptionHandler"/> tries this mapper after every other registered mapper.
 /// </summary>
 internal sealed partial class BindingExceptionProblemMapper : IExceptionProblemMapper
 {
@@ -22,15 +25,7 @@ internal sealed partial class BindingExceptionProblemMapper : IExceptionProblemM
     public bool TryMap(HttpContext httpContext, Exception exception, [NotNullWhen(true)] out ExceptionProblem? problem)
     {
         problem = null;
-        JsonException? json = null;
-        for (Exception? current = exception; current is not null; current = current.InnerException)
-        {
-            if (current is EnumValueJsonException)
-                return false;
-            json ??= current as JsonException;
-        }
-
-        if (json is null)
+        if (exception is not BadHttpRequestException { InnerException: JsonException json } || json is EnumValueJsonException)
             return false;
 
         problem = new ExceptionProblem(StatusCodes.Status400BadRequest, Errors: CreateErrors(json.Path, json.Message));

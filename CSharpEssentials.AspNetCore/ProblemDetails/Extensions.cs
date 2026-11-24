@@ -65,7 +65,8 @@ public static partial class Extensions
 
     /// <summary>
     /// Adds an <see cref="IExceptionProblemMapper"/> for <see cref="GlobalExceptionHandler"/>. Mappers are tried in
-    /// registration order before <see cref="DefaultExceptionProblemMapper"/>.
+    /// registration order, then the request body binding mapper of <see cref="AddEnhancedProblemDetails(IServiceCollection)"/>
+    /// (whatever the registration order) and finally <see cref="DefaultExceptionProblemMapper"/>.
     /// </summary>
     public static IServiceCollection AddExceptionProblemMapper<TMapper>(
         this IServiceCollection services,

@@ -9,7 +9,8 @@ namespace CSharpEssentials.AspNetCore;
 
 /// <summary>
 /// Writes unhandled exceptions as problem details. The exception is mapped by the registered
-/// <see cref="IExceptionProblemMapper"/>s (in registration order) and finally by <see cref="DefaultExceptionProblemMapper"/>.
+/// <see cref="IExceptionProblemMapper"/>s (in registration order), then by the request body binding mapper of
+/// <see cref="Extensions.AddEnhancedProblemDetails(IServiceCollection)"/> and finally by <see cref="DefaultExceptionProblemMapper"/>.
 /// Unknown exceptions become a 500 whose message and stack trace go only to the log.
 /// </summary>
 /// <remarks>
@@ -52,10 +53,17 @@ public sealed partial class GlobalExceptionHandler(
 
     private static ExceptionProblem Map(HttpContext httpContext, Exception exception, IEnumerable<IExceptionProblemMapper>? exceptionMappers)
     {
+        IExceptionProblemMapper? bindingMapper = null;
         if (exceptionMappers is not null)
             foreach (IExceptionProblemMapper mapper in exceptionMappers)
-                if (mapper.TryMap(httpContext, exception, out ExceptionProblem? mapped))
+            {
+                if (mapper is BindingExceptionProblemMapper)
+                    bindingMapper = mapper;
+                else if (mapper.TryMap(httpContext, exception, out ExceptionProblem? mapped))
                     return mapped;
+            }
+        if (bindingMapper is not null && bindingMapper.TryMap(httpContext, exception, out ExceptionProblem? binding))
+            return binding;
         DefaultExceptionProblemMapper.Instance.TryMap(httpContext, exception, out ExceptionProblem? fallback);
         return fallback!;
     }

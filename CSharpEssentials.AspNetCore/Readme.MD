@@ -76,7 +76,8 @@ A JSON request body failure becomes a 400 validation problem with one error per 
 - The description is fixed: `The value is invalid.`, or `The field is required.` for a missing required member. The framework text (CLR type names, line and byte positions) is never written.
 - A missing required member gets one error per member (`items[1].sku`). System.Text.Json lists the members in its message and cuts a long list short, so only the members it names are reported.
 - In `GlobalExceptionHandler`, a rejected enum value is left to the [enum conventions](#enum-conventions-json-binding-and-wire-format) mapper, whatever the registration order.
-- A `JsonException` that is not wrapped in a `BadHttpRequestException` is mapped the same way. If your own code deserializes server-side data (a cache, a database, a downstream response), or response serialization fails before the headers are sent (an object cycle, the maximum depth), and the `JsonException` escapes, catch it or add an `IExceptionProblemMapper` for it; otherwise the client gets a 400 for a server fault.
+- Only a `JsonException` wrapped in a `BadHttpRequestException` (a request body that failed to bind) is mapped. Any other `JsonException`, such as server-side deserialization of a cache entry or a downstream response, stays a 500.
+- Mappers added with `AddExceptionProblemMapper<T>()` run before this mapper, whatever the registration order.
 
 ```json
 { "status": 400, "title": "Validation Error", "detail": "The value is invalid.", "errorCodes": ["items[1].quantity"],

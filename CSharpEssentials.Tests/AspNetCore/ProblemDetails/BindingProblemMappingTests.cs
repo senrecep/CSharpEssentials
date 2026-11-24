@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -121,6 +122,7 @@ public class BindingProblemMappingTests
 
         response.Status.Should().Be(415);
         response.Json["status"]!.GetValue<int>().Should().Be(415);
+        response.Json.ContainsKey("detail").Should().BeFalse();
         response.ShouldNotLeak();
     }
 
@@ -148,16 +150,27 @@ public class BindingProblemMappingTests
             ("status", "'99' is not a valid EcStatus. Allowed values: pending, pending_approval, shipped."));
     }
 
-    [Fact]
-    public async Task BareJsonException_Should_Return400KeyedByPath_WithoutMessage()
+    [Theory]
+    [InlineData("/min/bare-json")]
+    [InlineData("/min/wrapped-json")]
+    public async Task JsonException_Should_Return500WithoutPath_When_NotABodyBindingFailure(string endpoint)
     {
         await using BindingHost host = await BindingHost.StartAsync();
 
-        BindingResponse response = await host.PostAsync("/min/bare-json", "{}");
+        BindingResponse response = await host.PostAsync(endpoint, "{}");
 
-        response.Status.Should().Be(400);
-        response.Errors.Should().Equal(("a.b", Invalid));
-        response.Body.Should().NotContain("secret");
+        response.Status.Should().Be(500);
+        response.Body.Should().NotContain("secret").And.NotContain("a.b");
+    }
+
+    [Fact]
+    public async Task UserMapper_Should_RunBeforeBindingMapper_When_RegisteredAfterProblemDetails()
+    {
+        await using BindingHost host = await BindingHost.StartAsync(s => s.AddExceptionProblemMapper<TeapotMapper>());
+
+        BindingResponse response = await host.PostAsync("/min/order", WrongNestedType);
+
+        response.Status.Should().Be(418);
     }
 
     [Fact]
@@ -170,6 +183,15 @@ public class BindingProblemMappingTests
         response.Status.Should().Be(400);
         response.Json["detail"]!.GetValue<string>().Should().Be("The request is invalid.");
         response.Body.Should().NotContain("secret");
+    }
+
+    private sealed class TeapotMapper : IExceptionProblemMapper
+    {
+        public bool TryMap(HttpContext httpContext, Exception exception, [NotNullWhen(true)] out ExceptionProblem? problem)
+        {
+            problem = exception.InnerException is JsonException ? new ExceptionProblem(StatusCodes.Status418ImATeapot) : null;
+            return problem is not null;
+        }
     }
 
     internal sealed record BmLine
@@ -248,6 +270,8 @@ public class BindingProblemMappingTests
             app.MapPost("/min/unsupported", int () => throw new BadHttpRequestException(
                 "Expected a supported JSON media type but got \"text/plain\".", StatusCodes.Status415UnsupportedMediaType));
             app.MapPost("/min/bare-json", int () => throw new JsonException("secret", "$.a.b", 1, 2));
+            app.MapPost("/min/wrapped-json", int () => throw new InvalidOperationException(
+                "outer", new JsonException("secret", "$.a.b", 1, 2)));
             app.MapPost("/min/bad-request", int () => throw new BadHttpRequestException("Failed to bind parameter secret"));
             app.MapControllers();
             await app.StartAsync();
