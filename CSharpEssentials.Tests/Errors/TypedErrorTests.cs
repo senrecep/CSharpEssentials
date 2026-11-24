@@ -34,6 +34,13 @@ public class TypedErrorTests
         public ErrorMetadata? Metadata => null;
     }
 
+    internal readonly record struct StructWithCodeField(string Code, string Description) : IError
+    {
+        public ErrorType Type => ErrorType.Conflict;
+        public int NumericType => (int)Type;
+        public ErrorMetadata? Metadata => null;
+    }
+
     public static TheoryData<Type, ErrorType> Kinds => new()
     {
         { typeof(NotFoundError), ErrorType.NotFound },
@@ -75,6 +82,44 @@ public class TypedErrorTests
         error.Type.Should().Be(expected);
         error.NumericType.Should().Be((int)expected);
         error.Metadata.Should().BeSameAs(metadata);
+    }
+
+    [Fact]
+    public void Kinds_ShouldCoverEveryErrorTypeExceptUnknownWithMatchingAttribute()
+    {
+        Type[] kinds = [.. typeof(TypedError).Assembly.GetTypes()
+            .Where(t => !t.IsAbstract && typeof(TypedError).IsAssignableFrom(t))];
+
+        foreach (Type kind in kinds)
+            kind.GetCustomAttribute<ErrorKindAttribute>()!.Type.Should().Be(Create(kind).Type, kind.Name);
+
+        kinds.Select(k => Create(k).Type).Should().BeEquivalentTo(
+            Enum.GetValues<ErrorType>().Where(t => t != ErrorType.Unknown));
+    }
+
+    [Theory]
+    [InlineData(ErrorType.Unknown)]
+    [InlineData(ErrorType.Domain)]
+    public void ErrorCreate_ShouldKeepAnyTypeAndMetadata(ErrorType type)
+    {
+        ErrorMetadata metadata = new("id", 5);
+
+        Error error = Error.Create("C", "d", type, metadata);
+
+        error.Type.Should().Be(type);
+        error.NumericType.Should().Be((int)type);
+        error.Metadata.Should().BeSameAs(metadata);
+        Error.Create("C", "d", type).Metadata.Should().BeNull();
+    }
+
+    [Fact]
+    public void ErrorCreate_WithNullCodeOrDescription_ShouldThrow()
+    {
+        Action code = () => _ = Error.Create(null!, "d", ErrorType.Failure);
+        Action description = () => _ = Error.Create("C", null!, ErrorType.Failure);
+
+        code.Should().Throw<ArgumentNullException>().WithParameterName("code");
+        description.Should().Throw<ArgumentNullException>().WithParameterName("description");
     }
 
     [Fact]
@@ -202,12 +247,14 @@ public class TypedErrorTests
     }
 
     [Fact]
-    public void PredefinedInstance_ShouldBeTheSameInstanceOnEveryRead()
+    public void PredefinedInstance_ShouldEqualFreshEquivalentAndBridgeCodeAndType()
     {
-        NotFoundError first = UserErrors.NotFound;
-        NotFoundError second = UserErrors.NotFound;
+        UserErrors.NotFound.Should().Be(new NotFoundError(UserErrors.Codes.NotFound, "User not found."));
+        UserErrors.NotFound.Should().NotBe(UserErrors.Deleted);
 
-        first.Should().BeSameAs(second);
+        Error bridged = UserErrors.Deleted.ToError();
+        bridged.Code.Should().Be(UserErrors.Codes.Deleted);
+        bridged.Type.Should().Be(ErrorType.NotFound);
         UserErrors.NotFoundById(Guid.Empty).Code.Should().Be(UserErrors.Codes.NotFound);
     }
 
@@ -248,7 +295,16 @@ public class TypedErrorTests
         typeof(StructLocked).GetCustomAttribute<ErrorKindAttribute>()!.Type.Should().Be(ErrorType.Conflict);
         boxed.Type.Should().Be(ErrorType.Conflict);
         boxed.Description.Should().Be("User 7 is locked.");
-        default(StructLocked).Id.Should().Be(0);
+        Error.Create(boxed.Code, boxed.Description, boxed.Type, boxed.Metadata).Code.Should().Be("User.Locked");
+    }
+
+    [Fact]
+    public void StructErrorType_Default_ShouldHaveNullCode()
+    {
+        IError boxed = default(StructWithCodeField);
+
+        boxed.Code.Should().BeNull();
+        boxed.Type.Should().Be(ErrorType.Conflict);
     }
 
     [Fact]

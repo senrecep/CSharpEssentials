@@ -55,6 +55,7 @@ Reference for every package in the CSharpEssentials ecosystem. Failures are retu
 | `Error.Domain(code, desc)` | Domain rule error | 422 | A business rule rejected a well-formed request |
 | `Error.Unexpected(code, desc)` | System error | 500 | Unexpected/infrastructure failures |
 | `Error.Exception(ex)` | From exception | 500 | Bridging exception-based code into the error world |
+| `Error.Create(code, desc, type)` | Any `ErrorType` | By type | Bridging another `IError`, or `ErrorType.Unknown` |
 
 All factory methods accept an optional `ErrorMetadata? metadata` parameter for attaching arbitrary key-value data. `code` and `description` have defaults (the factory name and a generic message), so `Error.NotFound()` is valid. `Error.Exception` has three overloads, `(exception, type = Unexpected, metadata)`, `(code, exception, type, metadata)` and `(code, description, exception, type, metadata)`. Without a `code` it is the exception type name; the metadata gets `exceptionType`, `exceptionMessage`, `exceptionStackTrace` and, when present, `innerException`.
 

@@ -223,7 +223,16 @@ public readonly record struct Error : IError
 
     internal Error WithMetadata(ErrorMetadata? metadata) => new(Code, Description, Type, metadata);
 
-    internal static Error Create(string code, string description, ErrorType type, ErrorMetadata? metadata) =>
+    /// <summary>
+    /// Creates an <see cref="Error"/> of any <see cref="ErrorType"/>, including <see cref="ErrorType.Unknown"/>.
+    /// Use it to bridge an <see cref="IError"/> (for example a struct error type) to <see cref="Error"/>.
+    /// </summary>
+    /// <param name="code">The unique error code.</param>
+    /// <param name="description">The error description.</param>
+    /// <param name="type">The error type.</param>
+    /// <param name="metadata">A dictionary which provides optional space for information.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="code"/> or <paramref name="description"/> is null.</exception>
+    public static Error Create(string code, string description, ErrorType type, ErrorMetadata? metadata = null) =>
         new(code, description, type, metadata);
 
     /// <summary>

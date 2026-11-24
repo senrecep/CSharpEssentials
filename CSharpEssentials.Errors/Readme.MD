@@ -29,7 +29,7 @@ Error unauthorized = Error.Unauthorized("Token.Expired", "The token has expired.
 Error unexpected = Error.Unexpected("Db.Down", "The database is unreachable.");
 ```
 
-`Failure`, `Unexpected` and `Unknown` map to HTTP 500. The AspNetCore problem details hide the description of a 5xx error unless `ExposeExceptionDetails` is on, so use `Domain` (422) for a business-rule rejection the client should read. The factories cover every `ErrorType` except `Unknown`. Each takes `code`, `description` and an optional `ErrorMetadata`, and all three have defaults: `Error.NotFound()` has the code `NotFound` and the description `A 'Not Found' error has occurred.` An `Error` exposes `Code`, `Description`, `Type`, `NumericType` (the `int` value of `Type`) and `Metadata` (`null` when none was given). It implements `IError`, and two errors are equal when type, code, description and metadata entries are equal. Metadata is compared by key, so entry order does not affect equality or `GetHashCode`.
+`Failure`, `Unexpected` and `Unknown` map to HTTP 500. The AspNetCore problem details hide the description of a 5xx error unless `ExposeExceptionDetails` is on, so use `Domain` (422) for a business-rule rejection the client should read. The factories cover every `ErrorType` except `Unknown`; `Error.Create(code, description, type, metadata = null)` takes any `ErrorType`, so it can turn any `IError` into an `Error`. Each takes `code`, `description` and an optional `ErrorMetadata`, and all three have defaults: `Error.NotFound()` has the code `NotFound` and the description `A 'Not Found' error has occurred.` An `Error` exposes `Code`, `Description`, `Type`, `NumericType` (the `int` value of `Type`) and `Metadata` (`null` when none was given). It implements `IError`, and two errors are equal when type, code, description and metadata entries are equal. Metadata is compared by key, so entry order does not affect equality or `GetHashCode`.
 
 ### Error metadata
 
@@ -226,7 +226,7 @@ string message = error switch
 Result<User> result = UserErrors.NotFoundById(id).ToError();
 ```
 
-`[ErrorKind(ErrorType.X)]` declares the kind on the type itself, so tools can read it without an instance. Every built-in kind has it and derived types inherit it. It also works on a struct that implements `IError`:
+`[ErrorKind(ErrorType.X)]` declares the kind on the type itself, so tools can read it without an instance. Every built-in kind has it and derived types inherit it. Do not redeclare it with a different kind on a derived error: `Type` stays the base kind's, so the attribute would disagree with the runtime type. It also works on a struct that implements `IError`:
 
 ```csharp
 [ErrorKind(ErrorType.Conflict)]
@@ -240,7 +240,7 @@ public readonly record struct OrderLocked(int OrderId) : IError
 }
 ```
 
-A struct error is boxed whenever it is used as `IError`, so prefer the class kinds. Nothing stops `default(OrderLocked)`, and a struct that stores its code in a field returns a null `Code` from `default`, which breaks the `IError` contract.
+A struct error is boxed whenever it is used as `IError`, so prefer the class kinds. Bridge it with `Error.Create(e.Code, e.Description, e.Type, e.Metadata)`. Nothing stops `default(OrderLocked)`, and a struct that stores its code in a field returns a null `Code` from `default`, which breaks the `IError` contract.
 
 Equality:
 
