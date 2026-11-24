@@ -8,7 +8,7 @@ By participating in this project, you are expected to uphold our [Code of Conduc
 
 ## Prerequisites
 
-- .NET SDK: the 11.0 prerelease SDK pinned in `global.json` (`rollForward` is `latestFeature`, prereleases allowed). The libraries target .NET 11/10/9/8 and netstandard2.0/2.1, so a build needs only that SDK; the NuGet packages themselves work with the SDKs of their target frameworks.
+- .NET SDK: the 11.0 SDK pinned in `global.json` (`rollForward` is `latestFeature`). The libraries target .NET 11/10/9/8 and netstandard2.0/2.1, so a build needs only that SDK; the NuGet packages themselves work with the SDKs of their target frameworks.
 - .NET 9 and .NET 10 runtimes: the test projects run on net9.0 and net10.0 (the net8.0 test project rolls forward to a newer runtime).
 - Docker: the PostgreSQL tests of `CSharpEssentials.Tests` start a container through Testcontainers.
 - Git.

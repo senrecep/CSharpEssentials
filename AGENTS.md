@@ -24,7 +24,7 @@ Current version: 8.0.0 <!-- x-release-please-version -->
 
 ## How
 
-- Solution: `CSharpEssentials.slnx`. The SDK is pinned in `global.json` (an 11.0 prerelease, `rollForward: latestFeature`).
+- Solution: `CSharpEssentials.slnx`. The SDK is pinned in `global.json` (11.0.100, `rollForward: latestFeature`).
 - Build: `dotnet build`
 - Test: `dotnet test`
 - Pack: `dotnet pack`
