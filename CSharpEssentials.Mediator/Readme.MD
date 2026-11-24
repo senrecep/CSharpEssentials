@@ -394,7 +394,7 @@ public record GetUserQuery(Guid Id) : IQuery<Result<User>>, IRequestResponseLogg
 
 ### Exception handling behavior
 
-When a handler that returns `Result` or `Result<T>` throws, `ExceptionHandlingBehavior` returns `Result.Failure(Error.Exception(ex))` (`ErrorType.Failure`, the exception type name as code, the message as description) instead of letting the exception escape. No marker interface is needed, but the behavior has to be registered: `AddMediatorBehaviors()` or `AddMediatorExceptionHandlingBehavior()`. `OperationCanceledException` always propagates. Handlers with any other response type pass through untouched.
+When a handler that returns `Result` or `Result<T>` throws, `ExceptionHandlingBehavior` returns `Result.Failure(Error.Exception(ex))` (`ErrorType.Unexpected`, the exception type name as code, the message as description) instead of letting the exception escape. No marker interface is needed, but the behavior has to be registered: `AddMediatorBehaviors()` or `AddMediatorExceptionHandlingBehavior()`. `OperationCanceledException` always propagates. Handlers with any other response type pass through untouched.
 
 Behaviors placed after it in the pipeline (caching, transaction, lock) run inside it, so their exceptions are converted too. Validation and logging run outside it.
 

@@ -8,6 +8,7 @@ title: "Migrating from 8.x to 9.0"
 - `ErrorType` has a new member, `Domain` (numeric value 8), which maps to HTTP 422. The values of the existing members do not change.
 - `CSharpEssentials.Http` maps a 422 response to `ErrorType.Domain` instead of `ErrorType.Validation`.
 - `ErrorType.Unknown` is the `[EnumFallback]` member: data reads map a type name or number they do not know to `Unknown`.
+- Request input bound through the AspNetCore enum conventions (`Input` mode) no longer accepts `unknown` or `7` for an `ErrorType` value and returns 400, and the OpenAPI description marks `Unknown` as response-only.
 
 ## Exceptions become `Unexpected` (`CSharpEssentials.Errors`)
 
@@ -50,3 +51,4 @@ An HTTP client that handled a 422 as `ErrorType.Validation` must match `ErrorTyp
 - 8.x payloads read by 9.0: every 8.x name and number still exists, so nothing changes.
 - 9.0 payloads read by 8.x: 8.x does not know `Domain` or the number 8. Readers that use the enum conventions of `CSharpEssentials.Json` in `Data` mode reject the unknown name, because 8.x has no fallback member. A reader that takes the plain number gets the undefined value 8, which the 8.x `ToHttpStatusCode` maps to 500. Roll the 9.0 packages out to every reader of cached, stored or idempotency payloads before a writer starts producing `Domain` errors.
 - From 9.0, a name or number a reader does not know maps to `Unknown` (HTTP 500) in `Data` mode, so the next new member will not break readers.
+- EF Core columns that store `ErrorType` through `EnumWireNameConverter` or `EnumIntegerConverter` also map an unknown stored value to `Unknown` instead of throwing. Saving the entity again writes `unknown` over the original value.

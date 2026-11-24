@@ -1622,7 +1622,7 @@ Validation modes (`ValidationMode`): `Enforce` (default, failures stop the reque
 
 ### ExceptionHandlingBehavior
 
-Singleton behavior between `LoggingBehavior` and `CachingBehavior`. It activates when `TResponse` is `Result` or `Result<T>`; other response types pass through. The failure is `Error.Exception(ex)` (section 1): `ErrorType.Failure`, the exception type name as `Code`, the message as `Description`.
+Singleton behavior between `LoggingBehavior` and `CachingBehavior`. It activates when `TResponse` is `Result` or `Result<T>`; other response types pass through. The failure is `Error.Exception(ex)` (section 1): `ErrorType.Unexpected`, the exception type name as `Code`, the message as `Description`.
 
 ### Registration
 

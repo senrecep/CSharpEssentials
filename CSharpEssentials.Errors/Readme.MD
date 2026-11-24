@@ -103,7 +103,7 @@ ErrorType type = 401.ToErrorType();                      // Unauthorized
 
 `ToErrorType` is the reverse for 400, 401, 403, 404, 409, 422 (`Domain`) and 500 (`Failure`); every other status code gives `Unexpected`.
 
-`Unknown` is the `[EnumFallback]` member of `ErrorType`: a data read (JSON with the `CSharpEssentials.Json` enum conventions, a cached or stored payload) maps a type name it does not know, such as `Domain` written by a newer version, to `Unknown`, which maps to 500.
+`Unknown` is the `[EnumFallback]` member of `ErrorType`: a data read (JSON with the `CSharpEssentials.Json` enum conventions, a cached or stored payload) maps a type name or number it does not know, such as a member added by a later version, to `Unknown`, which maps to 500. Request input through the AspNetCore enum conventions rejects `Unknown`. 8.x has no fallback member, so 8.x readers reject `Domain`; see the [8.x to 9.0 migration guide](../docs/migration/v8-to-v9.md).
 
 ### Domain-specific error hierarchies
 
