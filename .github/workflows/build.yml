@@ -83,6 +83,11 @@ jobs:
           dotnet run --project tests/PackageConsumer --configuration Release -p:CsePackage=CSharpEssentials.Validation -p:CseVersion=0.0.0-ci.${{ github.run_id }}
           dotnet run --project tests/PackageConsumer --configuration Release -p:CsePackage=CSharpEssentials.Mediator -p:CseVersion=0.0.0-ci.${{ github.run_id }}
 
+      # Typed results need the C# 15 compiler. tests/TypedResultConsumer builds each case against the packed packages with the
+      # global.json SDK and checks the diagnostics a consumer sees: a clean build for full coverage, CS8509, CS0457 and CS0029.
+      - name: Check typed result consumer diagnostics
+        run: python3 scripts/check-typed-consumer.py --version 0.0.0-ci.${{ github.run_id }}
+
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v7
         with:

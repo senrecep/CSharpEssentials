@@ -1,0 +1,2 @@
+<!-- Stops the repository Directory.Build.props from applying: this project consumes the packed packages like an outside project. -->
+<Project />

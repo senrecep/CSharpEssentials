@@ -1,0 +1,10 @@
+<!-- CseVersion is the version passed to dotnet pack. -->
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageVersion Include="CSharpEssentials.Errors" Version="$(CseVersion)" />
+  </ItemGroup>
+</Project>
