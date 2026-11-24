@@ -90,7 +90,7 @@ public class ErrorTests
 
         error.Code.Should().Be(nameof(InvalidOperationException));
         error.Description.Should().Be("Test exception");
-        error.Type.Should().Be(ErrorType.Failure);
+        error.Type.Should().Be(ErrorType.Unexpected);
         error.Metadata.Should().NotBeNull();
     }
 
@@ -102,7 +102,7 @@ public class ErrorTests
 
         error.Code.Should().Be("CUSTOM.CODE");
         error.Description.Should().Be("Test exception");
-        error.Type.Should().Be(ErrorType.Failure);
+        error.Type.Should().Be(ErrorType.Unexpected);
     }
 
     [Fact]
@@ -113,7 +113,7 @@ public class ErrorTests
 
         error.Code.Should().Be("CUSTOM.CODE");
         error.Description.Should().Be("Custom description");
-        error.Type.Should().Be(ErrorType.Failure);
+        error.Type.Should().Be(ErrorType.Unexpected);
     }
 
     #endregion

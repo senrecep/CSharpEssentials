@@ -17,6 +17,10 @@ public interface IErrorStatusCodeMapper
     /// <summary>
     /// The error that defines the response status, <c>title</c> and <c>detail</c>. <paramref name="errors"/> is never empty.
     /// </summary>
+    /// <remarks>
+    /// The default picks the error with the highest status, the first one on a tie. With the default statuses that order is
+    /// 5xx, then 422 (<see cref="ErrorType.Domain"/>), 409, 404, 403, 401 and 400.
+    /// </remarks>
     Error SelectPrimaryError(IReadOnlyList<Error> errors);
 
     /// <summary>

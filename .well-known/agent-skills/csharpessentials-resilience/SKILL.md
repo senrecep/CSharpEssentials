@@ -100,6 +100,7 @@ Both policies (and the circuit breaker) treat exceptions and failed `Result` / `
 - `ErrorType.Forbidden`
 - `ErrorType.NotFound`
 - `ErrorType.Validation`
+- `ErrorType.Domain`
 
 `Conflict`, `Failure` and `Unexpected` failures are retried.
 
@@ -132,5 +133,5 @@ Result<Product> product = await ResiliencePolicy<Product>
 
 - Use `ResiliencePolicy<T>` for operations that already return `Result<T>`; do not wrap `Result<T>` again. The non-generic policy boxes a returned `Result<T>` on every attempt.
 - Pass the `CancellationToken` through the callback so timeout and cancellation work.
-- Return `NotFound`, `Validation`, `Unauthorized` or `Forbidden` errors for permanent failures so they are not retried, or pass `shouldRetry` to `RetryIfFailed`.
+- Return `NotFound`, `Validation`, `Domain`, `Unauthorized` or `Forbidden` errors for permanent failures so they are not retried, or pass `shouldRetry` to `RetryIfFailed`.
 - Keep Polly types inside the package boundary; expose `ResiliencePolicy` from application and library code.

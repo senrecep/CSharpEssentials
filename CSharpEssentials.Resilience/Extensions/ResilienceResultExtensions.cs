@@ -15,8 +15,8 @@ public static class ResilienceResultExtensions
 
     /// <summary>
     /// Retries <paramref name="operation"/> while it returns a retryable failure or throws. Failures of type
-    /// <see cref="ErrorType.Unauthorized"/>, <see cref="ErrorType.Forbidden"/>, <see cref="ErrorType.NotFound"/> and
-    /// <see cref="ErrorType.Validation"/> are not retried. Cancellation of <paramref name="cancellationToken"/> is never
+    /// <see cref="ErrorType.Unauthorized"/>, <see cref="ErrorType.Forbidden"/>, <see cref="ErrorType.NotFound"/>,
+    /// <see cref="ErrorType.Validation"/> and <see cref="ErrorType.Domain"/> are not retried. Cancellation of <paramref name="cancellationToken"/> is never
     /// retried and throws <see cref="OperationCanceledException"/>.
     /// </summary>
     /// <param name="operation">The operation to run.</param>

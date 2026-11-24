@@ -72,7 +72,8 @@ internal static class ResilienceClassifier
         return type is not ErrorType.Unauthorized
             and not ErrorType.Forbidden
             and not ErrorType.NotFound
-            and not ErrorType.Validation;
+            and not ErrorType.Validation
+            and not ErrorType.Domain;
     }
 
     internal static bool IsRetryable<TResult>(TResult result, Func<Error, bool> shouldRetry)

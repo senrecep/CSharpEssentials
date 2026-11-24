@@ -22,13 +22,14 @@ using CSharpEssentials.Errors;
 Error notFound = Error.NotFound("User.NotFound", "User was not found.");
 Error validation = Error.Validation("Email.Invalid", "Email format is invalid.");
 Error conflict = Error.Conflict("User.Duplicate", "User already exists.");
+Error domain = Error.Domain("Payment.Declined", "The card was declined.");
 Error failure = Error.Failure("Payment.GatewayDown", "The payment gateway did not respond.");
 Error forbidden = Error.Forbidden("Order.Forbidden", "You cannot cancel this order.");
 Error unauthorized = Error.Unauthorized("Token.Expired", "The token has expired.");
 Error unexpected = Error.Unexpected("Db.Down", "The database is unreachable.");
 ```
 
-`Failure`, `Unexpected` and `Unknown` map to HTTP 500. The AspNetCore problem details hide the description of a 5xx error unless `ExposeExceptionDetails` is on, so use `Validation`, `Conflict` or `Forbidden` for a business-rule rejection the client should read. The factories cover every `ErrorType` except `Unknown`. Each takes `code`, `description` and an optional `ErrorMetadata`, and all three have defaults: `Error.NotFound()` has the code `NotFound` and the description `A 'Not Found' error has occurred.` An `Error` exposes `Code`, `Description`, `Type`, `NumericType` (the `int` value of `Type`) and `Metadata` (`null` when none was given). It implements `IError`, and two errors are equal when type, code, description and metadata entries are equal. Metadata is compared by key, so entry order does not affect equality or `GetHashCode`.
+`Failure`, `Unexpected` and `Unknown` map to HTTP 500. The AspNetCore problem details hide the description of a 5xx error unless `ExposeExceptionDetails` is on, so use `Domain` (422) for a business-rule rejection the client should read. The factories cover every `ErrorType` except `Unknown`. Each takes `code`, `description` and an optional `ErrorMetadata`, and all three have defaults: `Error.NotFound()` has the code `NotFound` and the description `A 'Not Found' error has occurred.` An `Error` exposes `Code`, `Description`, `Type`, `NumericType` (the `int` value of `Type`) and `Metadata` (`null` when none was given). It implements `IError`, and two errors are equal when type, code, description and metadata entries are equal. Metadata is compared by key, so entry order does not affect equality or `GetHashCode`.
 
 ### Error metadata
 
@@ -65,7 +66,7 @@ catch (Exception ex)
 }
 ```
 
-`Error.Exception(ex)` uses the exception type name as the code, the exception message as the description and `ErrorType.Failure`. The metadata carries `exceptionType`, `exceptionStackTrace` (`null` when the exception was never thrown), `exceptionMessage` and, when there is one, a nested `innerException`. Overloads take an explicit `code`, an explicit `code` and `description`, an `ErrorType` and extra `ErrorMetadata`:
+`Error.Exception(ex)` uses the exception type name as the code, the exception message as the description and `ErrorType.Unexpected` (before 9.0 it was `ErrorType.Failure`). The metadata carries `exceptionType`, `exceptionStackTrace` (`null` when the exception was never thrown), `exceptionMessage` and, when there is one, a nested `innerException`. Overloads take an explicit `code`, an explicit `code` and `description`, an `ErrorType` and extra `ErrorMetadata`:
 
 ```csharp
 Error custom = Error.Exception("Orders.SaveFailed", "The order could not be saved.", ex, ErrorType.Unexpected);
@@ -97,9 +98,12 @@ ErrorType type = 401.ToErrorType();                      // Unauthorized
 | `Forbidden` | 403 |
 | `NotFound` | 404 |
 | `Conflict` | 409 |
+| `Domain` | 422 |
 | `Failure`, `Unexpected`, `Unknown` | 500 |
 
-`ToErrorType` is the reverse for 400, 401, 403, 404, 409 and 500 (`Failure`); every other status code gives `Unexpected`.
+`ToErrorType` is the reverse for 400, 401, 403, 404, 409, 422 (`Domain`) and 500 (`Failure`); every other status code gives `Unexpected`.
+
+`Unknown` is the `[EnumFallback]` member of `ErrorType`: a data read (JSON with the `CSharpEssentials.Json` enum conventions, a cached or stored payload) maps a type name it does not know, such as `Domain` written by a newer version, to `Unknown`, which maps to 500.
 
 ### Domain-specific error hierarchies
 
@@ -129,7 +133,7 @@ public static class OrderErrors
         Error.Validation("Order.EmptyCart", "Cannot place an order with an empty cart.");
 
     public static Error InsufficientFunds(decimal required, decimal available) =>
-        Error.Conflict(
+        Error.Domain(
             "Order.InsufficientFunds",
             $"Payment requires {required:C} but only {available:C} is available.",
             new ErrorMetadata().AddMetadata("Required", required).AddMetadata("Available", available));

@@ -27,7 +27,7 @@ public static class HttpStatusCodeMapper
             HttpStatusCode.UnsupportedMediaType => ErrorType.Validation,
             HttpStatusCode.RequestedRangeNotSatisfiable => ErrorType.Validation,
             HttpStatusCode.ExpectationFailed => ErrorType.Validation,
-            HttpStatusCode.UnprocessableEntity => ErrorType.Validation,
+            HttpStatusCode.UnprocessableEntity => ErrorType.Domain,
             HttpStatusCode.TooManyRequests => ErrorType.Conflict,
             >= HttpStatusCode.BadRequest and < HttpStatusCode.InternalServerError => ErrorType.Failure,
             >= HttpStatusCode.InternalServerError => ErrorType.Unexpected,
@@ -69,7 +69,7 @@ public static class HttpStatusCodeMapper
             HttpStatusCode.UnsupportedMediaType => Error.Validation(code, msg),
             HttpStatusCode.RequestedRangeNotSatisfiable => Error.Validation(code, msg),
             HttpStatusCode.ExpectationFailed => Error.Validation(code, msg),
-            HttpStatusCode.UnprocessableEntity => Error.Validation(code, msg),
+            HttpStatusCode.UnprocessableEntity => Error.Domain(code, msg),
             HttpStatusCode.TooManyRequests => Error.Conflict(code, msg),
             >= HttpStatusCode.InternalServerError => Error.Unexpected(code, msg),
             _ => Error.Failure(code, msg)

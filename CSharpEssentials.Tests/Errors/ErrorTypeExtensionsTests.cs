@@ -18,6 +18,7 @@ public class ErrorTypeExtensionsTests
         { ErrorType.Unauthorized, "Unauthorized", "unauthorized", "unauthorized" },
         { ErrorType.Forbidden, "Forbidden", "forbidden", "forbidden" },
         { ErrorType.Unknown, "Unknown", "unknown", "unknown" },
+        { ErrorType.Domain, "Domain", "domain", "domain" },
     };
 
     [Theory]

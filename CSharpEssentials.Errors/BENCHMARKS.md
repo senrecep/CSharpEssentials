@@ -42,7 +42,7 @@ CSharpFunctionalExtensions has no column in classes 1 to 4 and 6. Its default er
 
 - Factory: code, type, message and metadata entries in order for CSE and ErrorOr; message and metadata for FluentResults. FluentResults always has an empty metadata dictionary, which the key treats as no metadata.
 - Equality: `Equals` gives `True` for both libraries, each library gives the same hash for its two equal errors, and both HashSets hold 10 items.
-- Exception: every row has the message `boom`. The CSE rows have code `InvalidOperationException` and type `Failure`. `Error.Exception` has the metadata keys `exceptionType`, `exceptionStackTrace` and `exceptionMessage`. Stack text is never compared.
+- Exception: every row has the message `boom`. The CSE rows have code `InvalidOperationException`; `Error.Exception` has type `Unexpected` and `Error.Failure` has type `Failure`. `Error.Exception` has the metadata keys `exceptionType`, `exceptionStackTrace` and `exceptionMessage`. Stack text is never compared.
 - Metadata `ToString`: exact string equality, for example `[{ key0: 0 }]`.
 - `ToString`: CSE and ErrorOr give the same text for an error without metadata. The other rows only have to contain the message, or `42` for the result rows.
 - JSON: CSE and ErrorOr give the same text. CSE deserializes back to an equal error.

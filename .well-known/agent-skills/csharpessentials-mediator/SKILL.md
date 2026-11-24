@@ -115,7 +115,7 @@ No marker interface is needed: once the behavior is registered it applies to any
 ### Error shape
 
 `Error.Exception(ex)` produces an error with:
-- `ErrorType`: `Failure`
+- `ErrorType`: `Unexpected`
 - `Code`: exception type name (e.g. `"InvalidOperationException"`)
 - `Description`: exception message
 

@@ -83,7 +83,7 @@ The records default to the same values as the method parameters, plus `TimeoutOp
 
 Both policies retry exceptions and failed `Result` / `Result<T>` values, and the circuit breaker counts the same failures. The non-generic `ResiliencePolicy` checks any return value that implements `IResultBase`; other return values count only when the delegate throws.
 
-Errors of type `Unauthorized`, `Forbidden`, `NotFound` and `Validation` are not retried, because running the operation again gives the same answer. Every other failed result (`Failure`, `Unexpected`, `Conflict` and so on) is treated as transient. When the retries run out, the last failed result is returned.
+Errors of type `Unauthorized`, `Forbidden`, `NotFound`, `Validation` and `Domain` are not retried, because running the operation again gives the same answer. Every other failed result (`Failure`, `Unexpected`, `Conflict` and so on) is treated as transient. When the retries run out, the last failed result is returned.
 
 ```csharp
 Result<Order> order = await ResiliencePolicy

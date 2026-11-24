@@ -22,7 +22,7 @@ using CSharpEssentials.Errors;
 ## Creating errors
 
 ```csharp
-// ErrorType: Failure | Unexpected | Validation | Conflict | NotFound | Unauthorized | Forbidden | Unknown (no factory)
+// ErrorType: Failure | Unexpected | Validation | Conflict | NotFound | Unauthorized | Forbidden | Unknown (no factory) | Domain
 Error failure      = Error.Failure("order.failed", "Order could not be processed.");
 Error validation   = Error.Validation("email.invalid", "Email format is invalid.");
 Error notFound     = Error.NotFound("user.not_found", "User not found.");
@@ -30,7 +30,8 @@ Error conflict     = Error.Conflict("email.taken", "Email is already registered.
 Error unauthorized = Error.Unauthorized("token.expired", "Token has expired.");
 Error forbidden    = Error.Forbidden("access.denied", "Insufficient permissions.");
 Error unexpected   = Error.Unexpected("sys.error", "An unexpected error occurred.");
-Error fromEx       = Error.Exception(ex); // code = exception type name, description = message, metadata = exception details
+Error domain       = Error.Domain("payment.declined", "The card was declined."); // business rule rejected it: 422
+Error fromEx       = Error.Exception(ex); // type Unexpected; code = exception type name, description = message, metadata = exception details
 ```
 
 ## Error properties
@@ -72,7 +73,7 @@ int status2  = ErrorType.Validation.ToHttpStatusCode(); // 400 (Failure/Unexpect
 ErrorType et = 401.ToErrorType();                       // Unauthorized
 ```
 
-`Validation` 400, `Unauthorized` 401, `Forbidden` 403, `NotFound` 404, `Conflict` 409. `ToErrorType` reverses 400, 401, 403, 404, 409 and 500 (`Failure`); any other status gives `Unexpected`.
+`Validation` 400, `Unauthorized` 401, `Forbidden` 403, `NotFound` 404, `Conflict` 409, `Domain` 422. `ToErrorType` reverses 400, 401, 403, 404, 409, 422 and 500 (`Failure`); any other status gives `Unexpected`. Use `Domain` for a business-rule rejection the client should read; 5xx descriptions are hidden by the AspNetCore problem details.
 
 ## Domain-specific error classes
 

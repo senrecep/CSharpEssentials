@@ -16,6 +16,7 @@ public class ErrorTypeTests
         ErrorType.Unauthorized.Should().Be((ErrorType)5);
         ErrorType.Forbidden.Should().Be((ErrorType)6);
         ErrorType.Unknown.Should().Be((ErrorType)7);
+        ErrorType.Domain.Should().Be((ErrorType)8);
     }
 
     [Fact]
@@ -29,6 +30,7 @@ public class ErrorTypeTests
         ErrorType.Unauthorized.ToIntType().Should().Be(5);
         ErrorType.Forbidden.ToIntType().Should().Be(6);
         ErrorType.Unknown.ToIntType().Should().Be(7);
+        ErrorType.Domain.ToIntType().Should().Be(8);
     }
 }
 

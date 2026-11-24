@@ -37,7 +37,7 @@ public class HttpStatusCodeMapperCoverageTests
     [InlineData(HttpStatusCode.UnsupportedMediaType, ErrorType.Validation)]
     [InlineData(HttpStatusCode.RequestedRangeNotSatisfiable, ErrorType.Validation)]
     [InlineData(HttpStatusCode.ExpectationFailed, ErrorType.Validation)]
-    [InlineData(HttpStatusCode.UnprocessableEntity, ErrorType.Validation)]
+    [InlineData(HttpStatusCode.UnprocessableEntity, ErrorType.Domain)]
     [InlineData(HttpStatusCode.TooManyRequests, ErrorType.Conflict)]
     [InlineData(HttpStatusCode.InternalServerError, ErrorType.Unexpected)]
     [InlineData(HttpStatusCode.BadGateway, ErrorType.Unexpected)]

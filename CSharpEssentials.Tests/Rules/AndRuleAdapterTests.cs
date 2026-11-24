@@ -241,7 +241,7 @@ public class AndRuleAdapterTests
         IRuleBase<TestContext> adapter = rules.And();
         Result result = RuleEngine.Evaluate(adapter, new TestContext());
         result.IsFailure.Should().BeTrue();
-        result.FirstError.Type.Should().Be(ErrorType.Failure);
+        result.FirstError.Type.Should().Be(ErrorType.Unexpected);
     }
 
     #endregion

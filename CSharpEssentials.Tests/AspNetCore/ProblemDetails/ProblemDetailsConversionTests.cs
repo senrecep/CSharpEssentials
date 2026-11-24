@@ -21,6 +21,8 @@ public class ProblemDetailsConversionTests
         { Error.Forbidden("f", "denied"), 403, "Forbidden" },
         { Error.NotFound("n", "missing"), 404, "Not Found" },
         { Error.Conflict("c", "exists"), 409, "Conflict" },
+        { Error.Domain("d", "declined"), 422, "Domain Error" },
+        { Error.Exception(new InvalidOperationException("boom")), 500, "Unexpected Error" },
         { Error.Failure("fail", "failed"), 500, "Server Failure" },
         { Error.Unexpected("unexpected", "boom"), 500, "Unexpected Error" },
         { Error.Exception(new InvalidOperationException("unknown"), ErrorType.Unknown), 500, "Unknown Error" },

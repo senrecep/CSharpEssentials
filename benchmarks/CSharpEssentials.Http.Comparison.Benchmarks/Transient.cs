@@ -8,5 +8,5 @@ internal static class Transient
     public static bool IsTransient(Outcome<Result<int>> outcome) =>
         outcome.Exception is not null
         || outcome.Result.IsFailure
-            && outcome.Result.FirstError.Type is not (ErrorType.Unauthorized or ErrorType.Forbidden or ErrorType.NotFound or ErrorType.Validation);
+            && outcome.Result.FirstError.Type is not (ErrorType.Unauthorized or ErrorType.Forbidden or ErrorType.NotFound or ErrorType.Validation or ErrorType.Domain);
 }

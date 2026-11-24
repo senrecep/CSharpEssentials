@@ -53,7 +53,7 @@ app.UseEnhancedProblemDetails(); // UseExceptionHandler() + UseStatusCodePages()
 
 ### Status codes
 
-Default `IErrorStatusCodeMapper`: Validation → 400, Unauthorized → 401, Forbidden → 403, NotFound → 404, Conflict → 409, Failure / Unexpected / Unknown → 500.
+Default `IErrorStatusCodeMapper`: Validation → 400, Unauthorized → 401, Forbidden → 403, NotFound → 404, Conflict → 409, Domain → 422, Failure / Unexpected / Unknown → 500. With several errors the highest status wins (5xx, then 422, 409, 404, 403, 401, 400).
 
 `DefaultExceptionProblemMapper` (always last): `OperationCanceledException` from an aborted request → 499, `BadHttpRequestException` → its status, `EnhancedValidationException` → 400, `DomainException` → status of its `ErrorType`, anything else → 500 with a generic detail (the message is logged, not returned).
 

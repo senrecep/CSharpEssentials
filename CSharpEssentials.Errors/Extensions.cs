@@ -17,6 +17,7 @@ public static class Extensions
             ErrorType.Unauthorized => HttpCodes.Unauthorized,
             ErrorType.Forbidden => HttpCodes.Forbidden,
             ErrorType.Unknown => HttpCodes.InternalServerError,
+            ErrorType.Domain => HttpCodes.UnprocessableEntity,
             _ => HttpCodes.InternalServerError
         };
     }
@@ -30,6 +31,7 @@ public static class Extensions
             HttpCodes.Forbidden => ErrorType.Forbidden,
             HttpCodes.NotFound => ErrorType.NotFound,
             HttpCodes.Conflict => ErrorType.Conflict,
+            HttpCodes.UnprocessableEntity => ErrorType.Domain,
             HttpCodes.InternalServerError => ErrorType.Failure,
             _ => ErrorType.Unexpected
         };

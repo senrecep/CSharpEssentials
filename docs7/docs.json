@@ -132,7 +132,8 @@
           "migration/v5-to-v6",
           "migration/v6-async-naming",
           "migration/v6-optional-route-parameters",
-          "migration/v6-to-v7-idempotency"
+          "migration/v6-to-v7-idempotency",
+          "migration/v8-to-v9"
         ]
       },
       {

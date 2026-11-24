@@ -314,7 +314,7 @@ public class LinearRuleAdapterTests
         IRuleBase<TestContext> adapter = rules.Linear();
         Result result = RuleEngine.Evaluate(adapter, new TestContext());
         result.IsFailure.Should().BeTrue();
-        result.FirstError.Type.Should().Be(ErrorType.Failure);
+        result.FirstError.Type.Should().Be(ErrorType.Unexpected);
     }
 
     #endregion
