@@ -30,13 +30,16 @@ public sealed class TypedResultJsonConverterFactory : JsonConverterFactory
         Type definition = ConverterDefinition(typeToConvert)
             ?? throw new ArgumentException($"{typeToConvert} is not a typed result.", nameof(typeToConvert));
         if (!RuntimeFeature.IsDynamicCodeSupported)
-            throw new NotSupportedException(
-                $"Dynamic code is not available, so {typeToConvert} needs its converter registered: add " +
-                $"{definition.Name.Split('`')[0]}<{string.Join(", ", typeToConvert.GetGenericArguments().Select(t => t.Name))}> " +
-                "to JsonSourceGenerationOptions.Converters or JsonSerializerOptions.Converters.");
+            throw new NotSupportedException(MissingConverterMessage(typeToConvert, definition));
 
         return CreateClosed(typeToConvert.GetGenericArguments());
     }
+
+    internal static string MissingConverterMessage(Type typeToConvert, Type definition) =>
+        $"Dynamic code is not available, so {TypedResultJson.TypeName(typeToConvert)} needs its converter registered: add " +
+        $"typeof({definition.Namespace}.{definition.Name.Substring(0, definition.Name.IndexOf('`'))}" +
+        $"<{string.Join(", ", typeToConvert.GetGenericArguments().Select(TypedResultJson.TypeName))}>) " +
+        "to JsonSourceGenerationOptions.Converters or JsonSerializerOptions.Converters.";
 
     [RequiresDynamicCode("Closes the typed result converter over the result's type arguments.")]
     private static JsonConverter CreateClosed(Type[] arguments)

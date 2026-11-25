@@ -18,7 +18,7 @@ internal static class TypedResultJson
 
     /// <summary>
     /// Returns the case names: <see cref="SuccessCase"/> first, then one per error slot. A slot type whose name another slot
-    /// type (or the success case) shares uses its full name instead.
+    /// type (or the success case) shares uses its <see cref="TypeName"/> instead, which carries no assembly version.
     /// </summary>
     internal static string[] CaseNames(params Type[] errorTypes)
     {
@@ -29,10 +29,29 @@ internal static class TypedResultJson
             Type type = errorTypes[i];
             bool shared = type.Name == SuccessCase
                 || Array.Exists(errorTypes, other => other != type && other.Name == type.Name);
-            names[i + 1] = shared ? type.FullName ?? type.Name : type.Name;
+            names[i + 1] = shared ? TypeName(type) : type.Name;
         }
 
         return names;
+    }
+
+    /// <summary>
+    /// Returns the type's name as C# writes it, namespace and declaring types included and generic arguments expanded the
+    /// same way, for example <c>MyApp.Errors.Validation&lt;MyApp.Email&gt;</c>.
+    /// </summary>
+    internal static string TypeName(Type type)
+    {
+        if (type.IsArray)
+            return $"{TypeName(type.GetElementType()!)}[{new string(',', type.GetArrayRank() - 1)}]";
+
+        string prefix = string.IsNullOrEmpty(type.Namespace) ? string.Empty : type.Namespace + ".";
+        if (type.DeclaringType is { } outer)
+            prefix = TypeName(outer) + ".";
+        int tick = type.Name.IndexOf('`');
+        string name = tick < 0 ? type.Name : type.Name.Substring(0, tick);
+        return type.IsGenericType
+            ? $"{prefix}{name}<{string.Join(", ", type.GetGenericArguments().Select(TypeName))}>"
+            : prefix + name;
     }
 
     internal static void WriteCase<TCase>(Utf8JsonWriter writer, string name, TCase value, JsonSerializerOptions options)

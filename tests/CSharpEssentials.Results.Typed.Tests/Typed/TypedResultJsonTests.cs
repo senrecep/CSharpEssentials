@@ -177,16 +177,42 @@ public sealed partial class TypedResultJsonTests
     }
 
     [Fact]
-    public void Serialize_Should_UseFullNames_When_TwoSlotTypesShareAName()
+    public void Serialize_Should_UseQualifiedNames_When_TwoSlotTypesShareAName()
     {
         Result<int, UserErrors.Locked, OtherErrors.Locked> result = new OtherErrors.Locked("x");
 
         string json = Write(result);
         Result<int, UserErrors.Locked, OtherErrors.Locked> back = Read<Result<int, UserErrors.Locked, OtherErrors.Locked>>(json);
 
-        JsonDocument.Parse(json).RootElement.GetProperty("case").GetString().Should().Be(typeof(OtherErrors.Locked).FullName);
+        JsonDocument.Parse(json).RootElement.GetProperty("case").GetString()
+            .Should().Be("CSharpEssentials.Results.Typed.Tests.Typed.TypedResultJsonTests.OtherErrors.Locked");
         back.TryGetValue(out OtherErrors.Locked error).Should().BeTrue();
         error.Reason.Should().Be("x");
+    }
+
+    [Fact]
+    public void Serialize_Should_WriteVersionFreeNames_When_TwoSlotsCloseOneGenericError()
+    {
+        Result<int, Invalid<UserDto>, Invalid<int>> result = new Invalid<int>(4);
+
+        string json = Write(result);
+        Result<int, Invalid<UserDto>, Invalid<int>> back = Read<Result<int, Invalid<UserDto>, Invalid<int>>>(json);
+
+        JsonDocument.Parse(json).RootElement.GetProperty("case").GetString()
+            .Should().Be("CSharpEssentials.Results.Typed.Tests.Typed.TypedResultJsonTests.Invalid<System.Int32>");
+        back.TryGetValue(out Invalid<int> error).Should().BeTrue();
+        error.Field.Should().Be(4);
+    }
+
+    [Fact]
+    public void Factory_Should_NameTheConverterAsCSharpWritesIt_When_DynamicCodeIsMissing()
+    {
+        string message = TypedResultJsonConverterFactory.MissingConverterMessage(
+            typeof(Result<List<UserDto>, OtherErrors.Locked>), typeof(TypedResultJsonConverter<,>));
+
+        message.Should().Contain(
+            "typeof(CSharpEssentials.ResultPattern.TypedResultJsonConverter<System.Collections.Generic.List<CSharpEssentials.Results.Typed.Tests.Typed.UserDto>, " +
+            "CSharpEssentials.Results.Typed.Tests.Typed.TypedResultJsonTests.OtherErrors.Locked>)");
     }
 
     [Fact]
@@ -266,6 +292,8 @@ public sealed partial class TypedResultJsonTests
             public string Reason { get; }
         }
     }
+
+    internal sealed record Invalid<TField>(TField Field);
 
     [JsonSourceGenerationOptions(Converters = [typeof(TypedResultJsonConverter<int, NotFoundError, RateLimited>)])]
     [JsonSerializable(typeof(Result<int, NotFoundError, RateLimited>))]
