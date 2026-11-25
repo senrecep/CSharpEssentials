@@ -26,6 +26,7 @@
     <ProjectReference Include="..\..\CSharpEssentials.Errors\CSharpEssentials.Errors.csproj" />
     <ProjectReference Include="..\..\CSharpEssentials.Results\CSharpEssentials.Results.csproj" />
     <ProjectReference Include="..\..\CSharpEssentials.Mediator\CSharpEssentials.Mediator.csproj" />
+    <ProjectReference Include="..\..\CSharpEssentials.Maybe\CSharpEssentials.Maybe.csproj" />
   </ItemGroup>
 
   <ItemGroup>

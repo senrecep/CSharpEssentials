@@ -32,6 +32,7 @@ CASES = {
     "TypedForeignError": {"CS0029"},
     "TypedReturningStatement": {"CS0161"},
     "TypedAsyncChain": set(),
+    "TypedQuerySyntax": set(),
 }
 
 FRAMEWORKS = ("net11.0", "net10.0")

@@ -21,6 +21,16 @@ internal static class TypedResultLogic
     internal static InvalidOperationException DefaultInitialized() =>
         new("Result was default-initialized: it holds neither a value nor an error. Create it from a value or an error.");
 
+    /// <summary>Throws <see cref="DefaultInitialized"/> for the <see langword="default"/> tag.</summary>
+    internal static void EnsureInitialized(byte tag)
+    {
+        if (tag == DefaultTag)
+            throw DefaultInitialized();
+    }
+
+    /// <summary>Returns the tag of a result that holds no success value, or throws for the <see langword="default"/> tag.</summary>
+    internal static byte ErrorTag(byte tag) => tag == DefaultTag ? throw DefaultInitialized() : tag;
+
     /// <summary>Compares two cases: the tags must match, then the values for the success tag or the errors for an error tag.</summary>
     internal static bool CaseEquals<T>(byte tag, T value, object? error, byte otherTag, T otherValue, object? otherError) =>
         tag == otherTag && (tag == SuccessTag

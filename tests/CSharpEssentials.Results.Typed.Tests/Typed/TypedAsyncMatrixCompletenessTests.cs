@@ -9,8 +9,10 @@ namespace CSharpEssentials.Results.Typed.Tests.Typed;
 /// from the cell table below, which copies the async matrix of <c>Result&lt;TValue&gt;</c> for each family. It does not read the
 /// emitter, so a cell the emitter drops fails here. A Task cell with a ValueTask twin on the same receiver needs
 /// <c>[OverloadResolutionPriority(1)]</c>. On <c>ResultExtensions</c> the same-slot Ensure and FailIf cells get 2 more than that, because
-/// they and the slot-adding cells are all generic and an error of a slot type binds both. The net9.0-only cells are missing from the
-/// netstandard2.1 asset.
+/// they and the slot-adding cells are all generic and an error of a slot type binds both; the per-slot TapError cells get 2 more so
+/// that they stay above the "any error" cells. The net9.0-only cells are missing from the netstandard2.1 asset. The "any error"
+/// members (constrained to <c>IError</c> slots), GetValueOrDefaultAsync and GetValueOrAsync have no handler cell table and are
+/// covered by the emitted tests instead.
 /// </summary>
 public sealed class TypedAsyncMatrixCompletenessTests
 {
@@ -50,7 +52,33 @@ public sealed class TypedAsyncMatrixCompletenessTests
             new("Task", "Task", false, false),
             new("ValueTask", "Task", false, true), new("ValueTask", "ValueTask", true, false),
         ],
+        ["Tap"] =
+        [
+            new("this", "Task", false, true), new("this", "ValueTask", true, false),
+            new("Task", "sync", false, false), new("Task", "Task", false, false),
+            new("ValueTask", "sync", false, false), new("ValueTask", "ValueTask", false, false),
+        ],
+        ["TapError"] =
+        [
+            new("this", "Task", false, true), new("this", "ValueTask", true, false),
+            new("Task", "Task", false, false),
+            new("ValueTask", "Task", false, true), new("ValueTask", "ValueTask", true, false),
+        ],
+        ["TryCatch"] = [new("Task", "sync", false, false), new("ValueTask", "sync", false, false)],
+        ["Finally"] =
+        [
+            new("Task", "sync", false, false), new("Task", "Task", false, false),
+            new("ValueTask", "sync", false, false), new("ValueTask", "ValueTask", true, false),
+        ],
+        ["FinallyAction"] =
+        [
+            new("Task", "sync", false, false), new("Task", "Task", false, false),
+            new("ValueTask", "sync", false, false), new("ValueTask", "Task", false, true), new("ValueTask", "ValueTask", true, false),
+        ],
+        ["Select"] = [new("Task", "sync", false, false), new("Task", "Task", false, false), new("ValueTask", "sync", false, false)],
     };
+
+    private static readonly HashSet<string> WithoutCellTable = new(StringComparer.Ordinal) { "GetValueOrDefaultAsync", "GetValueOrAsync" };
 
     private static readonly Dictionary<string, string> FamilyOf = new(StringComparer.Ordinal)
     {
@@ -61,6 +89,12 @@ public sealed class TypedAsyncMatrixCompletenessTests
         ["FailIf"] = "Ensure",
         ["MapError"] = "MapError",
         ["Compensate"] = "Compensate",
+        ["Tap"] = "Tap",
+        ["TapIf"] = "Tap",
+        ["TapError"] = "TapError",
+        ["TryCatch"] = "TryCatch",
+        ["Finally"] = "Finally",
+        ["Select"] = "Select",
     };
 
     private static readonly Type[] TypedResults = [typeof(Result<,>), typeof(Result<,,>), typeof(Result<,,,>)];
@@ -78,6 +112,8 @@ public sealed class TypedAsyncMatrixCompletenessTests
             {
                 if (!FamilyOf.TryGetValue(method.Name, out string? family))
                     continue;
+                if (family == "Finally" && method.ReturnType == type)
+                    family = "FinallyAction";
                 foreach (Cell cell in Cells[family])
                     expected.Add(ExpectedSignature(type, method, family, cell), (cell.Net9Only, ExpectedPriority(type, method, family, cell)));
             }
@@ -89,27 +125,39 @@ public sealed class TypedAsyncMatrixCompletenessTests
     {
         int priority = cell.Prioritized ? 1 : 0;
         bool sameSlotExtension = family == "Ensure" && cell.Receiver != "this" && !method.IsGenericMethodDefinition && type.GetGenericArguments().Length < 4;
-        return sameSlotExtension ? priority + 2 : priority;
+        bool slotTapError = family == "TapError" && cell.Receiver != "this";
+        return sameSlotExtension || slotTapError ? priority + 2 : priority;
     }
 
     private static string ExpectedSignature(Type type, MethodInfo method, string family, Cell cell)
     {
         ParameterInfo[] parameters = method.GetParameters();
-        Type[] handler = parameters[0].ParameterType.GetGenericArguments();
-        string ret = Format(handler[1]);
-        string handlerType = $"Func<{Format(handler[0])}, {(cell.Handler == "sync" ? ret : $"{cell.Handler}<{ret}>")}>";
-        IEnumerable<string> extras = parameters.Skip(1).Select(p => Format(p.ParameterType));
+        int index = Array.FindLastIndex(parameters, p => p.ParameterType.Name.StartsWith("Func", StringComparison.Ordinal) || p.ParameterType.Name.StartsWith("Action", StringComparison.Ordinal));
+        Type delegateType = parameters[index].ParameterType;
+        Type[] handler = delegateType.GetGenericArguments();
+        string handlerType;
+        if (delegateType.Name.StartsWith("Action", StringComparison.Ordinal))
+        {
+            handlerType = cell.Handler == "sync" ? Format(delegateType) : $"Func<{Format(handler[0])}, {cell.Handler}>";
+        }
+        else
+        {
+            string ret = Format(handler[1]);
+            handlerType = $"Func<{Format(handler[0])}, {(cell.Handler == "sync" ? ret : $"{cell.Handler}<{ret}>")}>";
+        }
+        IEnumerable<string> leading = parameters.Take(index).Select(p => Format(p.ParameterType));
+        IEnumerable<string> extras = parameters.Skip(index + 1).Select(p => Format(p.ParameterType));
         string returns = Format(method.ReturnType);
         string[] methodGenerics = method.GetGenericArguments().Select(Format).ToArray();
         if (cell.Receiver == "this")
         {
             string generics = methodGenerics.Length == 0 ? string.Empty : $"<{string.Join(", ", methodGenerics)}>";
             IEnumerable<string> token = family == "Bind" ? [] : ["CancellationToken"];
-            return $"{Format(type)}: {cell.Handler}<{returns}> {method.Name}Async{generics}({string.Join(", ", [handlerType, .. extras, .. token])})";
+            return $"{Format(type)}: {cell.Handler}<{returns}> {method.Name}Async{generics}({string.Join(", ", [.. leading, handlerType, .. extras, .. token])})";
         }
         string[] allGenerics = [.. type.GetGenericArguments().Select(Format), .. methodGenerics];
         string source = $"{cell.Receiver}<{Format(type)}>";
-        return $"ResultExtensions: {cell.Receiver}<{returns}> {method.Name}Async<{string.Join(", ", allGenerics)}>({string.Join(", ", [source, handlerType, .. extras, "CancellationToken"])})";
+        return $"ResultExtensions: {cell.Receiver}<{returns}> {method.Name}Async<{string.Join(", ", allGenerics)}>({string.Join(", ", [source, .. leading, handlerType, .. extras, "CancellationToken"])})";
     }
 
     private static Dictionary<string, MethodInfo> BuildSurface()
@@ -126,12 +174,17 @@ public sealed class TypedAsyncMatrixCompletenessTests
         foreach (MethodInfo method in typeof(ResultExtensions).GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly))
         {
             Type source = method.GetParameters()[0].ParameterType;
-            if (source.IsGenericType && source.GetGenericArguments()[0] is { IsGenericType: true } inner
-                && TypedResults.Contains(inner.GetGenericTypeDefinition()))
+            bool pending = source.IsGenericType && (source.GetGenericTypeDefinition() == typeof(Task<>) || source.GetGenericTypeDefinition() == typeof(ValueTask<>));
+            if (pending && source.GetGenericArguments()[0] is { IsGenericType: true } inner
+                && TypedResults.Contains(inner.GetGenericTypeDefinition())
+                && !WithoutCellTable.Contains(method.Name) && !HasErrorSlotConstraint(method))
                 surface.Add(Signature(typeof(ResultExtensions), method), method);
         }
         return surface;
     }
+
+    private static bool HasErrorSlotConstraint(MethodInfo method) =>
+        method.GetGenericArguments().Any(argument => argument.GetGenericParameterConstraints().Contains(typeof(CSharpEssentials.Errors.IError)));
 
     private static string Signature(Type declaringType, MethodInfo method)
     {

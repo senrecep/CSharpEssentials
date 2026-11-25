@@ -186,7 +186,7 @@ public readonly partial struct Result<T, E1> : IUnion, IValueResult, IEquatable<
     /// <param name="right">The second result.</param>
     public static bool operator !=(Result<T, E1> left, Result<T, E1> right) => !left.Equals(right);
 
-    private Error CurrentError() => Tag switch
+    internal Error CurrentError() => Tag switch
     {
         2 => TypedResultLogic.ToError(RawError!, typeof(E1)),
         _ => TypedResultLogic.DefaultError,

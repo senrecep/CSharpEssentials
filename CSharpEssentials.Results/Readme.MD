@@ -464,9 +464,46 @@ Overload resolution picks the overload from the argument types, so a few calls n
 
 None of these synchronous overloads uses `OverloadResolutionPriority`, so they compile the same way on C# 12, 13 and 14. All of them throw `InvalidOperationException` on `default`, and `Map`, `MapError` and `Recover` throw `ArgumentNullException` when the delegate returns `null`.
 
+### Side effects, values, queries and collections
+
+| Member | What it does |
+|---|---|
+| `Tap(Action<T>)`, `TapIf(predicate, Action<T>)` | Runs the action on a success value and returns the result unchanged. |
+| `TapError(Action<Ei>)` | One overload per slot: runs the action when that slot holds the error. Type the lambda parameter, as for `Recover`. |
+| `TapError(Action<Error>)` | Runs the action with any error, converted as by `ToResult`. Only when every slot implements `IError`. |
+| `TryCatch<TOut, TException>(Func<T, TOut>)` | Like `Map`, but an exception of type `TException` becomes an error in a new last slot; any other exception propagates. Give both type arguments. Arity 1 and 2 only. |
+| `Finally<TOut>(Func<Result<..>, TOut>)`, `Finally(Action<Result<..>>)` | Hands the whole result to the delegate, whatever case it holds. |
+| `GetValueOrDefault()`, `GetValueOr(T)` | The success value, or a fallback. They never throw, not even on `default`. |
+| `GetValueOrThrow(string?)` | The success value, or `InvalidOperationException`. |
+| `GetValueOr(Func<Error, T>)` | The success value, or the fallback computed from the error. Only when every slot implements `IError`. |
+| `Select`, `SelectMany` | Query syntax: `Select` is `Map`; `SelectMany` keeps the error set or adds the inner result's slots. |
+| `Result<T, E..>.Combine(first, second, ...)` | 2 to 8 results with the same error set into a tuple. It stops at the first error and does not look at the later results. |
+| `Sequence()`, `Traverse(selector)` | A collection of results into one result of an array. They stop at the first error. |
+| `Partition()` | The success values and the errors (as `Error`) of a collection, in order. |
+
+`Combine`, `Sequence` and `Traverse` behave differently from the `Result<T>` versions, which collect every error. A typed result holds one error, so they return the first one. To collect all errors, convert with `ToResult()` and use the `Result<T>` helpers.
+
+The "any error" members are extensions constrained to `IError` slots, so they do not exist on a result with a slot such as an exception or a plain class (CS1661 or CS1660 for a lambda typed as `Error`). Write the lambda parameter type: `TapError((Error e) => log(e.Code))`. An untyped `e => ...` binds the per-slot overload on `Result<T, E1>` and reports CS0121 on larger arities. On a result with an `Error` slot, a lambda typed as `Error` binds that slot's `TapError` instead.
+
+```csharp
+Result<OrderDto, NotFoundError, ValidationError> order =
+    from found in Find(id)
+    from valid in Validate(found)
+    select valid with { Checked = true };
+
+Result<int, NotFoundError, FormatException> quantity = Find(id).TryCatch<int, FormatException>(o => int.Parse(o.Quantity));
+Result<OrderDto[], NotFoundError> all = ids.Traverse(Find);
+```
+
+Query syntax has one name for both `SelectMany` forms, so it cannot use separate names the way `Bind` and `BindWiden` do. The same-set form has `[OverloadResolutionPriority(1)]`, and the inner result decides which form a query gets:
+
+- The inner result has the same error set: the error set stays the same. On C# 12 both forms fit and the compiler reports CS1940; use `Bind` there.
+- The inner result has other error types: they are added after this result's, as with `BindWiden`.
+- The inner result's errors are a subset of this result's: the adding form is picked and repeats a slot, which reports CS0029 as soon as the result is assigned to the declared type. Use `Bind<TOut>` for that step.
+
 ### Async combinators
 
-`Bind`, `BindWiden`, `Map`, `Ensure`, `FailIf`, `MapError` and `Compensate` have `*Async` forms with the same cells as `Result<T>`: an instance member that awaits a `Task` or `ValueTask` handler, and extensions on `Task<Result<T, E..>>` and `ValueTask<Result<T, E..>>` sources. `Recover` stays synchronous, as it is on `Result<T>`.
+`Bind`, `BindWiden`, `Map`, `Ensure`, `FailIf`, `MapError`, `Compensate`, `Tap`, `TapIf`, `TapError`, `TryCatch`, `Finally` and `Select` have `*Async` forms with the same cells as `Result<T>`: an instance member that awaits a `Task` or `ValueTask` handler, and extensions on `Task<Result<T, E..>>` and `ValueTask<Result<T, E..>>` sources. `Recover`, `Combine` and `SelectMany` stay synchronous, as they are on `Result<T>`.
 
 | Family | Instance handler | `Task` source handler | `ValueTask` source handler |
 |---|---|---|---|
@@ -475,6 +512,14 @@ None of these synchronous overloads uses `OverloadResolutionPriority`, so they c
 | `EnsureAsync`, `FailIfAsync` | `Task`, `ValueTask` (.NET 9+) | sync, `Task` | sync, `Task`, `ValueTask` (.NET 9+) |
 | `MapErrorAsync` | `Task`, `ValueTask` | sync, `Task` | sync, `ValueTask` |
 | `CompensateAsync` | `Task`, `ValueTask` (.NET 9+) | `Task` | `Task`, `ValueTask` (.NET 9+) |
+| `TapAsync`, `TapIfAsync` | `Task`, `ValueTask` (.NET 9+) | sync, `Task` | sync, `ValueTask` |
+| `TapErrorAsync` | `Task`, `ValueTask` (.NET 9+) | `Task` | `Task`, `ValueTask` (.NET 9+) |
+| `TryCatchAsync` | none | sync | sync |
+| `FinallyAsync` (`Func`) | none | sync, `Task` | sync, `ValueTask` (.NET 9+) |
+| `FinallyAsync` (`Action`) | none | sync, `Task` | sync, `Task`, `ValueTask` (.NET 9+) |
+| `SelectAsync` | none | sync, `Task` | sync |
+
+The "any error" `TapErrorAsync` has the same cells as the per-slot one, as extensions; the per-slot extensions sit above it in priority, so an untyped lambda keeps the per-slot overload. `GetValueOrDefaultAsync`, `GetValueOrAsync(T)` and, on `IError` slots, `GetValueOrAsync(Func<Error, T>)` exist on `Task` and `ValueTask` sources. `TraverseAsync` takes a `Task` selector, or a `ValueTask` one on .NET 9+, each with or without a token, and awaits one item at a time. `SequenceAsync` takes a collection of `Task` or `ValueTask` results; when it stops at an error it does not await the rest, and it observes their faults.
 
 ```csharp
 Task<Result<OrderDto, NotFoundError>> FindAsync(Guid id, CancellationToken ct) => ...;
@@ -500,7 +545,9 @@ An untyped `async` lambda fits both the `Task` and the `ValueTask` handler; `[Ov
 | `Value` | `null` |
 | `IsSuccess` / `IsFailure` | `false` / `true` |
 | switch expression without a `null` arm | throws `SwitchExpressionException` |
-| `Match`, `Switch`, `ToResult` and every combinator | throw `InvalidOperationException` |
+| `Match`, `Switch`, `ToResult`, `GetValueOrThrow` and every combinator | throw `InvalidOperationException` |
+| `Finally` | passes the `default` result to the delegate |
+| `GetValueOrDefault`, `GetValueOr(T)` | return the fallback |
 | `IResultBase.Errors`, `FirstError`, `LastError` | an `Unexpected` error with code `Result.Default` |
 | `==` | equal to another `default`, and to nothing else |
 
