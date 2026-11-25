@@ -123,9 +123,9 @@ app.MapGet("/status", GetStatus).RequireAuthorization().AllowAnonymous(); // no 
 }
 ```
 
-- An operation gets the requirement when its endpoint metadata has `IAuthorizeData` (`[Authorize]` on the action, controller or a base class, `.RequireAuthorization()` on the endpoint or its group) and no `IAllowAnonymous` (`[AllowAnonymous]`, `.AllowAnonymous()`). Other operations get none.
+- An operation gets the requirement when its endpoint metadata has `IAuthorizeData` (`[Authorize]` on the action, controller or a base class, any `.RequireAuthorization(...)` overload on the endpoint or its group, including the policy-object and policy-builder ones) and no `IAllowAnonymous` (`[AllowAnonymous]`, `.AllowAnonymous()`). Other operations get none.
 - The requirement is added whatever `IAuthorizeData.AuthenticationSchemes` names. An endpoint with `[Authorize(AuthenticationSchemes = "ApiKey")]` or a cookie scheme is still described as needing the bearer token, so call this only when bearer is the scheme your authorized endpoints accept.
-- `RequireAuthorization(AuthorizationPolicy)`, `RequireAuthorization(policy => ...)` and the `FallbackPolicy` add no `IAuthorizeData`, so those endpoints are not described as secured. Add `[Authorize]` or `.RequireAuthorization()` (with or without a policy name) to them.
+- The `FallbackPolicy` adds no endpoint metadata, so endpoints it alone protects are not described as secured. Add `[Authorize]` or `.RequireAuthorization()` to them.
 - `schemeName` (default `Bearer`), `bearerFormat` (default `JWT`) and `description` (default none) are parameters: `o.AddBearerSecurityScheme("Jwt", "JWT", "Access token from the identity server.")`. A scheme already registered under the same name is replaced; an operation that already requires the scheme is not given a second requirement.
 
 `CSharpEssentials.AspNetCore.Swashbuckle` has no per-operation equivalent: its `AddSwagger` registers the scheme you pass and requires it on every operation.

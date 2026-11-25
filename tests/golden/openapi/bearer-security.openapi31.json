@@ -8,6 +8,7 @@
   },
   "operations": {
     "GET /bearer/anonymous": null,
+    "GET /bearer/anonymous-controller/authorized": null,
     "GET /bearer/controller/anonymous": null,
     "GET /bearer/controller/secure": [
       {
@@ -21,6 +22,16 @@
       }
     ],
     "GET /bearer/plain": null,
+    "GET /bearer/policy": [
+      {
+        "Bearer": []
+      }
+    ],
+    "GET /bearer/policy-object": [
+      {
+        "Bearer": []
+      }
+    ],
     "GET /bearer/secure": [
       {
         "Bearer": []

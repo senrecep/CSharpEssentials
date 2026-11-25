@@ -109,7 +109,7 @@ public sealed class BearerSecurityOpenApiTests
             version,
             [OptionalRouteParameterOpenApiHost.DocumentName],
             configure,
-            controllers: [typeof(BearerSecurityController)],
+            controllers: [typeof(BearerSecurityController), typeof(BearerSecurityAnonymousController)],
             configureServices: static services => services.AddAuthorization(),
             configureApp: MapEndpoints))[OptionalRouteParameterOpenApiHost.DocumentName];
 
@@ -118,6 +118,9 @@ public sealed class BearerSecurityOpenApiTests
         app.MapGet("/bearer/secure", static () => "secure").RequireAuthorization();
         app.MapGet("/bearer/anonymous", static () => "anonymous").RequireAuthorization().AllowAnonymous();
         app.MapGet("/bearer/plain", static () => "plain");
+        app.MapGet("/bearer/policy", static () => "policy").RequireAuthorization(static policy => policy.RequireAuthenticatedUser());
+        app.MapGet("/bearer/policy-object", static () => "policy-object")
+            .RequireAuthorization(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
         RouteGroupBuilder group = app.MapGroup("/bearer/group").RequireAuthorization();
         group.MapGet("/secure", static () => "secure");
         group.MapGet("/anonymous", static () => "anonymous").AllowAnonymous();
@@ -153,4 +156,14 @@ internal sealed class BearerSecurityController : ControllerBase
     [HttpGet("anonymous")]
     [AllowAnonymous]
     public string Anonymous() => "anonymous";
+}
+
+[ApiController]
+[AllowAnonymous]
+[Route("bearer/anonymous-controller")]
+internal sealed class BearerSecurityAnonymousController : ControllerBase
+{
+    [HttpGet("authorized")]
+    [Authorize]
+    public string Authorized() => "authorized";
 }
