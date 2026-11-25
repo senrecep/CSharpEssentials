@@ -75,12 +75,14 @@ A `BadHttpRequestException` keeps its status code but never its message, which c
 
 ```json
 "errors": {
-  "Name": ["'Name' must not be empty.", "'Name' must be at least 3 characters. You entered 0 characters."],
-  "Email": ["'Email' must not be empty."]
+  "name": ["'Name' must not be empty.", "'Name' must be at least 3 characters. You entered 0 characters."],
+  "email": ["'Email' must not be empty."]
 }
 ```
 
-The key is the `field` metadata entry (`ErrorMetadata.FieldKey`) of each validation error. CSharpEssentials.Validation sets it on every error its built-in rules record, and the JSON body mapper, `ConfigureInvalidModelStateResponse()` and `ValidateModelAttribute` set it to the JSON path or model state key. An error with no `field` (a custom `Error` passed to a rule, `AddFailure`, an error you build yourself) is grouped by its code. Keys are written as given: validators give PascalCase paths (`Address.City`), the JSON body mapper gives camelCase JSON paths (`items[1].quantity`). The default stays `List`.
+The key is the `field` metadata entry (`ErrorMetadata.FieldKey`) of each validation error. CSharpEssentials.Validation sets it on every error its built-in rules record, and the JSON body mapper, `ConfigureInvalidModelStateResponse()` and `ValidateModelAttribute` set it to the JSON path or model state key. An error with no `field` (a custom `Error` passed to a rule, `AddFailure`, an error you build yourself) is grouped by its code. Each segment of the path goes through the `PropertyNamingPolicy` of the HTTP JSON options (`Microsoft.AspNetCore.Http.Json.JsonOptions`, camelCase by default) and indexers are kept, so a validator's `Lines[1].Sku` and the JSON body mapper's `items[1].quantity` both come out camelCase: `lines[1].sku`. With no policy the path is written as given. The code fallback is never converted. The default stays `List`.
+
+`ProblemErrorFields.AllErrors` (part of `All` and of `UseLegacyDefaults()`) writes each `Error` with its metadata, so validation errors now carry `"metadata": { "field": "Name" }` where they used to carry `null`. That value is the raw path, without the naming policy. The model state errors of `ValidateModelAttribute` and `ConfigureInvalidModelStateResponse()` get no `field` for the model-level key (`""`), and a JSON path key loses its `$.` prefix.
 
 A JSON request body failure becomes a 400 validation problem with one error per field. `AddEnhancedProblemDetails()` registers the mapper; Minimal APIs throw these failures only with `RouteHandlerOptions.ThrowOnBadRequest = true`.
 

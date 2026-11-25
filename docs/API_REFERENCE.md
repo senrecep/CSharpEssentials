@@ -1444,7 +1444,7 @@ All problem responses (Minimal API, MVC, `GlobalExceptionHandler`, status code p
 | `IncludeSpanIds` | `false` | Writes `spanId` / `parentSpanId` |
 | `Instance` | `ProblemInstanceFormat.Path` | `MethodAndPath` (3.x), `None` |
 | `ErrorFields` | `Codes \| ValidationErrors` | `ProblemErrorFields`: `None`, `Codes`, `ValidationErrors`, `Messages`, `AllErrors`, `All` |
-| `ValidationErrorsFormat` | `List` | `Dictionary` groups descriptions by code, `ByField` by the `field` metadata entry (`ValidationProblemDetails` shape) |
+| `ValidationErrorsFormat` | `List` | `Dictionary` groups descriptions by code, `ByField` by the `field` metadata entry (`ValidationProblemDetails` shape, keys run through the HTTP JSON naming policy) |
 | `TypeUriResolver` | `ProblemTypeUris.Rfc9110` | `Func<int, string?>`; `ProblemTypeUris.Rfc7231` restores 3.x |
 | `ExposeExceptionDetails` | `false` | Writes an `exception` extension; enable only in Development |
 | `UseLegacyDefaults()` | | Restores the 3.x output: `TraceparentHeader`, request id, user and span ids on, `MethodAndPath`, `ProblemErrorFields.All`, `Rfc7231` type URIs (`ValidationErrorsFormat` and `ExposeExceptionDetails` are untouched) |

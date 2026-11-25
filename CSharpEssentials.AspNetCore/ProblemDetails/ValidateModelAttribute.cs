@@ -16,7 +16,7 @@ public sealed class ValidateModelAttribute : ActionFilterAttribute
             .SelectMany(state => state.Value!.Errors.Select(x => Error.Validation(
                 $"validation.{state.Key}",
                 x.ErrorMessage,
-                new ErrorMetadata(ErrorMetadata.FieldKey, state.Key))))];
+                string.IsNullOrEmpty(state.Key) ? null : new ErrorMetadata(ErrorMetadata.FieldKey, BindingExceptionProblemMapper.ToKey(state.Key)))))];
         context.Result = errors.ToActionResult(context.HttpContext);
     }
 }

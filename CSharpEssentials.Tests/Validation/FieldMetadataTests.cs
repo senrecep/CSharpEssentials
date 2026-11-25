@@ -13,6 +13,10 @@ public class FieldMetadataTests
 
     private sealed record Line(string? Sku);
 
+    private sealed record ShippingLine(Address? Address);
+
+    private sealed record Shipment(IEnumerable<ShippingLine>? Lines);
+
     private sealed record Order(string? Name, Address? Address, IEnumerable<Line>? Lines, ValidationOrderStatus Status);
 
     private sealed class AddressValidator : Validator<Address>
@@ -81,6 +85,31 @@ public class FieldMetadataTests
 
         result.FirstError.Code.Should().Be("Address.City.NotEmpty");
         result.FirstError.Metadata!.GetField().Should().Be("Address.City");
+    }
+
+    [Fact]
+    public async Task ForEach_WithSetValidatorAsync_Should_PrefixIndexedNestedField()
+    {
+        Result<Shipment> result = await Validator.ValidateAsync(
+            new Shipment([new ShippingLine(new Address(""))]),
+            async (m, rules, ct) => await rules.ForEachAsync(
+                () => m.Lines,
+                async (line, lineRules, lineCt) => await lineRules.For(() => line.Address).SetValidatorAsync(new AddressValidator(), lineCt),
+                ct));
+
+        result.FirstError.Code.Should().Be("Lines[0].Address.City.NotEmpty");
+        result.FirstError.Metadata!.GetField().Should().Be("Lines[0].Address.City");
+    }
+
+    [Fact]
+    public async Task BuiltInValidatorError_Should_NotEqualErrorWithoutField_And_EqualErrorWithSameField()
+    {
+        Result<Order> result = await Validator.ValidateAsync(new Order("", null, null, ValidationOrderStatus.Pending), (m, rules) =>
+            rules.For(() => m.Name).NotEmpty());
+        Error recorded = result.FirstError;
+
+        recorded.Should().NotBe(Error.Validation(recorded.Code, recorded.Description));
+        recorded.Should().Be(Error.Validation(recorded.Code, recorded.Description, new ErrorMetadata(ErrorMetadata.FieldKey, "Name")));
     }
 
     [Fact]

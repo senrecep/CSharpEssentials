@@ -1,6 +1,10 @@
+using System.Text;
+using System.Text.Json;
 using CSharpEssentials.Errors;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using HttpJsonOptions = Microsoft.AspNetCore.Http.Json.JsonOptions;
 
 namespace CSharpEssentials.AspNetCore;
 
@@ -19,14 +23,23 @@ internal static class EnhancedProblemDetailsFactory
             extensions,
             statusCode,
             services?.GetService<IErrorStatusCodeMapper>() ?? DefaultErrorStatusCodeMapper.Instance,
-            ProblemDetailsEnrichment.GetOptions(services));
+            ProblemDetailsEnrichment.GetOptions(services),
+            GetFieldNamingPolicy(services));
+
+    /// <summary>
+    /// The naming policy of the <see cref="ValidationErrorsFormat.ByField"/> keys: the <c>PropertyNamingPolicy</c> of the
+    /// HTTP JSON options, which also write the problem body when an <see cref="IProblemDetailsService"/> is registered.
+    /// </summary>
+    internal static JsonNamingPolicy? GetFieldNamingPolicy(IServiceProvider? services) =>
+        services?.GetService<IOptions<HttpJsonOptions>>()?.Value.SerializerOptions.PropertyNamingPolicy;
 
     public static EnhancedProblemDetails Create(
         IReadOnlyList<Error> errors,
         ErrorMetadata? extensions,
         int? statusCode,
         IErrorStatusCodeMapper mapper,
-        EnhancedProblemDetailsOptions options)
+        EnhancedProblemDetailsOptions options,
+        JsonNamingPolicy? fieldNamingPolicy = null)
     {
         Error primary = mapper.SelectPrimaryError(errors);
         int status = statusCode ?? mapper.GetStatusCode(primary);
@@ -57,7 +70,7 @@ internal static class EnhancedProblemDetailsFactory
         if ((fields & ProblemErrorFields.AllErrors) != 0)
             problemDetails.Extensions[ErrorsKey] = problemDetails.Errors;
         else if ((fields & ProblemErrorFields.ValidationErrors) != 0)
-            AddValidationErrors(problemDetails, errors, options.ValidationErrorsFormat);
+            AddValidationErrors(problemDetails, errors, options.ValidationErrorsFormat, fieldNamingPolicy);
 
         return problemDetails;
     }
@@ -83,7 +96,7 @@ internal static class EnhancedProblemDetailsFactory
     private static bool IsExceptionKey(string key) =>
         key is "exception" or "exceptionType" or "exceptionStackTrace" or "exceptionMessage" or "innerException" or "stackTrace";
 
-    private static void AddValidationErrors(EnhancedProblemDetails problemDetails, IReadOnlyList<Error> errors, ValidationErrorsFormat format)
+    private static void AddValidationErrors(EnhancedProblemDetails problemDetails, IReadOnlyList<Error> errors, ValidationErrorsFormat format, JsonNamingPolicy? fieldNamingPolicy)
     {
         Error[] validationErrors = [.. errors.Where(e => e.Type == ErrorType.Validation)];
         if (validationErrors.Length == 0)
@@ -92,9 +105,33 @@ internal static class EnhancedProblemDetailsFactory
         problemDetails.Extensions[ErrorsKey] = format switch
         {
             ValidationErrorsFormat.Dictionary => GroupDescriptions(validationErrors, static e => e.Code),
-            ValidationErrorsFormat.ByField => GroupDescriptions(validationErrors, static e => e.Metadata?.GetField() ?? e.Code),
+            ValidationErrorsFormat.ByField => GroupDescriptions(validationErrors, e => e.Metadata?.GetField() is { } field ? ConvertPath(field, fieldNamingPolicy) : e.Code),
             _ => validationErrors.Select(e => new ProblemValidationError(e.Code, e.Description)).ToList(),
         };
+    }
+
+    /// <summary>
+    /// Applies the naming policy to the name part of each dotted segment and keeps indexers:
+    /// <c>Lines[1].Sku</c> becomes <c>lines[1].sku</c> under camelCase.
+    /// </summary>
+    internal static string ConvertPath(string path, JsonNamingPolicy? policy)
+    {
+        if (policy is null)
+            return path;
+        var builder = new StringBuilder(path.Length);
+        string[] segments = path.Split('.');
+        for (int i = 0; i < segments.Length; i++)
+        {
+            string segment = segments[i];
+            if (i > 0)
+                builder.Append('.');
+            int indexer = segment.IndexOf('[', StringComparison.Ordinal);
+            string name = indexer < 0 ? segment : segment[..indexer];
+            builder.Append(name.Length == 0 ? name : policy.ConvertName(name));
+            if (indexer >= 0)
+                builder.Append(segment, indexer, segment.Length - indexer);
+        }
+        return builder.ToString();
     }
 
     private static Dictionary<string, string[]> GroupDescriptions(Error[] errors, Func<Error, string> key) =>

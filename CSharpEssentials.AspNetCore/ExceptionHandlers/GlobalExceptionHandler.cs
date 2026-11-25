@@ -32,7 +32,8 @@ public sealed partial class GlobalExceptionHandler(
         ProblemDetails problemDetails = CreateProblemDetails(
             problem,
             services?.GetService<IErrorStatusCodeMapper>(),
-            services?.GetService<IOptions<EnhancedProblemDetailsOptions>>()?.Value);
+            services?.GetService<IOptions<EnhancedProblemDetailsOptions>>()?.Value,
+            services);
         int statusCode = problemDetails.Status ?? StatusCodes.Status500InternalServerError;
 
         if (statusCode >= StatusCodes.Status500InternalServerError)
@@ -71,7 +72,8 @@ public sealed partial class GlobalExceptionHandler(
     private static ProblemDetails CreateProblemDetails(
         ExceptionProblem problem,
         IErrorStatusCodeMapper? statusCodeMapper,
-        EnhancedProblemDetailsOptions? options)
+        EnhancedProblemDetailsOptions? options,
+        IServiceProvider? services)
     {
         if (problem.Errors is { Count: > 0 } errors)
         {
@@ -80,7 +82,8 @@ public sealed partial class GlobalExceptionHandler(
                 extensions: null,
                 problem.StatusCode,
                 statusCodeMapper ?? DefaultErrorStatusCodeMapper.Instance,
-                options ?? new EnhancedProblemDetailsOptions());
+                options ?? new EnhancedProblemDetailsOptions(),
+                EnhancedProblemDetailsFactory.GetFieldNamingPolicy(services));
             if (problem.Title is not null)
                 fromErrors.Title = problem.Title;
             if (problem.Detail is not null)

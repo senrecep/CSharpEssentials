@@ -460,6 +460,8 @@ rules.For(() => model.Quantity).GreaterThan(0).Even();
 
 `AddError(code, message)` records an `ErrorType.Validation` error and stores the property path under the `field` metadata key (`ErrorMetadata.FieldKey`), the same as every built-in validator. `AddError(Error)` records the error as given, without a `field` entry, so an error you compare by equality stays equal.
 
+Breaking change in 9.0: `Error` equality compares metadata, so an error a built-in rule or `AddError(code, message)` records no longer equals `Error.Validation("Name.NotEmpty", "...")` built without metadata. Tests and code that compare validator errors with `Be`, `Contain`, `Distinct`, a `HashSet` or a dictionary key should compare `Code` (and `Description`) instead, or add the same `field` metadata to the expected error.
+
 `RuleContext<T>` also accepts failures that belong to no single property, and a pre-evaluated value:
 
 ```csharp
