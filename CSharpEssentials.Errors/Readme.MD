@@ -253,6 +253,49 @@ Equality:
 
 Predefined instances share one `ErrorMetadata` dictionary, which is mutable. Do not add metadata to a shared instance; create a new error with its own metadata instead.
 
+### Moving a catalog to typed kinds
+
+A catalog of `Error` fields does not feed a typed result. `Error` has no conversion to a kind, because its kind is only known at run time, so returning `UserErrors.AlreadyExists` from the [catalog above](#domain-specific-error-hierarchies) into a `ConflictError` slot of `Result<T, E1..E3>` reports CS0029. Rewrite each catalog once:
+
+1. Change the field or return type from `Error` to the kind.
+2. Construct the kind instead of calling the `Error` factory.
+3. Add a `Codes` class with the codes as constants, so callers can match on them.
+
+```csharp
+// Before
+public static class UserErrors
+{
+    public static readonly Error AlreadyExists =
+        Error.Conflict("User.AlreadyExists", "A user with that email already exists.");
+
+    public static Error InvalidAge(int age) =>
+        Error.Validation("User.InvalidAge", $"Age {age} is not allowed; must be 18 or older.");
+}
+
+// After
+public static class UserErrors
+{
+    public static class Codes
+    {
+        public const string AlreadyExists = "User.AlreadyExists";
+        public const string InvalidAge = "User.InvalidAge";
+    }
+
+    public static readonly ConflictError AlreadyExists =
+        new(Codes.AlreadyExists, "A user with that email already exists.");
+
+    public static ValidationError InvalidAge(int age) =>
+        new(Codes.InvalidAge, $"Age {age} is not allowed; must be 18 or older.");
+}
+```
+
+The codes, descriptions and HTTP statuses stay the same. Code written for `Result<T>` needs `ToError()` where it used a catalog entry as an `Error`: a kind has no implicit conversion to `Error` or `Result<T>` (CS0029), and comparing a kind with an `Error` through `==` does not compile (CS0019). Compare codes instead.
+
+```csharp
+Result<User> legacy = UserErrors.AlreadyExists.ToError();
+Result<User, ConflictError> typed = UserErrors.AlreadyExists;
+```
+
 ## Upgrading to 8.0
 
 `ErrorMetadata.CreateWithException` and `AddException` no longer store the `Exception` object under `exception`. They store a nested `ErrorMetadata` with `exceptionType`, `exceptionStackTrace`, `exceptionMessage` and `innerException`, because System.Text.Json cannot serialize a thrown exception. Code that cast `metadata["exception"]` to `Exception` should read the nested keys instead, or keep the exception in its own variable.

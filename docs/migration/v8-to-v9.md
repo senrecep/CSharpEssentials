@@ -59,3 +59,9 @@ A failed built-in rule records `Error.Validation("Name.NotEmpty", "...", new Err
 - `Error` equality and hashing compare metadata. An expected `Error.Validation("Name.NotEmpty", "...")` with no metadata is no longer equal to the recorded error. Compare `Code` and `Description`, or build the expected error with the same `field` metadata.
 - With `ProblemErrorFields.AllErrors` (part of `All` and `UseLegacyDefaults()`) the `errors` array writes `"metadata": { "field": "Name" }` for these errors where 8.x wrote `"metadata": null`.
 - `ValidationErrorsFormat.ByField` is new and opt-in. It groups `errors` by `field`, run through the HTTP JSON naming policy.
+
+## New: typed results (`CSharpEssentials.Results`, `CSharpEssentials.Errors`)
+
+`Result<T, E1>`, `Result<T, E1, E2>` and `Result<T, E1, E2, E3>` are new and opt-in; nothing above depends on them. Exhaustive matching on them needs C# 15: a net11.0 project has it by default, and a project on an older target framework needs the .NET 11 SDK and `<LangVersion>15</LangVersion>`. See [Typed errors](../../CSharpEssentials.Results/Readme.MD#typed-errors-resultt-e1-resultt-e1-e2-resultt-e1-e2-e3).
+
+An existing catalog of `Error` fields does not convert into a typed slot. [Moving a catalog to typed kinds](../../CSharpEssentials.Errors/Readme.MD#moving-a-catalog-to-typed-kinds) shows the rewrite.

@@ -366,25 +366,11 @@ await GetResultAsync().TapIfAsync(v => v > 0, v => Enqueue(v));
 
 Matching on these types needs the C# 15 compiler. A net11.0 project gets C# 15 by default with the .NET 11 SDK. A project that targets net10.0, net9.0, net8.0 or netstandard2.1 must build with the .NET 11 SDK and set `<LangVersion>15</LangVersion>`; without it a type pattern over the result fails with CS9327 (C# 14), CS9260 (C# 13) or CS8400 (C# 8). Implicit returns, `Match`, `Switch`, `TryGetValue` and `ToResult` work at any language version.
 
-A typed result holds either the success value or exactly one error, and the error type is part of the signature. It is a `readonly struct` with one value field, one error field and a tag, so `Result<int, NotFoundError, ConflictError>` is 16 bytes and the success path allocates nothing. Up to three error types are supported; use `Result<T>` when a handler can fail in more ways.
+A typed result holds either the success value or exactly one error, and the error type is part of the signature. It is a `readonly struct` with one value field, one error field and a tag, so `Result<int, NotFoundError, ConflictError>` is 16 bytes and the success path allocates nothing. Up to three error types are supported.
+
+With the `UserErrors` catalog from [Typed error kinds](/libraries/errors#typed-error-kinds), a handler returns values and errors directly:
 
 ```csharp
-public static class UserErrors
-{
-    public static class Codes
-    {
-        public const string NotFound = "User.NotFound";
-        public const string Deleted = "User.Deleted";
-        public const string Locked = "User.Locked";
-    }
-
-    public static readonly NotFoundError NotFound = new(Codes.NotFound, "User not found.");
-    public static readonly NotFoundError Deleted = new(Codes.Deleted, "User was deleted.");
-
-    // An error that callers must see as its own case gets its own type.
-    public sealed record Locked(Guid Id) : ConflictError(Codes.Locked, "User is locked.");
-}
-
 public Result<UserDto, NotFoundError, UserErrors.Locked> Get(Guid id)
 {
     if (deleted) return UserErrors.Deleted;
@@ -394,7 +380,20 @@ public Result<UserDto, NotFoundError, UserErrors.Locked> Get(Guid id)
 }
 ```
 
-Values and errors convert implicitly, a predefined `static readonly` error keeps its instance, and a derived error (`UserErrors.Locked`) goes to the slot of its base kind when there is no slot of its own. An error type that is not in the set does not compile (CS0029), and two slots of the same type make every conversion ambiguous (CS0457). The error types come from [CSharpEssentials.Errors](/libraries/errors#typed-error-kinds).
+Values and errors convert implicitly, a predefined `static readonly` error keeps its instance, and a derived error (`UserErrors.Locked`) goes to the slot of its base kind when there is no slot of its own. An error type that is not in the set does not compile (CS0029), and two slots of the same type make every conversion ambiguous (CS0457). A nested error type is a type, not a value, so `return UserErrors.Locked;` does not compile (CS0119); create an instance. A catalog of `Error` fields does not convert into a typed slot either; [Moving a catalog to typed kinds](/libraries/errors#moving-a-catalog-to-typed-kinds) shows the rewrite.
+
+### Choosing between `Result<T>` and `Result<T, E..>`
+
+Use a typed result when the caller acts differently on each failure and the failures form a short, closed set: a lookup that can be not found or locked, a command that can conflict. The compiler then checks that every caller handles every case.
+
+Keep `Result<T>` when:
+
+- a failure carries several errors at once, such as validation or `Combine` over independent checks;
+- a handler can fail in more than three ways, or the set of errors is open;
+- the caller only forwards the errors, for example to a problem details response;
+- the consuming projects cannot use C# 15, since matching is the reason to pick the typed result.
+
+The two models work together. `ToResult()` turns a typed result into a `Result<T>`, and `ToError()` turns a typed error into an `Error`, so a typed handler can sit behind code written for `Result<T>`.
 
 ### Matching
 
@@ -410,8 +409,21 @@ IResult response = Get(id) switch
 };
 ```
 
-- A `static readonly` field is not a pattern (CS0150), so `case UserErrors.NotFound` does not compile. Tell errors of the same type apart with a constant `Code` property pattern, and keep a bare kind arm after it for exhaustiveness.
-- A switch statement gets no exhaustiveness check. One that returns from every case still reports CS0161 until you add `case null:`. In statement code prefer `Match` or `Switch`:
+The rules for the arms:
+
+- A `static readonly` field is not a pattern (CS0150), so `case UserErrors.NotFound` does not compile. Tell errors of the same type apart with a constant `Code` property pattern, which is why each catalog keeps a `Codes` class.
+- Property arms alone do not cover a slot. Keep a bare kind arm after them, or the compiler reports CS8509.
+- A `when` clause never counts toward exhaustiveness. `NotFoundError nf when nf == UserErrors.NotFound` as the only arm of that slot reports CS8846.
+- Put derived arms before the base kind. A base arm before a derived one makes the derived arm unreachable (CS8510), and a derived arm alone leaves the base slot open (CS8509).
+- Every slot type and the success type must be non-nullable. `Result<UserDto?, NotFoundError>` reports CS8714, and a switch over it then needs a `null` arm (CS8655). A nullable wrapper such as `Result<UserDto, NotFoundError>?` needs the `null` arm too (CS8655).
+- An `Error` slot is allowed but cannot be matched exhaustively: arms on `Error { Type: .. }` report CS8524 even when every `ErrorType` member has one, because an enum can hold any number. Match an `Error` slot with a bare `Error` arm, or use the typed kinds.
+
+Exhaustiveness is checked only for switch expressions:
+
+- A switch statement gets no exhaustiveness check. One that leaves out a case compiles without a warning, and one that returns from every case still reports CS0161 until you add `case null:`.
+- A `void` switch statement and an `if (r is A) .. else if ..` chain skip a missing case, and `default`, without a warning.
+
+In statement code prefer `Match` or `Switch`:
 
 ```csharp
 int status = Get(id).Match(
@@ -558,11 +570,13 @@ Create a typed result from a value or an error. Uninitialized fields, `new Resul
 
 ### Equality
 
-Two typed results are equal when they hold the same case: the same slot, and a value equal by `EqualityComparer<T>.Default` or an error equal by `Equals`. The same error instance in two different slots is not equal. `==`, `!=`, `Equals` and `GetHashCode` all follow this rule. Error kinds are records, so two errors with the same code, description and metadata are equal.
+Two typed results are equal when they hold the same case: the same slot, and a value equal by `EqualityComparer<T>.Default` or an error equal by `Equals`. The same error instance in two different slots is not equal. `==`, `!=`, `Equals` and `GetHashCode` all follow this rule. Error kinds are records, so two errors with the same code, description and metadata are equal. The limits of error equality, across kinds and after a JSON round trip, are in [Typed error kinds](/libraries/errors#typed-error-kinds).
+
+A typed result is a struct of three fields. Like any such struct, it can tear when one thread writes a shared field while another reads it: the reader can see the tag of one result and the error of another. Do not share a mutable field of this type between threads without a lock.
 
 ### Struct error types
 
-Error types may be structs. A struct error is boxed when it is stored, because all slots share one `object` field. `default` of a struct error type is a valid error with whatever its fields default to, often a `null` code; the bridge below turns an `IError` without a code into an `Unexpected` error instead of throwing.
+Error types may be structs. A struct error is boxed when it is stored, because all slots share one `object` field. `default` of a struct error type is a valid error with whatever its fields default to, often a `null` code; the bridge below turns an `IError` without a code into an `Unexpected` error instead of throwing. Prefer the class kinds; the [Errors Readme](/libraries/errors#typed-error-kinds) shows a struct error with `[ErrorKind]`.
 
 ### JSON
 
@@ -594,7 +608,9 @@ Without the registration, a Native AOT app throws `NotSupportedException` with t
 
 ### HTTP responses
 
-`CSharpEssentials.AspNetCore` turns a typed result into an HTTP response with `ToHttpResult()`, `ToOk()`, `ToCreated(...)` or `ToNoContent()`, and lists one problem response per error slot in the OpenAPI document. See [Typed results](/libraries/aspnetcore#typed-results). Do not return the result from a handler as it is: its error would go out as a 200.
+`CSharpEssentials.AspNetCore` turns a typed result into an HTTP response with `ToHttpResult()`, `ToOk()`, `ToCreated(...)` or `ToNoContent()`, and lists one problem response per error slot in the OpenAPI document. See [Typed results](/libraries/aspnetcore#typed-results).
+
+Do not return the result from a handler as it is. Without a guard its error would go out as a 200 with the error in the body. `AddEnhancedProblemDetails` registers a converter that throws before anything is written, so the request ends as a 500 instead (see [Forgetting `ToHttpResult()`](/libraries/aspnetcore#forgetting-tohttpresult)), and the `CSharpEssentials.Endpoints` analyzer reports the mistake at build time as [CSE1013](/libraries/endpoints#diagnostics).
 
 ### Converting to `Result<T>`
 
@@ -605,7 +621,7 @@ Without the registration, a Native AOT app throws `NotSupportedException` with t
 - An `Exception` becomes `Error.Exception(exception)`.
 - Anything else becomes an `Unexpected` error whose code is the name of the slot type.
 
-`IResultBase.Errors` and the related members never throw, for any slot type. The typed results do not plug into the Mediator failure conversion: when a handler that returns a typed result throws, `ExceptionHandlingBehavior` lets the original exception through unchanged.
+`IResultBase.Errors` and the related members never throw, for any slot type. The typed results do not plug into the Mediator failure conversion: when a handler that returns a typed result throws, `ExceptionHandlingBehavior` lets the original exception through unchanged. The other behaviors are listed in the Mediator [Typed responses](/libraries/mediator#typed-responses) section.
 
 ### Diagnostics
 
