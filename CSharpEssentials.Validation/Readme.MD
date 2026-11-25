@@ -75,7 +75,7 @@ Result<CreateUserCommand> asyncResult = await Validator.ValidateAsync(command, a
 
 ## Error codes and fields
 
-A failed rule records an `Error` of type `Validation` with the code `{path}.{Rule}` (`Name.NotEmpty`, `Address.City.NotEmpty`, `Lines[1].Sku.NotEmpty`) and the property path in its metadata under `field` (`ErrorMetadata.FieldKey`): `Name`, `Address.City`, `Lines[1].Sku`. Nested validators prefix the path. Read it with `error.Metadata?.GetField()`, or from a typed `ValidationError` built from the error with `Field`. The AspNetCore problem details group `errors` by it with `ValidationErrorsFormat.ByField`. Errors passed in as `Error` values (`NotEmpty(error)`, `AddError(error)`, `AddFailure`) are kept as given and carry no `field`.
+A failed rule records an `Error` of type `Validation` with the code `{path}.{Rule}` (`Name.NotEmpty`, `Address.City.NotEmpty`, `Lines[1].Sku.NotEmpty`) and the property path in its metadata under `field` (`ErrorMetadata.FieldKey`): `Name`, `Address.City`, `Lines[1].Sku`. Nested validators prefix the path. Read it with `error.Metadata?.GetField()`, or from a typed `ValidationError` built from the error with `Field`. The AspNetCore problem details group `errors` by it with `ValidationErrorsFormat.ByField`. Errors passed in as `Error` values (`NotEmpty(error)`, `AddError(error)`, `AddFailure`) are kept as given and carry no `field`, except inside a nested validator (`SetValidator`, `SetValidatorAsync`), which writes the parent property path as `field` on every child error.
 
 ## Built-in validators
 

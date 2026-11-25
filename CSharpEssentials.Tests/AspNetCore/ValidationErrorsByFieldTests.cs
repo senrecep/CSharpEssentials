@@ -21,7 +21,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using HttpJsonOptions = Microsoft.AspNetCore.Http.Json.JsonOptions;
+using MvcJsonOptions = Microsoft.AspNetCore.Mvc.JsonOptions;
 
 namespace CSharpEssentials.Tests.AspNetCore;
 
@@ -65,7 +65,7 @@ public class ValidationErrorsByFieldTests
     private static Microsoft.AspNetCore.Mvc.ProblemDetails Problem(
         Error[] errors,
         Action<EnhancedProblemDetailsOptions> configure,
-        Action<HttpJsonOptions>? json = null)
+        Action<MvcJsonOptions>? json = null)
     {
         ServiceCollection collection = new();
         if (json is not null)
@@ -95,7 +95,7 @@ public class ValidationErrorsByFieldTests
         var problem = Problem(
             [FieldError("Lines[1].Sku.NotEmpty", "Empty.", "Lines[1].Sku")],
             o => o.ValidationErrorsFormat = ValidationErrorsFormat.ByField,
-            json => json.SerializerOptions.PropertyNamingPolicy = null);
+            json => json.JsonSerializerOptions.PropertyNamingPolicy = null);
 
         problem.Extensions["errors"].Should().BeAssignableTo<Dictionary<string, string[]>>()
             .Which.Keys.Should().Equal("Lines[1].Sku");
@@ -111,7 +111,7 @@ public class ValidationErrorsByFieldTests
         var problem = Problem(
             [FieldError("Code", "Invalid.", field)],
             o => o.ValidationErrorsFormat = ValidationErrorsFormat.ByField,
-            json => json.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower);
+            json => json.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower);
 
         problem.Extensions["errors"].Should().BeAssignableTo<Dictionary<string, string[]>>()
             .Which.Keys.Should().Equal(expected);

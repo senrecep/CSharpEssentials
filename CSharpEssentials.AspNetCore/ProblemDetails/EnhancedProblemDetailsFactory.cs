@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using HttpJsonOptions = Microsoft.AspNetCore.Http.Json.JsonOptions;
+using MvcJsonOptions = Microsoft.AspNetCore.Mvc.JsonOptions;
 
 namespace CSharpEssentials.AspNetCore;
 
@@ -18,13 +19,32 @@ internal static class EnhancedProblemDetailsFactory
         ErrorMetadata? extensions,
         int? statusCode,
         IServiceProvider? services) =>
+        Create(errors, extensions, statusCode, services, GetFieldNamingPolicy(services));
+
+    /// <summary>
+    /// Same as <see cref="Create(IReadOnlyList{Error}, ErrorMetadata?, int?, IServiceProvider?)"/> for a response
+    /// written by MVC: the <see cref="ValidationErrorsFormat.ByField"/> keys follow the MVC JSON options.
+    /// </summary>
+    public static EnhancedProblemDetails CreateForMvc(
+        IReadOnlyList<Error> errors,
+        ErrorMetadata? extensions,
+        int? statusCode,
+        IServiceProvider? services) =>
+        Create(errors, extensions, statusCode, services, GetMvcFieldNamingPolicy(services));
+
+    private static EnhancedProblemDetails Create(
+        IReadOnlyList<Error> errors,
+        ErrorMetadata? extensions,
+        int? statusCode,
+        IServiceProvider? services,
+        JsonNamingPolicy? fieldNamingPolicy) =>
         Create(
             errors,
             extensions,
             statusCode,
             services?.GetService<IErrorStatusCodeMapper>() ?? DefaultErrorStatusCodeMapper.Instance,
             ProblemDetailsEnrichment.GetOptions(services),
-            GetFieldNamingPolicy(services));
+            fieldNamingPolicy);
 
     /// <summary>
     /// The naming policy of the <see cref="ValidationErrorsFormat.ByField"/> keys: the <c>PropertyNamingPolicy</c> of the
@@ -32,6 +52,12 @@ internal static class EnhancedProblemDetailsFactory
     /// </summary>
     internal static JsonNamingPolicy? GetFieldNamingPolicy(IServiceProvider? services) =>
         services?.GetService<IOptions<HttpJsonOptions>>()?.Value.SerializerOptions.PropertyNamingPolicy;
+
+    /// <summary>
+    /// The <c>PropertyNamingPolicy</c> of the MVC JSON options, which write controller responses.
+    /// </summary>
+    private static JsonNamingPolicy? GetMvcFieldNamingPolicy(IServiceProvider? services) =>
+        services?.GetService<IOptions<MvcJsonOptions>>()?.Value.JsonSerializerOptions.PropertyNamingPolicy;
 
     public static EnhancedProblemDetails Create(
         IReadOnlyList<Error> errors,

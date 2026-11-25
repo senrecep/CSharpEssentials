@@ -23,7 +23,7 @@ public sealed class EnhancedProblemObjectResult : ObjectResult
         _statusCode = statusCode;
 
         EnhancedProblemDetails preview =
-            EnhancedProblemDetailsFactory.Create(errors, extensions, statusCode, httpContext?.RequestServices);
+            EnhancedProblemDetailsFactory.CreateForMvc(errors, extensions, statusCode, httpContext?.RequestServices);
         if (httpContext is not null)
             ProblemDetailsEnrichment.ApplyDefaults(new ProblemDetailsContext { HttpContext = httpContext, ProblemDetails = preview });
         Value = preview;
@@ -36,7 +36,7 @@ public sealed class EnhancedProblemObjectResult : ObjectResult
         ArgumentNullException.ThrowIfNull(context);
         HttpContext httpContext = context.HttpContext;
         EnhancedProblemDetails problemDetails =
-            EnhancedProblemDetailsFactory.Create(_errors, _extensions, _statusCode, httpContext.RequestServices);
+            EnhancedProblemDetailsFactory.CreateForMvc(_errors, _extensions, _statusCode, httpContext.RequestServices);
         Value = problemDetails;
         StatusCode = problemDetails.Status;
         httpContext.Response.StatusCode = problemDetails.Status ?? StatusCodes.Status500InternalServerError;

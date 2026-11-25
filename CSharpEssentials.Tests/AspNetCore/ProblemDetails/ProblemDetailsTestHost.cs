@@ -47,6 +47,12 @@ internal static class ProblemScenarios
             Error.Validation("name.required", "Name is too short"),
             Error.Validation("email.invalid", "Email is invalid"),
         ],
+        "fields" =>
+        [
+            Error.Validation("Lines[1].SkuCode.NotEmpty", "Sku is required", new ErrorMetadata(ErrorMetadata.FieldKey, "Lines[1].SkuCode")),
+            Error.Validation("Lines[1].SkuCode.MaxLength", "Sku is too long", new ErrorMetadata(ErrorMetadata.FieldKey, "Lines[1].SkuCode")),
+            Error.Validation("email.invalid", "Email is invalid"),
+        ],
         "notfound" => [Error.NotFound("user.notFound", "User not found")],
         "secret" => [Error.Exception(new InvalidOperationException(SecretMessage))],
         "unauthorized" => [Error.Failure("auth.unauthorized", "Login required")],
