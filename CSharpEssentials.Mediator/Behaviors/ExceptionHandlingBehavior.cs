@@ -9,8 +9,8 @@ namespace CSharpEssentials.Mediator;
 /// Pipeline behavior that catches unhandled handler exceptions and turns them
 /// into <see cref="Result"/> or <see cref="Result{T}"/> failures.
 /// <para>
-/// When <typeparamref name="TResponse"/> cannot carry errors (a plain DTO, for example),
-/// the behavior only calls the next step, so the exception propagates unchanged and nothing extra runs.
+/// When <typeparamref name="TResponse"/> is any other type (a plain DTO or a typed <c>Result&lt;T, E1..E3&gt;</c>, for example),
+/// the behavior only calls the next step, so the original exception propagates unchanged and nothing extra runs.
 /// <see cref="OperationCanceledException"/> always propagates, whatever
 /// <typeparamref name="TResponse"/> is.
 /// </para>

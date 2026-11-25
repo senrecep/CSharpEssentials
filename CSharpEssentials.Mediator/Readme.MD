@@ -394,9 +394,32 @@ public record GetUserQuery(Guid Id) : IQuery<Result<User>>, IRequestResponseLogg
 
 ### Exception handling behavior
 
-When a handler that returns `Result` or `Result<T>` throws, `ExceptionHandlingBehavior` returns `Result.Failure(Error.Exception(ex))` (`ErrorType.Unexpected`, the exception type name as code, the message as description) instead of letting the exception escape. No marker interface is needed, but the behavior has to be registered: `AddMediatorBehaviors()` or `AddMediatorExceptionHandlingBehavior()`. `OperationCanceledException` always propagates. Handlers with any other response type pass through untouched.
+When a handler that returns `Result` or `Result<T>` throws, `ExceptionHandlingBehavior` returns `Result.Failure(Error.Exception(ex))` (`ErrorType.Unexpected`, the exception type name as code, the message as description) instead of letting the exception escape. No marker interface is needed, but the behavior has to be registered: `AddMediatorBehaviors()` or `AddMediatorExceptionHandlingBehavior()`. `OperationCanceledException` always propagates. Handlers with any other response type, typed `Result<T, E1..E3>` included, pass through untouched.
 
 Behaviors placed after it in the pipeline (caching, transaction, lock) run inside it, so their exceptions are converted too. Validation and logging run outside it.
+
+### Typed responses
+
+A handler can return a typed `Result<T, E1>`, `Result<T, E1, E2>` or `Result<T, E1, E2, E3>` from `CSharpEssentials.Results`. The behaviors treat it like this:
+
+| Behavior | With a typed response |
+|----------|-----------------------|
+| `ExceptionHandlingBehavior` | Does nothing. A handler exception propagates as the original exception, with its stack trace. A typed result has no slot the behavior could put the exception in |
+| `ValidationBehavior` | A failed validation throws `EnhancedValidationException` with the validation errors, and the handler does not run |
+| `CachingBehavior` | A failed typed result is not cached unless `CacheFailures` is `true`. A cached result comes back in the same slot with the same error type |
+| `IdempotencyBehavior` | Stores and replays the typed result in the same slot, failures too while `StoreFailures` is on (the default). A rejection (missing or invalid key, no scope, in flight, key reused) throws `EnhancedValidationException` with the error code from the table above |
+
+Caching and idempotency store the result as JSON through its envelope converter (`{"case":"<slot>","value":…}`), so every slot type must round-trip through `System.Text.Json`. An exception slot does not. `IdempotencyBehavior` logs the failed write and the key stays in flight until `Lease` expires. `CachingBehavior` with `CacheFailures` on throws `NotSupportedException` to the caller. If a response has an exception slot, set `StoreFailures = false` and leave `CacheFailures` off.
+
+```csharp
+public record GetUserQuery(int Id) : IQuery<Result<User, NotFoundError>>, ICacheable
+{
+    public string CacheKey => $"user:{Id}";
+    public TimeSpan Expiration => TimeSpan.FromMinutes(5);
+    public bool BypassCache => false;
+    public bool CacheFailures => false;
+}
+```
 
 ## Marker interfaces
 

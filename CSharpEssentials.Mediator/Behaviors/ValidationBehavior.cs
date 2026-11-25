@@ -311,7 +311,7 @@ public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
     /// Maps validation errors to <typeparamref name="TResponse"/>:
     /// <list type="bullet">
     ///   <item><see cref="Result"/> and <see cref="Result{T}"/>: a failure carrying <paramref name="errors"/>, built without reflection.</item>
-    ///   <item>Any other type: <see cref="EnhancedValidationException"/> thrown for <c>GlobalExceptionHandler</c>.</item>
+    ///   <item>Any other type, typed <c>Result&lt;T, E1..E3&gt;</c> included: <see cref="EnhancedValidationException"/> thrown for <c>GlobalExceptionHandler</c>.</item>
     /// </list>
     /// </summary>
     private static TResponse BuildFailureResponse(Error[] errors) =>

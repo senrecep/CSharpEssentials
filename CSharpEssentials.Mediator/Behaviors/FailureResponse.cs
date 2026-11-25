@@ -6,7 +6,7 @@ namespace CSharpEssentials.Mediator;
 /// <summary>
 /// Builds failed <typeparamref name="TResponse"/> values for pipeline behaviors without reflection.
 /// <see cref="Factory"/> is set when <typeparamref name="TResponse"/> is <see cref="Result"/> or a
-/// <see cref="Result{T}"/>, and is <see langword="null"/> for any other response type.
+/// <see cref="Result{T}"/>, and is <see langword="null"/> for any other response type, typed <c>Result&lt;T, E1..E3&gt;</c> included.
 /// </summary>
 internal static class FailureResponse<TResponse>
 {
