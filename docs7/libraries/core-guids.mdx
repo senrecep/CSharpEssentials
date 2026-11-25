@@ -38,6 +38,17 @@ To turn the pool off, set the AppContext switch before the first ID is created, 
 
 or with `AppContext.SetSwitch("CSharpEssentials.Guider.DisableRandomPool", true)` at startup. Every ID then takes its random bits from `Guid.NewGuid()`, as `Guid.CreateVersion7()` does, and costs about the same. The switch covers `NewMonotonicGuid()` and `NewSqlServerGuid()` too.
 
+## NewGuid(DateTimeOffset) and NewGuid(TimeProvider)
+
+Create a version 7 GUID whose timestamp is the time you pass, or the current time of a `TimeProvider`. Code that reads its clock from a `TimeProvider` gets IDs whose timestamp a test can predict with `FakeTimeProvider`.
+
+```csharp
+Guid stamped = Guider.NewGuid(order.CreatedAt);
+Guid fromClock = Guider.NewGuid(timeProvider); // .NET 8 and later builds only
+```
+
+The random bits come from `Guid.NewGuid()` on every call, not from the pool, and these overloads do not change the state that `NewGuid()`, `NewMonotonicGuid()` and `NewSqlServerGuid()` keep. IDs with the same timestamp have no set order. A time before 1970-01-01T00:00:00Z throws `ArgumentOutOfRangeException`. The `netstandard2.0` and `netstandard2.1` builds have no `TimeProvider`, so they only have the `DateTimeOffset` overload: pass `timeProvider.GetUtcNow()` there.
+
 ## NewMonotonicGuid()
 
 Creates a version 7 GUID that is strictly greater than every GUID it returned before in the same process (per loaded copy of the assembly), compared as big-endian bytes, with `Guid.CompareTo` or as strings.

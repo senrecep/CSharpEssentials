@@ -25,6 +25,18 @@ public sealed class GuiderNetStandardTests
     }
 
     [Fact]
+    public void NewGuid_WithTimestamp_ShouldEncodeThatTime()
+    {
+        var timestamp = new DateTimeOffset(2026, 3, 4, 5, 6, 7, 891, TimeSpan.Zero);
+        Guid guid = Guider.NewGuid(timestamp);
+        byte[] b = guid.ToByteArray(bigEndian: true);
+
+        guid.Version.Should().Be(7);
+        (b[8] >> 6).Should().Be(0b10);
+        UnixMs(b).Should().Be(timestamp.ToUnixTimeMilliseconds());
+    }
+
+    [Fact]
     public void NewGuid_ShouldReturnUniqueIds()
     {
         Enumerable.Range(0, 100_000).Select(_ => Guider.NewGuid()).Distinct().Should().HaveCount(100_000);

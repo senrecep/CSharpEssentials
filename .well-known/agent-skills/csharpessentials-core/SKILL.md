@@ -32,6 +32,7 @@ Also `ToTitleCase`, `ToTrainCase`, `ToUnderscoreCamelCase`. Each takes an option
 ```csharp
 Guid id = Guider.NewGuid();                 // version 7, time-sortable, every target
 Guid ordered = Guider.NewMonotonicGuid();   // version 7, strictly increasing within the process
+Guid stamped = Guider.NewGuid(timeProvider); // version 7 with the provider's time; NewGuid(DateTimeOffset) on every target
 Guid sqlKey = Guider.NewSqlServerGuid();    // version 8, sequential in SQL Server uniqueidentifier order
 
 string shortId = id.ToStringFromGuid();     // 22-char RFC 4648 base64url, no padding

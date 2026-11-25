@@ -120,6 +120,7 @@ ValueTask<string> vt = value.AsValueTask();
 
 ```csharp
 Guid id = Guider.NewGuid();          // Version 7 on every target
+Guid stamped = Guider.NewGuid(timeProvider); // Version 7 stamped with the provider's time (DateTimeOffset overload too)
 Guid ordered = Guider.NewMonotonicGuid(); // Version 7, strictly increasing in this process
 Guid sqlKey = Guider.NewSqlServerGuid();  // Version 8, ordered for SQL Server uniqueidentifier
 string shortId = id.ToStringFromGuid(); // URL-safe, 22 chars

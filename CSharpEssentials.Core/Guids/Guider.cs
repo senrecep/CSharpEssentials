@@ -136,6 +136,37 @@ public static class Guider
     public static Guid NewGuid() => GuidV7.NewGuid();
 
     /// <summary>
+    /// Creates a new RFC 9562 version 7 GUID whose 48-bit timestamp is <paramref name="timestamp"/> in Unix milliseconds, so an ID
+    /// made from a fake clock carries the time the test set. The other 74 bits are random.
+    /// </summary>
+    /// <remarks>
+    /// The random bits come from <see cref="Guid.NewGuid"/> on every call, not from the pool of <see cref="NewGuid()"/>, and the call
+    /// leaves the state of <see cref="NewGuid()"/>, <see cref="NewMonotonicGuid"/> and <see cref="NewSqlServerGuid"/> alone. IDs with the
+    /// same timestamp have no set order.
+    /// </remarks>
+    /// <param name="timestamp">The creation time; its offset is ignored.</param>
+    /// <returns>A version 7 GUID with the layout of <c>Guid.CreateVersion7(timestamp)</c>.</returns>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="timestamp"/> is before the Unix epoch.</exception>
+    public static Guid NewGuid(DateTimeOffset timestamp) => GuidV7.NewGuid(timestamp);
+
+#if NET8_0_OR_GREATER
+    /// <summary>
+    /// Creates a new RFC 9562 version 7 GUID stamped with <see cref="TimeProvider.GetUtcNow"/> of <paramref name="timeProvider"/>:
+    /// <see cref="NewGuid(DateTimeOffset)"/> with the provider's current time. With a fake provider the timestamp is deterministic.
+    /// </summary>
+    /// <remarks>Not in the netstandard builds, which have no <see cref="TimeProvider"/>; call <see cref="NewGuid(DateTimeOffset)"/> with <c>GetUtcNow()</c> there.</remarks>
+    /// <param name="timeProvider">The clock to read.</param>
+    /// <returns>A version 7 GUID.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="timeProvider"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The provider returns a time before the Unix epoch.</exception>
+    public static Guid NewGuid(TimeProvider timeProvider)
+    {
+        ArgumentNullException.ThrowIfNull(timeProvider);
+        return GuidV7.NewGuid(timeProvider.GetUtcNow());
+    }
+#endif
+
+    /// <summary>
     /// Creates a new RFC 9562 version 7 GUID that is strictly greater than every GUID this method returned before in the same process (per loaded copy of the assembly).
     /// The 12 bits after the version hold the time inside the millisecond and the first 6 bits of <c>rand_b</c> hold a counter,
     /// so IDs created in the same millisecond also sort in creation order.
