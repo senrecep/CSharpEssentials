@@ -134,7 +134,7 @@ public static partial class ResultExtensions
     {
         Result<TValue> result = await task.ConfigureAwait(false);
         if (result.IsFailure)
-            return Result<TOut>.Failure(result.Errors);
+            return Result<TOut>.Failure(result.InitializedErrors);
         return await func(result.Value).WithCancellation().ConfigureAwait(false);
     }
 
@@ -142,7 +142,7 @@ public static partial class ResultExtensions
     {
         Result<TValue> result = await task.ConfigureAwait(false);
         if (result.IsFailure)
-            return Result<TOut>.Failure(result.Errors);
+            return Result<TOut>.Failure(result.InitializedErrors);
         return await func(result.Value).WithCancellation(cancellationToken).ConfigureAwait(false);
     }
 

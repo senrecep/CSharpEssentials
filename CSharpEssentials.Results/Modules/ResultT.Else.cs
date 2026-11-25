@@ -15,7 +15,7 @@ public readonly partial record struct Result<TValue>
     {
         if (IsSuccess)
             return Value;
-        return onFailure(Errors);
+        return onFailure(InitializedErrors);
     }
 
     /// <summary>
@@ -27,7 +27,7 @@ public readonly partial record struct Result<TValue>
     {
         if (IsSuccess)
             return Value;
-        return onFailure(Errors);
+        return onFailure(InitializedErrors);
     }
 
     /// <summary>
@@ -51,7 +51,7 @@ public readonly partial record struct Result<TValue>
     {
         if (IsSuccess)
             return Value;
-        return onFailure(Errors);
+        return onFailure(InitializedErrors);
     }
 
     /// <summary>
@@ -77,7 +77,7 @@ public readonly partial record struct Result<TValue>
     {
         if (IsSuccess)
             return Value;
-        TValue? result = await onFailure(Errors).WithCancellation(cancellationToken).ConfigureAwait(false);
+        TValue? result = await onFailure(InitializedErrors).WithCancellation(cancellationToken).ConfigureAwait(false);
         return result;
     }
 
@@ -92,7 +92,7 @@ public readonly partial record struct Result<TValue>
     {
         if (IsSuccess)
             return Value;
-        Error result = await onFailure(Errors).WithCancellation(cancellationToken).ConfigureAwait(false);
+        Error result = await onFailure(InitializedErrors).WithCancellation(cancellationToken).ConfigureAwait(false);
         return result;
     }
 
@@ -107,7 +107,7 @@ public readonly partial record struct Result<TValue>
     {
         if (IsSuccess)
             return Value;
-        Error[] result = await onFailure(Errors).WithCancellation(cancellationToken).ConfigureAwait(false);
+        Error[] result = await onFailure(InitializedErrors).WithCancellation(cancellationToken).ConfigureAwait(false);
         return result;
     }
 
@@ -152,7 +152,7 @@ public readonly partial record struct Result<TValue>
     {
         if (IsSuccess)
             return Value;
-        TValue? result = await onFailure(Errors).WithCancellation(cancellationToken).ConfigureAwait(false);
+        TValue? result = await onFailure(InitializedErrors).WithCancellation(cancellationToken).ConfigureAwait(false);
         return result;
     }
 
@@ -166,7 +166,7 @@ public readonly partial record struct Result<TValue>
     {
         if (IsSuccess)
             return Value;
-        Error result = await onFailure(Errors).WithCancellation(cancellationToken).ConfigureAwait(false);
+        Error result = await onFailure(InitializedErrors).WithCancellation(cancellationToken).ConfigureAwait(false);
         return result;
     }
 
@@ -180,7 +180,7 @@ public readonly partial record struct Result<TValue>
     {
         if (IsSuccess)
             return Value;
-        Error[] result = await onFailure(Errors).WithCancellation(cancellationToken).ConfigureAwait(false);
+        Error[] result = await onFailure(InitializedErrors).WithCancellation(cancellationToken).ConfigureAwait(false);
         return result;
     }
 

@@ -26,7 +26,7 @@ public readonly partial record struct Result
     /// <returns>A task representing the asynchronous operation that returns the result of the matching function.</returns>
     [OverloadResolutionPriority(1)]
     public async Task<T> MatchAsync<T>(Func<Task<T>> onSuccess, Func<Error[], Task<T>> onFailure, CancellationToken cancellationToken = default) =>
-        IsFailure ? await onFailure(Errors).WithCancellation(cancellationToken).ConfigureAwait(false) : await onSuccess().WithCancellation(cancellationToken).ConfigureAwait(false);
+        IsFailure ? await onFailure(InitializedErrors).WithCancellation(cancellationToken).ConfigureAwait(false) : await onSuccess().WithCancellation(cancellationToken).ConfigureAwait(false);
 
     /// <summary>
     /// Matches the result by executing the corresponding function for success or the first encountered error.
@@ -36,7 +36,7 @@ public readonly partial record struct Result
     /// <param name="onFirstError">A function to execute on the first error encountered.</param>
     /// <returns>The result of the matching function.</returns>
     public T MatchFirst<T>(Func<T> onSuccess, Func<Error, T> onFirstError) =>
-        IsFailure ? onFirstError(FirstError) : onSuccess();
+        IsFailure ? onFirstError(InitializedErrors[0]) : onSuccess();
 
     /// <summary>
     /// Matches the result by executing the corresponding function for success or the last encountered error.
@@ -46,7 +46,7 @@ public readonly partial record struct Result
     /// <param name="onLastError">A function to execute on the last error encountered.</param>
     /// <returns>The result of the matching function.</returns>
     public T MatchLast<T>(Func<T> onSuccess, Func<Error, T> onLastError) =>
-        IsFailure ? onLastError(LastError) : onSuccess();
+        IsFailure ? onLastError(InitializedErrors[^1]) : onSuccess();
 
     /// <summary>
     /// Asynchronously matches the result by executing the corresponding async function for success or the first encountered error.
@@ -58,7 +58,7 @@ public readonly partial record struct Result
     /// <returns>A task representing the asynchronous operation that returns the result of the matching function.</returns>
     [OverloadResolutionPriority(1)]
     public async Task<T> MatchFirstAsync<T>(Func<Task<T>> onSuccess, Func<Error, Task<T>> onFirstError, CancellationToken cancellationToken = default) =>
-        IsFailure ? await onFirstError(FirstError).WithCancellation(cancellationToken).ConfigureAwait(false) : await onSuccess().WithCancellation(cancellationToken).ConfigureAwait(false);
+        IsFailure ? await onFirstError(InitializedErrors[0]).WithCancellation(cancellationToken).ConfigureAwait(false) : await onSuccess().WithCancellation(cancellationToken).ConfigureAwait(false);
 
     /// <summary>
     /// Asynchronously matches the result by executing the corresponding async function for success or the last encountered error.
@@ -70,7 +70,7 @@ public readonly partial record struct Result
     /// <returns>A task representing the asynchronous operation that returns the result of the matching function.</returns>
     [OverloadResolutionPriority(1)]
     public async Task<T> MatchLastAsync<T>(Func<Task<T>> onSuccess, Func<Error, Task<T>> onLastError, CancellationToken cancellationToken = default) =>
-        IsFailure ? await onLastError(LastError).WithCancellation(cancellationToken).ConfigureAwait(false) : await onSuccess().WithCancellation(cancellationToken).ConfigureAwait(false);
+        IsFailure ? await onLastError(InitializedErrors[^1]).WithCancellation(cancellationToken).ConfigureAwait(false) : await onSuccess().WithCancellation(cancellationToken).ConfigureAwait(false);
 
 #if NET9_0_OR_GREATER
     /// <summary>
@@ -83,7 +83,7 @@ public readonly partial record struct Result
     /// <returns>The result of the matching function.</returns>
     public async ValueTask<T> MatchAsync<T>(Func<ValueTask<T>> onSuccess, Func<Error[], ValueTask<T>> onFailure, CancellationToken cancellationToken = default) =>
         IsFailure
-            ? await onFailure(Errors).WithCancellation(cancellationToken).ConfigureAwait(false)
+            ? await onFailure(InitializedErrors).WithCancellation(cancellationToken).ConfigureAwait(false)
             : await onSuccess().WithCancellation(cancellationToken).ConfigureAwait(false);
 
     /// <summary>
@@ -96,7 +96,7 @@ public readonly partial record struct Result
     /// <returns>The result of the matching function.</returns>
     public async ValueTask<T> MatchFirstAsync<T>(Func<ValueTask<T>> onSuccess, Func<Error, ValueTask<T>> onFirstError, CancellationToken cancellationToken = default) =>
         IsFailure
-            ? await onFirstError(FirstError).WithCancellation(cancellationToken).ConfigureAwait(false)
+            ? await onFirstError(InitializedErrors[0]).WithCancellation(cancellationToken).ConfigureAwait(false)
             : await onSuccess().WithCancellation(cancellationToken).ConfigureAwait(false);
 
     /// <summary>
@@ -109,7 +109,7 @@ public readonly partial record struct Result
     /// <returns>The result of the matching function.</returns>
     public async ValueTask<T> MatchLastAsync<T>(Func<ValueTask<T>> onSuccess, Func<Error, ValueTask<T>> onLastError, CancellationToken cancellationToken = default) =>
         IsFailure
-            ? await onLastError(LastError).WithCancellation(cancellationToken).ConfigureAwait(false)
+            ? await onLastError(InitializedErrors[^1]).WithCancellation(cancellationToken).ConfigureAwait(false)
             : await onSuccess().WithCancellation(cancellationToken).ConfigureAwait(false);
 #endif
 }

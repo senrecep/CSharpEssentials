@@ -10,14 +10,14 @@ public readonly partial record struct Result
     {
         if (IsSuccess)
             return this;
-        return onFailure(Errors);
+        return onFailure(InitializedErrors);
     }
 
     public Result CompensateFirst(Func<Error, Result> onFirstFailure)
     {
         if (IsSuccess)
             return this;
-        return onFirstFailure(FirstError);
+        return onFirstFailure(InitializedErrors[0]);
     }
 
     [OverloadResolutionPriority(1)]
@@ -25,7 +25,7 @@ public readonly partial record struct Result
     {
         if (IsSuccess)
             return this;
-        return await onFailure(Errors).WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await onFailure(InitializedErrors).WithCancellation(cancellationToken).ConfigureAwait(false);
     }
 
     [OverloadResolutionPriority(1)]
@@ -33,7 +33,7 @@ public readonly partial record struct Result
     {
         if (IsSuccess)
             return this;
-        return await onFirstFailure(FirstError).WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await onFirstFailure(InitializedErrors[0]).WithCancellation(cancellationToken).ConfigureAwait(false);
     }
 
 #if NET9_0_OR_GREATER
@@ -41,14 +41,14 @@ public readonly partial record struct Result
     {
         if (IsSuccess)
             return this;
-        return await onFailure(Errors).WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await onFailure(InitializedErrors).WithCancellation(cancellationToken).ConfigureAwait(false);
     }
 
     public async ValueTask<Result> CompensateFirstAsync(Func<Error, ValueTask<Result>> onFirstFailure, CancellationToken cancellationToken = default)
     {
         if (IsSuccess)
             return this;
-        return await onFirstFailure(FirstError).WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await onFirstFailure(InitializedErrors[0]).WithCancellation(cancellationToken).ConfigureAwait(false);
     }
 #endif
 }

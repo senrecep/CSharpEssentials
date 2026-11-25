@@ -102,7 +102,7 @@ public static partial class ResultExtensions
     {
         Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         if (result.IsFailure)
-            return result.ErrorsOrEmptyArray;
+            return result.InitializedErrors;
         return await map().WithCancellation(cancellationToken).ConfigureAwait(false);
     }
 
@@ -132,7 +132,7 @@ public static partial class ResultExtensions
     {
         Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         if (result.IsFailure)
-            return result.ErrorsOrEmptyArray;
+            return result.InitializedErrors;
         cancellationToken.ThrowIfCancellationRequested();
         return await map().WithCancellation(cancellationToken).ConfigureAwait(false);
     }

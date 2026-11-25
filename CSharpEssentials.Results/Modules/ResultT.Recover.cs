@@ -17,7 +17,7 @@ public readonly partial record struct Result<TValue>
             return this;
         }
 
-        foreach (Error error in ErrorsOrEmptyArray)
+        foreach (Error error in InitializedErrors)
         {
             if (error.Type == errorType)
             {
@@ -41,7 +41,7 @@ public readonly partial record struct Result<TValue>
             return this;
         }
 
-        foreach (Error error in ErrorsOrEmptyArray)
+        foreach (Error error in InitializedErrors)
         {
             if (error.Type == errorType)
             {
@@ -65,9 +65,9 @@ public readonly partial record struct Result<TValue>
             return this;
         }
 
-        if (FirstError.Type == errorType)
+        if (InitializedErrors[0].Type == errorType)
         {
-            return recovery(FirstError);
+            return recovery(InitializedErrors[0]);
         }
 
         return this;
@@ -86,9 +86,9 @@ public readonly partial record struct Result<TValue>
             return this;
         }
 
-        if (FirstError.Type == errorType)
+        if (InitializedErrors[0].Type == errorType)
         {
-            return recovery(FirstError);
+            return recovery(InitializedErrors[0]);
         }
 
         return this;
@@ -107,7 +107,7 @@ public readonly partial record struct Result<TValue>
             return this;
         }
 
-        foreach (Error error in ErrorsOrEmptyArray)
+        foreach (Error error in InitializedErrors)
         {
             if (predicate(error))
             {
@@ -131,7 +131,7 @@ public readonly partial record struct Result<TValue>
             return this;
         }
 
-        foreach (Error error in ErrorsOrEmptyArray)
+        foreach (Error error in InitializedErrors)
         {
             if (predicate(error))
             {

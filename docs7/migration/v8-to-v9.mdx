@@ -15,7 +15,7 @@ title: "Migrating from 8.x to 9.0"
 - `CSharpEssentials.Resilience`: every `RetryIfFailed` overload (with and without `shouldRetry`, for `Result` and `Result<T>`) take two more optional parameters, `useJitter` and `maxDelay`, before `cancellationToken`. A call that passes the token by name compiles unchanged; one that passes it positionally after `exponentialBackoff` must name it. An assembly compiled against 8.x must be recompiled (`MissingMethodException` otherwise).
 - `CSharpEssentials.Json`: `EnhancedJsonSerializerOptions.StrictOptions` requires every constructor parameter that is a non-nullable value type and has no default (`JsonTypeInfoModifiers.RequireValueTypeConstructorParameters`). A payload that omits such a property now throws `JsonException` instead of binding `0`, the first enum member or `default`. Give the parameter a default value or make it nullable to keep it optional. A property without a setter (get-only, assigned in the constructor) stays optional.
 - `CSharpEssentials.Time`: `DateTimeProvider.TimeZone` returns the `LocalTimeZone` of the wrapped `TimeProvider` instead of always `TimeZoneInfo.Local`. With `TimeProvider.System` nothing changes. Over `FakeTimeProvider` it is UTC unless the test calls `SetLocalTimeZone`, and `GetAge(dateTimeProvider)` follows it.
-- `CSharpEssentials.Results`: `default(Result)` and `default(Result<T>)` are no longer successes. They report a failure with one `Error.Unexpected` coded `Result.Default`, and `Match`, `Map`, `Bind`, `Then` and `MapError` throw `InvalidOperationException` on them. See [Default results fail closed](#default-results-fail-closed-csharpessentialsresults-csharpessentialsrules).
+- `CSharpEssentials.Results`: `default(Result)` and `default(Result<T>)` are no longer successes. They report a failure with one `Error.Unexpected` coded `Result.Default`, and every member that passes the errors to a delegate or builds a new failure from them throws `InvalidOperationException` on them. See [Default results fail closed](#default-results-fail-closed-csharpessentialsresults-csharpessentialsrules).
 - `CSharpEssentials.Rules`: a custom `IOrRule<TContext, TResult>` with an empty `Rules` array returns `EMPTY_RULE_ARRAY` like the generic And rule, instead of a wrapped `RuleEngine.Evaluate.OrRule` error. Calling `Evaluate` directly on a generic rule built by `.And()` or `.Or()` runs the whole rule instead of returning `default`.
 
 ## Default results fail closed (`CSharpEssentials.Results`, `CSharpEssentials.Rules`)
@@ -27,7 +27,9 @@ In 8.x `IsSuccess` was `_errors is null`, so an uninitialized `Result` or `Resul
 | `IsSuccess` / `IsFailure` | `true` / `false` | `false` / `true` |
 | `Errors`, `ErrorsOrEmptyArray`, `FirstError`, `LastError` | the success placeholders (`Error.NoErrors`, `Error.NoFirstError`, `Error.NoLastError`) and `[]` | one `Error.Unexpected("Result.Default", ...)` |
 | `Value` | `default(T)` | `default(T)` |
-| `Match`, `Map`, `Bind`, `Then`, `MapError` | ran the success path | throw `InvalidOperationException` |
+| `Match`, `MatchFirst`, `Switch`, `Map`, `Bind`, generic `Then`, `MapError`, `Else`, `TapError`, `ElseDo`, `Compensate`, `Recover`, sync and async, including the `Task`/`ValueTask` receiver overloads | ran the success path | throw `InvalidOperationException` |
+| `Result.Then`, `ThenDo`, `Tap`, `Ensure` | ran the success path | return the `default` unchanged |
+| `Result.And`, `Partition`, `Combine` | treated it as a success | collect the `Result.Default` error |
 | `TryGet`, `ToString`, `Equals`, JSON | success | failure with `Result.Default` |
 | `default(Result) == Result.Success()` | `true` | `false` |
 | `ToProblemDetails()`, `ToProblemResult()` | threw (success) | 500 |

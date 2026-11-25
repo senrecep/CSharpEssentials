@@ -10,7 +10,7 @@ public readonly partial record struct Result<TValue>
     {
         if (IsSuccess)
             return this;
-        return errorMapper(Errors);
+        return errorMapper(InitializedErrors);
     }
 
     public Result<TValue> MapError(Func<Error, Error> errorMapper)

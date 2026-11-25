@@ -99,6 +99,55 @@ public class ResultDefaultTests
         then.Should().ThrowExactly<InvalidOperationException>().WithMessage("*default-initialized*");
     }
 
+    private static Func<Task> Sync(Action action) => () =>
+    {
+        action();
+        return Task.CompletedTask;
+    };
+
+    public static TheoryData<string, Func<Task>> ErrorForwardingOverloads => new()
+    {
+        { "Result.MatchAsync", () => default(Result).MatchAsync(() => Task.FromResult(1), _ => Task.FromResult(2)) },
+        { "Result.MatchFirst", Sync(() => default(Result).MatchFirst(() => 1, _ => 2)) },
+        { "Result.MatchFirstAsync", () => default(Result).MatchFirstAsync(() => Task.FromResult(1), _ => Task.FromResult(2)) },
+        { "Result.MapAsync", () => default(Result).MapAsync(() => Task.FromResult(1)) },
+        { "Result.BindAsync", () => default(Result).BindAsync(() => Task.FromResult(Result<int>.Success(1))) },
+        { "Result.MapError(Error[])", Sync(() => default(Result).MapError((Error[] errors) => errors)) },
+        { "Result.Switch", Sync(() => default(Result).Switch(() => { }, _ => { })) },
+        { "Result.TapError", Sync(() => default(Result).TapError((Error[] _) => { })) },
+        { "Result.Compensate", Sync(() => default(Result).Compensate((Error[] _) => Result.Success())) },
+        { "Result<int>.MatchAsync", () => default(Result<int>).MatchAsync(v => Task.FromResult(v), _ => Task.FromResult(-1)) },
+        { "Result<int>.MatchFirst", Sync(() => default(Result<int>).MatchFirst(v => v, _ => -1)) },
+        { "Result<int>.MapAsync", () => default(Result<int>).MapAsync(v => Task.FromResult(v + 1)) },
+        { "Result<int>.BindAsync", () => default(Result<int>).BindAsync(v => Task.FromResult(Result<int>.Success(v))) },
+        { "Result<int>.ThenAsync", () => default(Result<int>).ThenAsync(_ => Task.FromResult(Result.Success())) },
+        { "Result<int>.MapError(Error[])", Sync(() => default(Result<int>).MapError((Error[] errors) => errors)) },
+        { "Result<int>.Switch", Sync(() => default(Result<int>).Switch(_ => { }, _ => { })) },
+        { "Result<int>.Else", Sync(() => default(Result<int>).Else((Error[] _) => 1)) },
+        { "Result<int>.Recover", Sync(() => default(Result<int>).Recover(ErrorType.Unexpected, _ => Result<int>.Success(1))) },
+        { "Task<Result<int>>.BindAsync", () => Task.FromResult(default(Result<int>)).BindAsync(v => Task.FromResult(Result<int>.Success(v))) },
+        { "Task<Result<int>>.MapAsync", () => Task.FromResult(default(Result<int>)).MapAsync(v => Task.FromResult(v + 1)) },
+        { "Task<Result<int>>.Bind", () => Task.FromResult(default(Result<int>)).BindAsync(v => Result<int>.Success(v)) },
+    };
+
+    [Theory]
+    [MemberData(nameof(ErrorForwardingOverloads))]
+    public async Task Default_ErrorForwardingOverloads_Should_Throw(string name, Func<Task> call)
+    {
+        Func<Task> act = async () => await call();
+
+        await act.Should().ThrowExactlyAsync<InvalidOperationException>(name).WithMessage("*default-initialized*");
+    }
+
+    [Fact]
+    public void Default_PassThroughAndAggregation_Should_KeepResultDefault()
+    {
+        default(Result).Then(() => Result.Success()).FirstError.Code.Should().Be("Result.Default");
+        default(Result<int>).Ensure(v => v > 0, Failure).FirstError.Code.Should().Be("Result.Default");
+        Result.And(default(Result), Result.Success()).FirstError.Code.Should().Be("Result.Default");
+        new[] { default(Result<int>), 1 }.Partition().Errors.Should().ContainSingle().Which.Code.Should().Be("Result.Default");
+    }
+
     [Fact]
     public void Failure_Combinators_Should_StillPropagateErrors()
     {

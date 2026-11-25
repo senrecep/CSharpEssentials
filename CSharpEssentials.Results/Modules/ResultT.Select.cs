@@ -96,7 +96,7 @@ public static partial class ResultExtensions
     {
         Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         if (result.IsFailure)
-            return result.ErrorsOrEmptyArray;
+            return result.InitializedErrors;
         return await selector(result.Value).WithCancellation(cancellationToken).ConfigureAwait(false);
     }
 

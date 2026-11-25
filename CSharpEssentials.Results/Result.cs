@@ -62,7 +62,7 @@ public readonly partial record struct Result : IResult, IFailureFactory<Result>
     [JsonIgnore]
     public readonly Error LastError => IsSuccess ? Error.NoLastError : ErrorsOrEmptyArray[^1];
 
-    private Error[] InitializedErrors => ResultLogic.InitializedErrors(_errors);
+    internal Error[] InitializedErrors => ResultLogic.InitializedErrors(_errors);
 
 
     public override string ToString()

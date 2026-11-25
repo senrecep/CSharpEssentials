@@ -32,7 +32,7 @@ public readonly partial record struct Result<TValue>
     public async Task<T> MatchAsync<T>(Func<TValue, Task<T>> onSuccess, Func<Error[], Task<T>> onError, CancellationToken cancellationToken = default)
     {
         if (IsFailure)
-            return await onError(Errors).WithCancellation(cancellationToken).ConfigureAwait(false);
+            return await onError(InitializedErrors).WithCancellation(cancellationToken).ConfigureAwait(false);
         return await onSuccess(Value).WithCancellation(cancellationToken).ConfigureAwait(false);
     }
 
@@ -46,7 +46,7 @@ public readonly partial record struct Result<TValue>
     public T MatchFirst<T>(Func<TValue, T> onSuccess, Func<Error, T> onFirstError)
     {
         if (IsFailure)
-            return onFirstError(FirstError);
+            return onFirstError(InitializedErrors[0]);
         return onSuccess(Value);
     }
 
@@ -63,7 +63,7 @@ public readonly partial record struct Result<TValue>
     public async Task<T> MatchFirstAsync<T>(Func<TValue, Task<T>> onSuccess, Func<Error, Task<T>> onFirstError, CancellationToken cancellationToken = default)
     {
         if (IsFailure)
-            return await onFirstError(FirstError).WithCancellation(cancellationToken).ConfigureAwait(false);
+            return await onFirstError(InitializedErrors[0]).WithCancellation(cancellationToken).ConfigureAwait(false);
         return await onSuccess(Value).WithCancellation(cancellationToken).ConfigureAwait(false);
     }
 
@@ -77,7 +77,7 @@ public readonly partial record struct Result<TValue>
     public T MatchLast<T>(Func<TValue, T> onSuccess, Func<Error, T> onLastError)
     {
         if (IsFailure)
-            return onLastError(LastError);
+            return onLastError(InitializedErrors[^1]);
         return onSuccess(Value);
     }
 
@@ -93,7 +93,7 @@ public readonly partial record struct Result<TValue>
     public async Task<T> MatchLastAsync<T>(Func<TValue, Task<T>> onSuccess, Func<Error, Task<T>> onLastError, CancellationToken cancellationToken = default)
     {
         if (IsFailure)
-            return await onLastError(LastError).WithCancellation(cancellationToken).ConfigureAwait(false);
+            return await onLastError(InitializedErrors[^1]).WithCancellation(cancellationToken).ConfigureAwait(false);
         return await onSuccess(Value).WithCancellation(cancellationToken).ConfigureAwait(false);
     }
 
@@ -104,7 +104,7 @@ public readonly partial record struct Result<TValue>
     public async ValueTask<T> MatchAsync<T>(Func<TValue, ValueTask<T>> onSuccess, Func<Error[], ValueTask<T>> onError, CancellationToken cancellationToken = default)
     {
         if (IsFailure)
-            return await onError(Errors).WithCancellation(cancellationToken).ConfigureAwait(false);
+            return await onError(InitializedErrors).WithCancellation(cancellationToken).ConfigureAwait(false);
         return await onSuccess(Value).WithCancellation(cancellationToken).ConfigureAwait(false);
     }
 
@@ -114,7 +114,7 @@ public readonly partial record struct Result<TValue>
     public async ValueTask<T> MatchFirstAsync<T>(Func<TValue, ValueTask<T>> onSuccess, Func<Error, ValueTask<T>> onFirstError, CancellationToken cancellationToken = default)
     {
         if (IsFailure)
-            return await onFirstError(FirstError).WithCancellation(cancellationToken).ConfigureAwait(false);
+            return await onFirstError(InitializedErrors[0]).WithCancellation(cancellationToken).ConfigureAwait(false);
         return await onSuccess(Value).WithCancellation(cancellationToken).ConfigureAwait(false);
     }
 
@@ -124,7 +124,7 @@ public readonly partial record struct Result<TValue>
     public async ValueTask<T> MatchLastAsync<T>(Func<TValue, ValueTask<T>> onSuccess, Func<Error, ValueTask<T>> onLastError, CancellationToken cancellationToken = default)
     {
         if (IsFailure)
-            return await onLastError(LastError).WithCancellation(cancellationToken).ConfigureAwait(false);
+            return await onLastError(InitializedErrors[^1]).WithCancellation(cancellationToken).ConfigureAwait(false);
         return await onSuccess(Value).WithCancellation(cancellationToken).ConfigureAwait(false);
     }
 #endif
