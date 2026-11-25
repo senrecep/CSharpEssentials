@@ -30,6 +30,14 @@ jobs:
             9.0.x
             10.0.x
 
+      # The typed-result combinators and their tests come from scripts/generate-typed-results.py. Regenerate them and fail
+      # when the checked-in files differ.
+      - name: Check the emitted typed result combinators are in sync
+        run: |
+          python3 scripts/generate-typed-results.py
+          git diff --exit-code -- CSharpEssentials.Results/Modules tests/CSharpEssentials.Results.Typed.Tests/Typed/Emitted
+          test -z "$(git status --porcelain -- CSharpEssentials.Results/Modules tests/CSharpEssentials.Results.Typed.Tests/Typed/Emitted)"
+
       - name: Restore
         run: dotnet restore
 

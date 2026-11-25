@@ -30,6 +30,7 @@ Current version: 8.0.0 <!-- x-release-please-version -->
 - Pack: `dotnet pack`
 - Publish: `./build-and-publish-nugets.sh` (CI runs it on release; see Releasing)
 - Docs site: `docs7/` is generated from README.MD, `docs/`, the package Readmes, BENCHMARKS.md files and the example READMEs. After editing any of them run `python3 scripts/docs7.py`; CI fails when `docs7/` is out of date. Never edit `docs7/` by hand.
+- Typed results: the combinators of `Result<T, E1..E3>` (`CSharpEssentials.Results/Modules/ResultTE1*.cs`) and their tests (`tests/CSharpEssentials.Results.Typed.Tests/Typed/Emitted/`) are written by `python3 scripts/generate-typed-results.py`. Edit the script, not the files, and rerun it; CI fails when they differ. The layout, conversions, `Match`, `Switch` and `ToResult` stay hand-written in `ResultTE1.cs`, `ResultTE1E2.cs` and `ResultTE1E2E3.cs`.
 - First-time setup: `git config core.hooksPath .githooks` (activates the pre-commit hook that checks and fixes the test and package count badges in README.MD)
 - Naming: PascalCase types, camelCase locals, `_camelCase` private fields
 - File layout: one public type per file, filename matches type name
@@ -40,7 +41,7 @@ Directory.Build.props applies to every project: `LangVersion` 15, `Nullable` ena
 
 Directory.Build.targets gives a packable project's references to other CSharpEssentials projects `PrivateAssets="contentfiles;build"` by default, so the Enums generator and analyzers reach consumers of any package that depends on Enums. It also packs `.well-known/agent-skills/<name>/SKILL.md` into each package at `skills/<name>/SKILL.md`.
 
-CI (`.github/workflows/build.yml`) restores, builds and tests in Release; builds or tests the examples that stay outside the solution (Enums end to end, and the Redis and PostgreSQL idempotency examples, which need Docker); packs to a local feed; checks that every agent skill is packed; runs `tests/PackageConsumer` against six packages; builds `tests/TypedResultConsumer` with the real SDK through `scripts/check-typed-consumer.py` and checks the C# diagnostics of each case; and publishes `examples/Examples.Endpoints` with Native AOT. `codeql.yml` runs CodeQL on pushes and pull requests to `main` and weekly.
+CI (`.github/workflows/build.yml`) regenerates the typed result combinators and fails on a diff; restores, builds and tests in Release; builds or tests the examples that stay outside the solution (Enums end to end, and the Redis and PostgreSQL idempotency examples, which need Docker); packs to a local feed; checks that every agent skill is packed; runs `tests/PackageConsumer` against six packages; builds `tests/TypedResultConsumer` with the real SDK through `scripts/check-typed-consumer.py` and checks the C# diagnostics of each case; and publishes `examples/Examples.Endpoints` with Native AOT. `codeql.yml` runs CodeQL on pushes and pull requests to `main` and weekly.
 
 ## Releasing
 

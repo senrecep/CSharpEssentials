@@ -433,6 +433,39 @@ Result<UserDto, NotFoundError, UserErrors.Locked> Get(Guid id) => Find(id);
 Result<UserDto, UserErrors.Locked, NotFoundError> reordered = Get(id);
 ```
 
+### Combinators
+
+The typed results have synchronous `Bind`, `BindWiden`, `Map`, `Ensure`, `FailIf`, `MapError`, `Recover` and `Compensate`. Each passes an error through in its slot without calling the delegate.
+
+| Member | Error set of the returned result |
+|---|---|
+| `Bind<TOut>(Func<T, Result<TOut, E..>>)` | the same |
+| `BindWiden<TOut, F..>(Func<T, Result<TOut, F..>>)` | this result's slots, then the inner result's slots (three at most) |
+| `Map<TOut>(Func<T, TOut>)` | the same |
+| `Ensure(predicate, Ei)` / `FailIf(predicate, Ei)` | the same |
+| `Ensure<F>(predicate, F)` / `FailIf<F>(predicate, F)` | `F` added as the last slot (arity 1 and 2 only) |
+| `MapError<F>(Func<Ei, F>)` | slot `Ei` becomes `F` |
+| `Recover(Func<Ei, T>)` | slot `Ei` removed; on `Result<T, E1>` it returns `T` |
+| `Compensate(Func<Ei, Result<T, E..>>)` | slot `Ei` removed; on `Result<T, E1>` the same set |
+
+```csharp
+Result<OrderDto, NotFoundError> Find(Guid id) => ...;
+Result<OrderDto, ConflictError> Lock(OrderDto order) => ...;
+
+Result<OrderDto, NotFoundError, ConflictError> locked = Find(id).BindWiden(Lock);
+Result<OrderDto, ConflictError> orNew = locked.Recover((NotFoundError _) => OrderDto.Empty);
+Result<OrderDto, NotFoundError, ValidationError> checkedOrder = Find(id).Ensure(o => o.Total > 0, OrderErrors.EmptyTotal);
+```
+
+Overload resolution picks the overload from the argument types, so a few calls need an explicit type:
+
+- `Bind` keeps the error set and `BindWiden` adds to it. They have different names because the result types differ: with one name, an inner result whose errors are a subset of the outer ones would pick the adding overload and, through `var`, silently produce a repeated slot such as `Result<string, NotFoundError, ConflictError, NotFoundError>`. When the inner result has fewer error types, call `Bind<TOut>` with the type argument and let the inner result widen: `Get(id).Bind<string>(d => Name(d.Id))`. `BindWiden` with such an inner result repeats the slot, which fails with CS0029 as soon as the result is assigned to the declared type.
+- A lambda that returns a value on one path and an error on another has no single return type (CS0411). Give the type arguments: `.BindWiden<string, ConflictError>(...)` or `.Bind<string>(...)`.
+- `MapError`, `Recover` and `Compensate` have one overload per slot. Give the lambda's parameter type to choose the slot, `Recover((NotFoundError e) => ...)`; an untyped `e => ...` fits several slots and fails with CS0121.
+- `Ensure` with an error of the exact type of a slot keeps the error set. An error whose static type is a derived type, such as `new UserErrors.Locked(id)` on a `ConflictError` slot, binds `Ensure<F>` and adds a slot, because an identity conversion beats the conversion to the base kind. Cast it to the slot type to keep the set.
+
+None of these overloads uses `OverloadResolutionPriority`, so they compile the same way on C# 12, 13 and 14. All of them throw `InvalidOperationException` on `default`, and `Map`, `MapError` and `Recover` throw `ArgumentNullException` when the delegate returns `null`.
+
 ### `default`
 
 `default(Result<T, E1, E2>)` holds no case. The compiler cannot catch it, so the members behave as follows:
@@ -444,7 +477,7 @@ Result<UserDto, UserErrors.Locked, NotFoundError> reordered = Get(id);
 | `Value` | `null` |
 | `IsSuccess` / `IsFailure` | `false` / `true` |
 | switch expression without a `null` arm | throws `SwitchExpressionException` |
-| `Match`, `Switch`, `ToResult` | throw `InvalidOperationException` |
+| `Match`, `Switch`, `ToResult` and every combinator | throw `InvalidOperationException` |
 | `IResultBase.Errors`, `FirstError`, `LastError` | an `Unexpected` error with code `Result.Default` |
 | `==` | equal to another `default`, and to nothing else |
 

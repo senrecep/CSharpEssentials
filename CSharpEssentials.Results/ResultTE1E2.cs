@@ -20,7 +20,7 @@ namespace CSharpEssentials.ResultPattern;
 /// <typeparam name="E2">The second error type.</typeparam>
 [SuppressMessage("Naming", "CA1715:Identifiers should have correct prefix", Justification = "E1..E3 name the error slots, matching the documented Result<T, E1, E2> shape.")]
 [Union]
-public readonly struct Result<T, E1, E2> : IUnion, IValueResult, IEquatable<Result<T, E1, E2>>
+public readonly partial struct Result<T, E1, E2> : IUnion, IValueResult, IEquatable<Result<T, E1, E2>>
     where T : notnull
     where E1 : notnull
     where E2 : notnull
