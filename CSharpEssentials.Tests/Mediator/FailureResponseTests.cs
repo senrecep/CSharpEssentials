@@ -31,6 +31,14 @@ public class FailureResponseTests
     }
 
     [Fact]
+    public void Factory_Should_Be_Null_For_Typed_Result_Types()
+    {
+        FailureResponse<Result<int, NotFoundError>>.Factory.Should().BeNull();
+        FailureResponse<Result<int, NotFoundError, ConflictError>>.Factory.Should().BeNull();
+        FailureResponse<Result<int, NotFoundError, ConflictError, ForbiddenError>>.Factory.Should().BeNull();
+    }
+
+    [Fact]
     public void CreateFailure_Should_Use_The_Given_Array_For_Generic_Result()
     {
         Error[] errors = [Error.Validation("Code", "Message")];

@@ -12,6 +12,17 @@ internal sealed record GetUserCommand(int Id) : ICommand<Result<UserDto, NotFoun
 
 internal sealed record LockUserByIdCommand(int Id) : ICommand<Result<UserDto, NotFoundError, UserErrors.Locked>>;
 
+internal sealed record ImportUserByIdCommand(int Id) : ICommand<Result<UserDto, InvalidOperationException>>;
+
+internal sealed class PositiveImportIdValidator : Validator<ImportUserByIdCommand>
+{
+    protected override ValueTask Configure(ImportUserByIdCommand model, RuleContext<ImportUserByIdCommand> rules, CancellationToken ct = default)
+    {
+        rules.For(() => model.Id).Must(id => id > 0, "User.IdInvalid", "Id must be positive.");
+        return ValueTask.CompletedTask;
+    }
+}
+
 internal sealed class PositiveIdValidator : Validator<GetUserCommand>
 {
     protected override ValueTask Configure(GetUserCommand model, RuleContext<GetUserCommand> rules, CancellationToken ct = default)
@@ -77,6 +88,24 @@ public sealed class TypedResultMediatorTests
         Func<Task> act = async () => await _behavior.Handle(new GetUserCommand(1), next, default);
 
         (await act.Should().ThrowExactlyAsync<InvalidOperationException>()).Which.Should().BeSameAs(exception);
+    }
+
+    [Fact]
+    public async Task Handle_Should_ReturnTheExceptionSlotUnchanged_When_TheHandlerReturnsAnExceptionAsAFailure()
+    {
+        var exception = new InvalidOperationException("boom");
+        ExceptionHandlingBehavior<ImportUserByIdCommand, Result<UserDto, InvalidOperationException>> exceptionHandling = new();
+        ValidationBehavior<ImportUserByIdCommand, Result<UserDto, InvalidOperationException>> validation = new([new PositiveImportIdValidator()]);
+        MessageHandlerDelegate<ImportUserByIdCommand, Result<UserDto, InvalidOperationException>> next =
+            (_, _) => new ValueTask<Result<UserDto, InvalidOperationException>>(exception);
+
+        Result<UserDto, InvalidOperationException> handled = await exceptionHandling.Handle(new ImportUserByIdCommand(1), next, default);
+        Result<UserDto, InvalidOperationException> validated = await validation.Handle(new ImportUserByIdCommand(1), next, default);
+
+        handled.TryGetValue(out InvalidOperationException handledError).Should().BeTrue();
+        handledError.Should().BeSameAs(exception);
+        validated.TryGetValue(out InvalidOperationException validatedError).Should().BeTrue();
+        validatedError.Should().BeSameAs(exception);
     }
 
     [Fact]

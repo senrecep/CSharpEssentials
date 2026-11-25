@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 
 using CSharpEssentials.Errors;
@@ -304,7 +305,7 @@ public sealed partial class IdempotencyBehavior<TRequest, TResponse> : IPipeline
         {
             if (result is not IResultBase { IsFailure: true } failure)
                 return IdempotencyResultHandling.Store;
-            if (releaseFailures)
+            if (releaseFailures || result is IUnion { Value: Exception })
                 return IdempotencyResultHandling.Release;
             return failure.FirstError.Type == ErrorType.Unexpected
                 ? IdempotencyResultHandling.StoreAsFailure

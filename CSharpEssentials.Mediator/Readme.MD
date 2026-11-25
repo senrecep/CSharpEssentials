@@ -409,7 +409,7 @@ A handler can return a typed `Result<T, E1>`, `Result<T, E1, E2>` or `Result<T, 
 | `CachingBehavior` | A failed typed result is not cached unless `CacheFailures` is `true`. A cached result comes back in the same slot with the same error type |
 | `IdempotencyBehavior` | Stores and replays the typed result in the same slot, failures too while `StoreFailures` is on (the default). A rejection (missing or invalid key, no scope, in flight, key reused) throws `EnhancedValidationException` with the error code from the table above |
 
-Caching and idempotency store the result as JSON through its envelope converter (`{"case":"<slot>","value":…}`), so every slot type must round-trip through `System.Text.Json`. An exception slot does not. `IdempotencyBehavior` logs the failed write and the key stays in flight until `Lease` expires. `CachingBehavior` with `CacheFailures` on throws `NotSupportedException` to the caller. If a response has an exception slot, set `StoreFailures = false` and leave `CacheFailures` off.
+Caching and idempotency store the result as JSON through its envelope converter (`{"case":"<slot>","value":…}`), so every slot type must round-trip through `System.Text.Json`. An exception slot does not, so a failure that holds an exception is never stored: `IdempotencyBehavior` releases the key and a retry runs the handler again, and `CachingBehavior` with `CacheFailures` on logs a warning and returns the result without caching it.
 
 ```csharp
 public record GetUserQuery(int Id) : IQuery<Result<User, NotFoundError>>, ICacheable

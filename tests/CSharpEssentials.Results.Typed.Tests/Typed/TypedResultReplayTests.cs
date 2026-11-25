@@ -166,11 +166,17 @@ public sealed class TypedResultReplayTests
     }
 
     [Fact]
-    public async Task CachingBehavior_Should_Throw_When_AFailureHoldingAnExceptionIsCached()
+    public async Task CachingBehavior_Should_ReturnTheResultWithoutCaching_When_AFailureHoldingAnExceptionIsCached()
     {
-        Func<Task> act = () => TwiceThroughCacheAsync(new GetImportedUserQuery(2, CacheFailures: true), (Result<UserDto, InvalidOperationException>)Thrown());
+        InvalidOperationException exception = Thrown();
 
-        await act.Should().ThrowExactlyAsync<NotSupportedException>();
+        (Result<UserDto, InvalidOperationException> replayed, Result<UserDto, InvalidOperationException> first) =
+            await TwiceThroughCacheAsync(new GetImportedUserQuery(2, CacheFailures: true), (Result<UserDto, InvalidOperationException>)exception);
+
+        _runs.Should().Be(2);
+        first.TryGetValue(out InvalidOperationException error).Should().BeTrue();
+        error.Should().BeSameAs(exception);
+        replayed.IsFailure.Should().BeTrue();
     }
 
     [Fact]
@@ -224,23 +230,17 @@ public sealed class TypedResultReplayTests
     }
 
     [Fact]
-    public async Task IdempotencyBehavior_Should_KeepTheKeyInFlight_When_AStoredFailureHoldsAnException()
+    public async Task IdempotencyBehavior_Should_ReleaseTheKey_When_AFailureHoldsAnExceptionAndStoreFailuresIsOn()
     {
-        StaticOptionsMonitor<IdempotencyExecutorOptions> monitor = new(new IdempotencyExecutorOptions());
-        IdempotencyBehavior<ImportUserCommand, Result<UserDto, InvalidOperationException>> behavior = new(
-            new IdempotencyExecutor(new InMemoryIdempotencyRecordStore(), monitor),
-            monitor,
-            new IdempotencyBehaviorOptions(),
-            NullLogger<IdempotencyBehavior<ImportUserCommand, Result<UserDto, InvalidOperationException>>>.Instance);
         InvalidOperationException exception = Thrown();
 
-        Result<UserDto, InvalidOperationException> first = await behavior.Handle(new ImportUserCommand("import-1"), (_, _) => Run((Result<UserDto, InvalidOperationException>)exception), default);
-        Func<Task> retry = () => behavior.Handle(new ImportUserCommand("import-1"), (_, _) => Run((Result<UserDto, InvalidOperationException>)exception), default).AsTask();
+        (Result<UserDto, InvalidOperationException> replayed, Result<UserDto, InvalidOperationException> first) =
+            await TwiceThroughIdempotencyAsync(new ImportUserCommand("import-1"), (Result<UserDto, InvalidOperationException>)exception);
 
+        _runs.Should().Be(2);
         first.TryGetValue(out InvalidOperationException error).Should().BeTrue();
         error.Should().BeSameAs(exception);
-        (await retry.Should().ThrowExactlyAsync<EnhancedValidationException>()).Which.Errors.Should().ContainSingle(e => e.Code == IdempotencyErrorCodes.InFlight);
-        _runs.Should().Be(1);
+        replayed.IsFailure.Should().BeTrue();
     }
 
     [Fact]
