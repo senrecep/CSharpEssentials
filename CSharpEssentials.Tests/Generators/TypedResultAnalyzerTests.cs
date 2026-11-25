@@ -97,13 +97,40 @@ public class TypedResultAnalyzerTests
     [Theory]
     [InlineData("private Result<Dto, NotFoundError> _field;", "Field '_field' without an initializer")]
     [InlineData("private static Result<Dto, NotFoundError> _field;", "Field '_field' without an initializer")]
-    [InlineData("public Result<Dto, NotFoundError> Value { get; set; }", "Property 'Value' without an initializer")]
-    [InlineData("public Result<Dto, NotFoundError> Value { get; init; }", "Property 'Value' without an initializer")]
+    [InlineData("public Result<Dto, NotFoundError> Value { get; }", "Property 'Value' without an initializer")]
+    [InlineData("public Result<Dto, NotFoundError> Value { get; private set; }", "Property 'Value' without an initializer")]
+    [InlineData("private Result<Dto, NotFoundError> Value { get; set; }", "Property 'Value' without an initializer")]
     public async Task CSE5001_Should_Report_A_Member_Without_An_Initializer(string member, string what)
     {
         Diagnostic diagnostic = await SingleAsync("CSE5001", $"public sealed class C {{ {member} public object Read() => this; }}");
 
         Message(diagnostic).Should().StartWith(what);
+    }
+
+    [Fact]
+    public async Task CSE5001_Should_Not_Report_A_Member_Other_Types_Can_Set()
+    {
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzeAsync("""
+            public class Holder
+            {
+                public Result<Dto, NotFoundError> Outcome { get; init; }
+                public Result<Dto, NotFoundError> Current { get; set; }
+                protected Result<Dto, NotFoundError> _inherited;
+                internal Result<Dto, NotFoundError> Shared;
+            }
+
+            public sealed class Derived : Holder
+            {
+                public Derived(Result<Dto, NotFoundError> r) => _inherited = r;
+            }
+
+            public static class Factory
+            {
+                public static Holder Create(Result<Dto, NotFoundError> r) => new() { Outcome = r, Current = r, Shared = r };
+            }
+            """);
+
+        diagnostics.Should().BeEmpty();
     }
 
     [Fact]
@@ -194,7 +221,35 @@ public class TypedResultAnalyzerTests
             public sealed record Missing() : NotFoundError("Missing", "Missing.");
             """);
 
-        Message(diagnostic).Should().Be("'Sample.Missing' declares [ErrorKind(Conflict)] but derives from 'CSharpEssentials.Errors.NotFoundError' of kind NotFound");
+        Message(diagnostic).Should().Be("'Sample.Missing' has [ErrorKind(Conflict)] but 'CSharpEssentials.Errors.NotFoundError' has kind NotFound");
+    }
+
+    [Theory]
+    [InlineData("public sealed record Custom() : TypedError(\"Custom\", \"Custom.\") { public override ErrorType Type => ErrorType.NotFound; }", "Sample.Custom.Type")]
+    [InlineData("public readonly record struct Custom(int Id) : IError { public string Code => \"Custom\"; public string Description => \"Custom.\"; public ErrorType Type { get => ErrorType.NotFound; } public int NumericType => (int)Type; public ErrorMetadata? Metadata => null; }", "Sample.Custom.Type")]
+    public async Task CSE5005_Should_Report_A_Type_Property_That_Disagrees_With_The_Kind(string declaration, string property)
+    {
+        Diagnostic diagnostic = await SingleAsync("CSE5005", $"[ErrorKind(ErrorType.Conflict)]\n{declaration}");
+
+        Message(diagnostic).Should().Be($"'Sample.Custom' has [ErrorKind(Conflict)] but '{property}' has kind NotFound");
+    }
+
+    [Fact]
+    public async Task CSE5005_Should_Not_Report_A_Type_Property_That_Matches_The_Kind()
+    {
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzeAsync("""
+            [ErrorKind(ErrorType.Conflict)]
+            public readonly record struct OrderLocked(int OrderId) : IError
+            {
+                public string Code => "Order.Locked";
+                public string Description => "Order is locked.";
+                public ErrorType Type => ErrorType.Conflict;
+                public int NumericType => (int)Type;
+                public ErrorMetadata? Metadata => null;
+            }
+            """);
+
+        diagnostics.Should().BeEmpty();
     }
 
     [Fact]
@@ -314,7 +369,7 @@ public class TypedResultAnalyzerTests
             }
             """);
 
-        Message(diagnostic).Should().StartWith("'SelectMany' returns");
+        Message(diagnostic).Should().StartWith("'SelectMany' returns").And.EndWith("; rewrite the query as .Bind<TOut>(...) or make the inner result's error set disjoint");
     }
 
     [Fact]

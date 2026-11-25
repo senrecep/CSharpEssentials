@@ -613,11 +613,11 @@ The package ships analyzers for the typed results. They load in any SDK whose co
 
 | ID | Reports |
 |---|---|
-| CSE5001 | A typed result created as `default`: `default`, `default(R)`, `new R()`, `new R[n]` without an initializer, and a field or auto-property without an initializer that no code of its type assigns. Comparing with `default` (`r == default`) is not reported. |
+| CSE5001 | A typed result created as `default`: `default`, `default(R)`, `new R()`, `new R[n]` without an initializer, and a private field or an auto-property with no setter or a private one, without an initializer, that no code of its type assigns. A member other types can set, such as a public `init` property filled by an object initializer, is not reported. Comparing with `default` (`r == default`) is not reported. |
 | CSE5002 | A typed result type that repeats an error type, such as `Result<Dto, NotFoundError, NotFoundError>`. |
 | CSE5003 | Error slots where one converts to another, such as `Result<Dto, TypedError, NotFoundError>`: a `NotFoundError` whose static type is `TypedError` goes to the `TypedError` slot. User-defined conversions are not reported. |
 | CSE5004 | A success type that converts to an error slot or from one, such as `Result<object, NotFoundError>`. |
-| CSE5005 | A type whose `[ErrorKind]` names another kind than the nearest base that declares one, such as `[ErrorKind(ErrorType.Conflict)]` on a record derived from `NotFoundError`. |
+| CSE5005 | A type whose `[ErrorKind]` names another kind than the nearest base that declares one, such as `[ErrorKind(ErrorType.Conflict)]` on a record derived from `NotFoundError`, or than its own `Type` property when that returns a constant (`public override ErrorType Type => ErrorType.NotFound;`). A `Type` declared on a base without `[ErrorKind]` is not compared. |
 | CSE5006 | `Ensure<F>`, `FailIf<F>`, `BindWiden`, `TryCatch`, a query `SelectMany` or their async forms returning a result whose added slot repeats, converts to or accepts a slot it already had: a derived error passed to `Ensure`, or `BindWiden` with an inner result whose errors the outer result already has. Slots the source result already had are reported by CSE5003, not here. The fixes are in [Combinators](#combinators). |
 
 ## Upgrading to 8.0

@@ -55,13 +55,14 @@ internal static class TypedResultDiagnostics
 
     public static readonly DiagnosticDescriptor ErrorKindMismatch = new(
         "CSE5005",
-        "[ErrorKind] disagrees with the kind of the base error",
-        "'{0}' declares [ErrorKind({1})] but derives from '{2}' of kind {3}",
+        "[ErrorKind] disagrees with the kind of the error",
+        "'{0}' has [ErrorKind({1})] but '{2}' has kind {3}",
         Category,
         DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
-        description: "The Type of a typed error kind is fixed by its base, so the attribute that tools read (status codes, OpenAPI) " +
-            "and the runtime error disagree. Remove the attribute or derive from the kind it names.",
+        description: "The attribute that tools read (status codes, OpenAPI) and the Type of the runtime error disagree. The Type of " +
+            "a typed error kind is fixed by its base, and a Type property that returns a constant fixes it too. Make the attribute " +
+            "name the same kind as the base or the property.",
         helpLinkUri: HelpLink);
 
     public static readonly DiagnosticDescriptor CombinatorRepeatsSlot = new(

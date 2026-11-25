@@ -10,7 +10,8 @@ namespace CSharpEssentials.Results.Generators;
 
 /// <summary>
 /// Reports the places that create a default typed result (CSE5001): <c>default</c>, <c>default(R)</c>, <c>new R()</c>,
-/// <c>new R[n]</c>, and a field or auto-property without an initializer that no code of its type assigns.
+/// <c>new R[n]</c>, and a private field or an auto-property only its own type can set, without an initializer, that no code of
+/// its type assigns.
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class TypedResultDefaultAnalyzer : DiagnosticAnalyzer
@@ -106,13 +107,16 @@ public sealed class TypedResultDefaultAnalyzer : DiagnosticAnalyzer
 
         return member switch
         {
-            IFieldSymbol { IsConst: false, IsRequired: false } field when symbols.IsTypedResult(field.Type) =>
+            IFieldSymbol { IsConst: false, IsRequired: false, DeclaredAccessibility: Accessibility.Private } field when symbols.IsTypedResult(field.Type) =>
                 member.DeclaringSyntaxReferences.All(static reference => reference.GetSyntax() is VariableDeclaratorSyntax { Initializer: null }),
-            IPropertySymbol { IsRequired: false, IsIndexer: false } property when symbols.IsTypedResult(property.Type) =>
+            IPropertySymbol { IsRequired: false, IsIndexer: false } property when symbols.IsTypedResult(property.Type) && IsSetOnlyByItsType(property) =>
                 member.DeclaringSyntaxReferences.All(static reference => IsAutoPropertyWithoutInitializer(reference.GetSyntax())),
             _ => false,
         };
     }
+
+    private static bool IsSetOnlyByItsType(IPropertySymbol property) =>
+        property.DeclaredAccessibility == Accessibility.Private || property.SetMethod is null or { DeclaredAccessibility: Accessibility.Private };
 
     private static bool IsAutoPropertyWithoutInitializer(SyntaxNode syntax) =>
         syntax is PropertyDeclarationSyntax { Initializer: null, ExpressionBody: null, AccessorList: { } accessors } declaration &&

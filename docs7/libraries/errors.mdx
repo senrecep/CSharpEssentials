@@ -228,7 +228,7 @@ string message = error switch
 Result<User> result = UserErrors.NotFoundById(id).ToError();
 ```
 
-`[ErrorKind(ErrorType.X)]` declares the kind on the type itself, so tools can read it without an instance. Every built-in kind has it and derived types inherit it. Do not redeclare it with a different kind on a derived error: `Type` stays the base kind's, so the attribute would disagree with the runtime type. It also works on a struct that implements `IError`:
+`[ErrorKind(ErrorType.X)]` declares the kind on the type itself, so tools can read it without an instance. Every built-in kind has it and derived types inherit it. Do not redeclare it with a different kind on a derived error: `Type` stays the base kind's, so the attribute would disagree with the runtime type. The CSE5005 analyzer reports that mismatch, and a `Type` property that returns another constant kind; it ships with the `CSharpEssentials.Results` package, so a project that references only `CSharpEssentials.Errors` does not get it. The attribute also works on a struct that implements `IError`:
 
 ```csharp
 [ErrorKind(ErrorType.Conflict)]

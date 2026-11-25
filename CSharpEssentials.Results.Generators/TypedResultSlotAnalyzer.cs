@@ -44,6 +44,9 @@ public sealed class TypedResultSlotAnalyzer : DiagnosticAnalyzer
     private static void AnalyzeTypeName(SyntaxNodeAnalysisContext context, TypedResultSymbols symbols)
     {
         var name = (GenericNameSyntax)context.Node;
+        if (name.Identifier.ValueText != "Result" || name.Arity is < 2 or > 4)
+            return;
+
         INamedTypeSymbol? result = symbols.AsTypedResult(context.SemanticModel.GetSymbolInfo(name, context.CancellationToken).Symbol as ITypeSymbol);
         if (result is null)
             return;
@@ -108,7 +111,8 @@ public sealed class TypedResultSlotAnalyzer : DiagnosticAnalyzer
 
     private static string Hint(string method) => method switch
     {
-        "BindWiden" or "BindWidenAsync" or "SelectMany" => "call Bind<TOut> and let the inner result widen",
+        "BindWiden" or "BindWidenAsync" => "call Bind<TOut> and let the inner result widen",
+        "SelectMany" => "rewrite the query as .Bind<TOut>(...) or make the inner result's error set disjoint",
         "TryCatch" or "TryCatchAsync" => "catch an exception type that is not already a slot",
         _ => "cast the error to the slot type to keep the error set",
     };
