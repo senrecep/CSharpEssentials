@@ -1,6 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using CSharpEssentials.Enums;
 
 namespace CSharpEssentials.Json;
@@ -10,6 +12,9 @@ namespace CSharpEssentials.Json;
 /// </summary>
 public static class JsonSerializerOptionsExtensions
 {
+    private static readonly ConditionalWeakTable<JsonSerializerOptions, object> RequiredParameterOptions = [];
+    private static readonly object Marker = new();
+
     /// <summary>
     /// Adds an <see cref="EnumConverterFactory"/> at position 0 and removes earlier <see cref="EnumConverterFactory"/>
     /// instances (<c>ConditionalStringEnumConverter</c> included). Other converters such as <see cref="JsonStringEnumConverter"/>
@@ -68,4 +73,35 @@ public static class JsonSerializerOptionsExtensions
     }
 
     private static bool IsEnumConverter(JsonConverter converter) => converter is EnumConverterFactory;
+
+    /// <summary>
+    /// Adds <see cref="JsonTypeInfoModifiers.RequireValueTypeConstructorParameters"/> to <see cref="JsonSerializerOptions.TypeInfoResolver"/>,
+    /// which must be set: a missing JSON property for a non-nullable value-type constructor parameter without a default then
+    /// throws <see cref="JsonException"/> instead of binding as <see langword="default"/>.
+    /// </summary>
+    /// <remarks>
+    /// Call it before <see cref="JsonPolymorphismExtensions.AddPolymorphism"/> or
+    /// <see cref="JsonPolymorphismExtensions.AddPolymorphismWithReflection"/>, so their wrapper stays outermost.
+    /// <see cref="EnhancedJsonSerializerOptions.ApplyTo"/> carries the requirement to the target, also when the target keeps its own resolver.
+    /// </remarks>
+    /// <param name="options">The options to change; they must not be in use yet.</param>
+    /// <returns><paramref name="options"/>.</returns>
+    /// <exception cref="InvalidOperationException"><see cref="JsonSerializerOptions.TypeInfoResolver"/> is not set.</exception>
+    public static JsonSerializerOptions RequireValueTypeConstructorParameters(this JsonSerializerOptions options)
+    {
+        _ = options ?? throw new ArgumentNullException(nameof(options));
+        IJsonTypeInfoResolver resolver = options.TypeInfoResolver is { } current
+            ? JsonTypeInfoResolver.Combine(current)
+            : throw new InvalidOperationException(
+                "Set TypeInfoResolver (for example to a JsonSerializerContext or a DefaultJsonTypeInfoResolver) before RequireValueTypeConstructorParameters.");
+        options.TypeInfoResolver = resolver.WithAddedModifier(JsonTypeInfoModifiers.RequireValueTypeConstructorParameters);
+        RequiredParameterOptions.AddOrUpdate(options, Marker);
+        return options;
+    }
+
+    internal static bool RequiresValueTypeConstructorParameters(JsonSerializerOptions options) =>
+        RequiredParameterOptions.TryGetValue(options, out _);
+
+    internal static void MarkValueTypeConstructorParametersRequired(JsonSerializerOptions options) =>
+        RequiredParameterOptions.AddOrUpdate(options, Marker);
 }

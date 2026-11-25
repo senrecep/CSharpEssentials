@@ -41,7 +41,7 @@ string json = JsonSerializer.Serialize(myObject, options);
 | `DefaultOptionsWithoutConverters` | Web defaults, camelCase, case-insensitive reads, nulls ignored on write, `ReferenceHandler.IgnoreCycles`, relaxed escaping |
 | `DefaultOptions` | The above plus enum conventions (Data mode), `MultiFormatDateTimeConverterFactory`, `PolymorphicJsonConverterFactory` and `AddPolymorphismWithReflection()` |
 | `DefaultOptionsWithDateTimeConverter` | `DefaultOptionsWithoutConverters` plus `MultiFormatDateTimeConverterFactory` |
-| `StrictOptions` | Case-sensitive; rejects trailing commas, comments and unmapped members; `AddPolymorphismWithReflection()` |
+| `StrictOptions` | Case-sensitive; rejects trailing commas, comments and unmapped members; requires non-nullable value-type constructor parameters without a default; `AddPolymorphismWithReflection()` |
 | `CreateOptionsWithConverters(params JsonConverter[])` | `DefaultOptionsWithoutConverters` plus the given converters |
 | `options.Create(configure)` | Copies the options and applies `configure` to the copy |
 | `source.ApplyTo(target)` / `target.ApplyFrom(source)` | Copies settings and converters onto another instance. The target keeps its own `TypeInfoResolver` when it has one; if the source used `AddPolymorphism` or `AddPolymorphismWithReflection`, the target's resolver gets the same polymorphism added |
@@ -54,6 +54,23 @@ JsonSerializerOptions indented = EnhancedJsonSerializerOptions.DefaultOptions.Cr
 var target = new JsonSerializerOptions();
 EnhancedJsonSerializerOptions.DefaultOptions.ApplyTo(target);
 ```
+
+### Required value-type constructor parameters
+
+System.Text.Json binds a missing JSON property to `default` when the constructor parameter is a value type, so an omitted quantity reads as `0` and an omitted enum as its first member. `JsonTypeInfoModifiers.RequireValueTypeConstructorParameters` marks those properties as required: a parameter that is a non-nullable value type (`int`, an enum, `DateTime`, `Guid`, a struct) and has no default value. Reference types, `Nullable<T>` and parameters with a default stay optional. A missing required property throws `JsonException`, and serialization does not change.
+
+```csharp
+public sealed record CreateOrder(int Quantity, Size Size, int? Discount, string? Note, int Priority = 5);
+
+JsonSerializerOptions options = new JsonSerializerOptions(JsonSerializerDefaults.Web)
+{
+    TypeInfoResolver = AppJsonContext.Default, // or new DefaultJsonTypeInfoResolver()
+}.RequireValueTypeConstructorParameters();
+
+JsonSerializer.Deserialize<CreateOrder>("""{"note":"gift"}""", options); // JsonException: quantity and size are missing
+```
+
+The extension wraps `TypeInfoResolver`, which must be set, and throws `InvalidOperationException` otherwise. Call it before `AddPolymorphism` or `AddPolymorphismWithReflection`. To build your own resolver, add the modifier directly: `new DefaultJsonTypeInfoResolver { Modifiers = { JsonTypeInfoModifiers.RequireValueTypeConstructorParameters } }`. It reads only resolver metadata, so it is trim and native AOT safe. `StrictOptions` includes it, and `ApplyTo` carries it to the target options, also when the target keeps its own resolver. On .NET 9 and later, `RespectRequiredConstructorParameters = true` is the stricter built-in option: it also requires reference-type parameters without a default.
 
 ### Quick extensions
 

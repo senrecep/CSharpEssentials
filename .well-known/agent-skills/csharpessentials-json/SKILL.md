@@ -1,6 +1,6 @@
 ---
 name: csharpessentials-json
-description: Use when configuring System.Text.Json. Covers EnhancedJsonSerializerOptions presets (DefaultOptions, StrictOptions, ApplyTo), ConvertToJson/ConvertFromJson helpers, AddEnumConventions for [StringEnum] enums (obsolete ConditionalStringEnumConverter and StringEnumNaming), polymorphism with [JsonTypeDiscriminator] and AddPolymorphism (source-generated, AOT safe) or AddPolymorphismWithReflection, the $type PolymorphicJsonConverterFactory for bases without attributes, MultiFormatDateTimeConverterFactory, JsonElement.ToClrObject() and the CSE4001-CSE4012 analyzers.
+description: Use when configuring System.Text.Json. Covers EnhancedJsonSerializerOptions presets (DefaultOptions, StrictOptions, ApplyTo), ConvertToJson/ConvertFromJson helpers, AddEnumConventions for [StringEnum] enums (obsolete ConditionalStringEnumConverter and StringEnumNaming), polymorphism with [JsonTypeDiscriminator] and AddPolymorphism (source-generated, AOT safe) or AddPolymorphismWithReflection, RequireValueTypeConstructorParameters, the $type PolymorphicJsonConverterFactory for bases without attributes, MultiFormatDateTimeConverterFactory, JsonElement.ToClrObject() and the CSE4001-CSE4012 analyzers.
 ---
 
 # CSharpEssentials.Json
@@ -29,7 +29,7 @@ using CSharpEssentials.Json;
 | `DefaultOptionsWithoutConverters` | Web defaults, camelCase, case-insensitive reads, nulls ignored on write, `ReferenceHandler.IgnoreCycles`, relaxed escaping |
 | `DefaultOptions` | The above plus enum conventions (`AddEnumConventions(EnumConventions.Default)`, Data mode), `MultiFormatDateTimeConverterFactory`, `PolymorphicJsonConverterFactory` and `AddPolymorphismWithReflection()` |
 | `DefaultOptionsWithDateTimeConverter` | `DefaultOptionsWithoutConverters` plus `MultiFormatDateTimeConverterFactory` |
-| `StrictOptions` | Case-sensitive; rejects trailing commas, comments and unmapped members; `AddPolymorphismWithReflection()` |
+| `StrictOptions` | Case-sensitive; rejects trailing commas, comments and unmapped members; requires non-nullable value-type constructor parameters without a default; `AddPolymorphismWithReflection()` |
 | `CreateOptionsWithConverters(params JsonConverter[])` | `DefaultOptionsWithoutConverters` plus the given converters |
 | `options.Create(configure)` | Copies the options and applies `configure` to the copy |
 | `source.ApplyTo(target)` / `target.ApplyFrom(source)` | Copies settings and converters onto another instance. The target keeps its own `TypeInfoResolver` when it has one, and gets the source's polymorphism added to it |

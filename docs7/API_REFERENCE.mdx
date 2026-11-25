@@ -1346,7 +1346,8 @@ Preconfigured `System.Text.Json` options, enum and date converters, and polymorp
 |--------|-------------|
 | `EnhancedJsonSerializerOptions.DefaultOptions` | Web defaults with camelCase, case-insensitive reads, `null` properties omitted on write, cycles ignored, relaxed escaping, plus the enum conventions (`EnumConventions.Default`), `MultiFormatDateTimeConverterFactory`, `PolymorphicJsonConverterFactory` and `AddPolymorphismWithReflection()` |
 | `EnhancedJsonSerializerOptions.DefaultOptionsWithoutConverters` | The same settings without any converter |
-| `EnhancedJsonSerializerOptions.StrictOptions` | Case-sensitive property names, no trailing commas or comments, unmapped members rejected; no converters, but `AddPolymorphismWithReflection()` |
+| `EnhancedJsonSerializerOptions.StrictOptions` | Case-sensitive property names, no trailing commas or comments, unmapped members rejected, non-nullable value-type constructor parameters without a default required; no converters, but `AddPolymorphismWithReflection()` |
+| `options.RequireValueTypeConstructorParameters()` / `JsonTypeInfoModifiers.RequireValueTypeConstructorParameters` | Marks properties bound to non-nullable value-type constructor parameters without a default as required, so a missing one throws `JsonException` instead of binding as `default`; the extension wraps `TypeInfoResolver` (must be set) and goes before `AddPolymorphism`; trim and AOT safe |
 | `.DefaultOptionsWithDateTimeConverter` | Options with multi-format date parsing |
 | `source.ApplyTo(target)` / `target.ApplyFrom(source)` | Copies the serializer settings and any converter type the target lacks from one `JsonSerializerOptions` to another |
 | `options.Create(configure)` | Copies options and applies a configuration delegate |
