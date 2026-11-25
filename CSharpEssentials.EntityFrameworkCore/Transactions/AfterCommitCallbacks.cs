@@ -42,9 +42,9 @@ internal static class AfterCommitCallbacks
 
         if (TryDefer(context, callback))
             return;
-        if (context.Database.CurrentTransaction is not null)
+        if (context.Database.CurrentTransaction is not null || System.Transactions.Transaction.Current is not null)
             throw new InvalidOperationException(
-                $"{context.GetType().Name} has a transaction that was not started by EfCoreTransactionRunner, so the commit cannot be observed. Run the work through the runner.");
+                $"{context.GetType().Name} is in a transaction that was not started by EfCoreTransactionRunner (or in an ambient TransactionScope), so the commit cannot be observed. Run the work through the runner.");
         await callback(cancellationToken).ConfigureAwait(false);
     }
 

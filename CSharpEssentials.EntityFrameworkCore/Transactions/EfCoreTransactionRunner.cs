@@ -86,7 +86,7 @@ public sealed class EfCoreTransactionRunner<TDbContext>(TDbContext dbContext) : 
     /// <summary>
     /// Queues <paramref name="callback"/> to run after the outermost commit of the unit running on this context,
     /// or runs it now when no transaction is open. Throws <see cref="InvalidOperationException"/> when a
-    /// transaction this runner did not start is open.
+    /// transaction this runner did not start, or an ambient <c>TransactionScope</c>, is open.
     /// </summary>
     public ValueTask OnCommittedAsync(Func<CancellationToken, ValueTask> callback, CancellationToken cancellationToken = default) =>
         AfterCommitCallbacks.RegisterAsync(dbContext, callback, cancellationToken);

@@ -5,6 +5,8 @@ using CSharpEssentials.EntityFrameworkCore.Interceptors;
 using CSharpEssentials.EntityFrameworkCore.Transactions;
 using CSharpEssentials.Transactions;
 
+using System.Transactions;
+
 using FluentAssertions;
 
 using Microsoft.Data.Sqlite;
@@ -241,6 +243,19 @@ public sealed class AfterCommitCallbackTests : IDisposable
     }
 
     [Fact]
+    public async Task Ambient_TransactionScope_Throws()
+    {
+        await using NotesDbContext context = new(_options);
+        EfCoreTransactionRunner<NotesDbContext> runner = new(context);
+        using TransactionScope scope = new(TransactionScopeAsyncFlowOption.Enabled);
+
+        Func<Task> act = async () => await runner.OnCommittedAsync(Record("never"));
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        _log.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task Failing_Callbacks_Do_Not_Stop_The_Others_And_Surface_After_Commit()
     {
         await using NotesDbContext context = new(_options);
@@ -333,11 +348,22 @@ public sealed class AfterCommitCallbackTests : IDisposable
         return context;
     }
 
-    private ServiceProvider BuildEventServices()
+    private sealed class RecordingOutbox(List<string> log) : IDomainEventOutbox
+    {
+        public Task StoreAsync(IReadOnlyList<IDomainEvent> domainEvents, CancellationToken cancellationToken = default)
+        {
+            log.Add("stored");
+            return Task.CompletedTask;
+        }
+    }
+
+    private ServiceProvider BuildEventServices(bool withOutbox = false)
     {
         ServiceCollection services = new();
         services.AddLogging();
         services.AddSingleton<IDomainEventPublisher>(new RecordingPublisher(_log));
+        if (withOutbox)
+            services.AddSingleton<IDomainEventOutbox>(new RecordingOutbox(_log));
         return services.BuildServiceProvider();
     }
 
@@ -386,5 +412,19 @@ public sealed class AfterCommitCallbackTests : IDisposable
         await SaveEventAsync(context, _log, CancellationToken.None);
 
         _log.Should().Equal("published", "saved");
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Outbox_Storage_Is_Never_Deferred(bool commit)
+    {
+        await using ServiceProvider provider = BuildEventServices(withOutbox: true);
+        await using DeferringDbContext context = CreateDeferringContext(provider, defer: true);
+        EfCoreTransactionRunner<DeferringDbContext> runner = new(context);
+
+        await runner.ExecuteAsync(token => new ValueTask<bool>(SaveEventAsync(context, _log, token)), _ => commit);
+
+        _log.Should().Equal("stored", "saved");
     }
 }

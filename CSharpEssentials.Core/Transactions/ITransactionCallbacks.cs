@@ -12,7 +12,7 @@ public interface ITransactionCallbacks
     /// commit and returns at once. A rollback, a retry of the unit or a rolled-back nested unit drops the
     /// callbacks it registered. With no transaction open, runs <paramref name="callback"/> now.
     /// Implementations throw <see cref="InvalidOperationException"/> when a transaction they do not manage is open,
-    /// because they cannot tell when it commits.
+    /// an ambient <c>TransactionScope</c> included, because they cannot tell when it commits.
     /// </summary>
     ValueTask OnCommittedAsync(Func<CancellationToken, ValueTask> callback, CancellationToken cancellationToken = default);
 }

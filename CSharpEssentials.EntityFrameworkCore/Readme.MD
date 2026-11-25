@@ -635,14 +635,14 @@ await transactionRunner.ExecuteAsync(async ct =>
 {
     db.Orders.Add(order);
     await db.SaveChangesAsync(ct);
-    await callbacks.OnCommittedAsync(token => cache.RemoveAsync($"orders:{order.CustomerId}", token), ct);
+    await callbacks.OnCommittedAsync(async token => await cache.RemoveAsync($"orders:{order.CustomerId}", token), ct);
     return Result.Success();
 }, outcome => outcome.IsSuccess, cancellationToken);
 ```
 
 - Callbacks run in registration order after the outermost commit, once the execution strategy has returned, so a retried attempt never runs them twice.
 - A unit that does not commit, throws or is retried drops the callbacks it queued. A nested unit that rolls back to its savepoint drops only its own.
-- With no transaction open, `OnCommittedAsync` runs the callback at once. With a transaction the runner did not start (`Database.BeginTransactionAsync` called by hand), it throws `InvalidOperationException`, because it cannot see that commit.
+- With no transaction open, `OnCommittedAsync` runs the callback at once. With a transaction the runner did not start (`Database.BeginTransactionAsync` called by hand, or an ambient `TransactionScope`), it throws `InvalidOperationException`, because it cannot see that commit.
 - The callbacks are kept per `DbContext` instance, so any runner over the same context sees them.
 - When callbacks throw, the rest still run and the runner throws an `AggregateException` of the failures. The transaction is already committed at that point.
 
