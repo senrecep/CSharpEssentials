@@ -64,6 +64,6 @@ A failed built-in rule records `Error.Validation("Name.NotEmpty", "...", new Err
 
 ## New: typed results (`CSharpEssentials.Results`, `CSharpEssentials.Errors`)
 
-`Result<T, E1>`, `Result<T, E1, E2>` and `Result<T, E1, E2, E3>` are new and opt-in; nothing above depends on them. Exhaustive matching on them needs C# 15: a net11.0 project has it by default, and a project on an older target framework needs the .NET 11 SDK and `<LangVersion>15</LangVersion>`. See [Typed errors](/libraries/results#typed-errors-resultt-e1-resultt-e1-e2-resultt-e1-e2-e3).
+`Result<T, E1>`, `Result<T, E1, E2>` and `Result<T, E1, E2, E3>` are new and opt-in; nothing above depends on them. Matching on them (any type pattern) needs C# 15; implicit returns, `Match`, `Switch`, `TryGetValue` and `ToResult` work at any language version. For C# 15, a net11.0 project has it by default, and a project on an older target framework needs the .NET 11 SDK and `<LangVersion>15</LangVersion>`. See [Typed errors](/libraries/results#typed-errors-resultt-e1-resultt-e1-e2-resultt-e1-e2-e3).
 
 An existing catalog of `Error` fields does not convert into a typed slot. [Moving a catalog to typed kinds](/libraries/errors#moving-a-catalog-to-typed-kinds) shows the rewrite.

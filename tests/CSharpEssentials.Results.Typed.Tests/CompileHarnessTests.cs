@@ -128,6 +128,36 @@ public sealed class CompileHarnessTests
     }
 
     [Fact]
+    public void Compile_Should_ReportCS0029_When_AnErrorCatalogFieldIsReturnedIntoAKindSlot()
+    {
+        const string members = "public static R<Dto, NotFoundError, ConflictError> Conflict() => Error.Conflict(\"User.AlreadyExists\", \"User already exists\");";
+
+        IReadOnlyList<Diagnostic> diagnostics = CompileHarness.Compile(InlineUnion.With(members), LanguageVersion.CSharp15);
+
+        diagnostics.Ids().Should().BeEquivalentTo("CS0029");
+    }
+
+    [Fact]
+    public void Compile_Should_ReportCS0019_When_AKindIsComparedWithAnError()
+    {
+        const string members = "public static bool Same(Error error) => NotFound == error;";
+
+        IReadOnlyList<Diagnostic> diagnostics = CompileHarness.Compile(InlineUnion.With(members), LanguageVersion.CSharp15);
+
+        diagnostics.Ids().Should().BeEquivalentTo("CS0019");
+    }
+
+    [Fact]
+    public void Compile_Should_ReportNothing_When_AVoidSwitchStatementLeavesOutACase()
+    {
+        const string members = "public static void M(int i) { switch (Get(i)) { case Dto: break; case NotFoundError: break; } }";
+
+        IReadOnlyList<Diagnostic> diagnostics = CompileHarness.Compile(InlineUnion.With(members), LanguageVersion.CSharp15);
+
+        diagnostics.Should().BeEmpty();
+    }
+
+    [Fact]
     public void Compile_Should_ReportCS0150_When_AStaticFieldIsUsedAsACasePattern()
     {
         const string members = "public static int M(int i) => Get(i) switch { Dto d => d.Id, NotFound => 1, NotFoundError => 404, ConflictError => 409 };";

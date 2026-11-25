@@ -610,7 +610,7 @@ Without the registration, a Native AOT app throws `NotSupportedException` with t
 
 `CSharpEssentials.AspNetCore` turns a typed result into an HTTP response with `ToHttpResult()`, `ToOk()`, `ToCreated(...)` or `ToNoContent()`, and lists one problem response per error slot in the OpenAPI document. See [Typed results](/libraries/aspnetcore#typed-results).
 
-Do not return the result from a handler as it is. Without a guard its error would go out as a 200 with the error in the body. `AddEnhancedProblemDetails` registers a converter that throws before anything is written, so the request ends as a 500 instead (see [Forgetting `ToHttpResult()`](/libraries/aspnetcore#forgetting-tohttpresult)), and the `CSharpEssentials.Endpoints` analyzer reports the mistake at build time as [CSE1013](/libraries/endpoints#diagnostics).
+Do not return the result from a handler as it is. Without a guard its error would go out as a 200 with the error in the body. `AddEnhancedProblemDetails` registers a converter that throws before anything is written, so the request ends as a 500 instead (see [Forgetting `ToHttpResult()`](/libraries/aspnetcore#forgetting-tohttpresult)), and, in a project that references `CSharpEssentials.Endpoints`, analyzer [CSE1013](/libraries/endpoints#diagnostics) reports a `Map*` handler that returns the result at build time.
 
 ### Converting to `Result<T>`
 
