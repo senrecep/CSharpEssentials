@@ -71,6 +71,39 @@ public sealed class BearerSecurityOpenApiTests
         act.Should().Throw<ArgumentException>().WithParameterName("schemeName");
     }
 
+    [Fact]
+    public void AddBearerSecurityScheme_Should_Throw_When_TheBearerFormatIsBlank()
+    {
+        Action act = () => new OpenApiOptions().AddBearerSecurityScheme("Bearer", " ");
+
+        act.Should().Throw<ArgumentException>().WithParameterName("bearerFormat");
+    }
+
+    [Fact]
+    public async Task AddBearerSecurityScheme_Should_ReplaceASchemeAlreadyRegisteredUnderTheSameName()
+    {
+        string json = await GetJsonAsync(OpenApiSpecVersion.OpenApi3_1, static options =>
+        {
+            options.AddDocumentTransformer((document, _, _) =>
+            {
+                document.Components ??= new OpenApiComponents();
+                document.Components.SecuritySchemes ??= new Dictionary<string, IOpenApiSecurityScheme>(StringComparer.Ordinal);
+                document.Components.SecuritySchemes["Bearer"] = new OpenApiSecurityScheme
+                {
+                    Type = SecuritySchemeType.ApiKey,
+                    Name = "X-Api-Key",
+                    In = ParameterLocation.Header,
+                };
+                return Task.CompletedTask;
+            });
+            options.AddBearerSecurityScheme();
+        });
+        JsonNode root = JsonNode.Parse(json)!;
+
+        root["components"]!["securitySchemes"]!["Bearer"]!.ToJsonString().Should().Be(
+            """{"type":"http","scheme":"bearer","bearerFormat":"JWT"}""");
+    }
+
     private static async Task<string> GetJsonAsync(OpenApiSpecVersion version, Action<OpenApiOptions> configure) =>
         (await OptionalRouteParameterOpenApiHost.GetJsonDocumentsAsync(
             version,
@@ -112,7 +145,7 @@ public sealed class BearerSecurityOpenApiTests
 [ApiController]
 [Authorize]
 [Route("bearer/controller")]
-public sealed class BearerSecurityController : ControllerBase
+internal sealed class BearerSecurityController : ControllerBase
 {
     [HttpGet("secure")]
     public string Secure() => "secure";
