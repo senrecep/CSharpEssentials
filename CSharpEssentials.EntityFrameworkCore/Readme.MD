@@ -626,6 +626,28 @@ The work delegate returns a `ValueTask<T>` and `shouldCommit` decides whether th
 - It needs a relational provider: the InMemory provider throws on `BeginTransactionAsync` unless `TransactionIgnoredWarning` is ignored. Retrying strategies also refuse to run inside an ambient `TransactionScope`, so don't combine it with `TransactionScopeBehavior`.
 - If the commit itself fails with a transient error after the database applied it, the retry runs the work again. Make the work idempotent when you use a retrying strategy.
 
+#### After-commit callbacks
+
+`AddEfCoreTransactionRunner` also registers the runner as `ITransactionCallbacks` (from `CSharpEssentials.Core`). Use it for side effects that must not happen unless the data is committed: waking an outbox relay, evicting a cache entry, sending a message.
+
+```csharp
+await transactionRunner.ExecuteAsync(async ct =>
+{
+    db.Orders.Add(order);
+    await db.SaveChangesAsync(ct);
+    await callbacks.OnCommittedAsync(token => cache.RemoveAsync($"orders:{order.CustomerId}", token), ct);
+    return Result.Success();
+}, outcome => outcome.IsSuccess, cancellationToken);
+```
+
+- Callbacks run in registration order after the outermost commit, once the execution strategy has returned, so a retried attempt never runs them twice.
+- A unit that does not commit, throws or is retried drops the callbacks it queued. A nested unit that rolls back to its savepoint drops only its own.
+- With no transaction open, `OnCommittedAsync` runs the callback at once. With a transaction the runner did not start (`Database.BeginTransactionAsync` called by hand), it throws `InvalidOperationException`, because it cannot see that commit.
+- The callbacks are kept per `DbContext` instance, so any runner over the same context sees them.
+- When callbacks throw, the rest still run and the runner throws an `AggregateException` of the failures. The transaction is already committed at that point.
+
+`BaseDbContext` can publish its after-save domain events this way. Override `DeferDomainEventPublishingUntilCommit` to return `true` (with `DispatchDomainEventsOnSaveChanges` enabled): inside a runner unit the events go to `IDomainEventPublisher` after the commit and are dropped on rollback. Outside a runner unit they are published right after the save, as before. Events stored in an `IDomainEventOutbox` are never deferred, since the outbox row has to be written in the transaction. `DomainEventInterceptor` does not defer.
+
 ### Idempotency records
 
 `EfCoreIdempotencyRecordStore<TContext>` (namespace `CSharpEssentials.EntityFrameworkCore.Idempotency`) is an `IIdempotencyRecordStore` from `CSharpEssentials.Idempotency` that keeps its records in your own `DbContext` and writes them inside the context's current transaction. The record commits and rolls back with the business rows of the same unit of work: a request whose transaction rolls back leaves no record, and its retry runs again.

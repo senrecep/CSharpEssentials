@@ -737,6 +737,7 @@ All methods accept an optional `CultureInfo` parameter.
 |------|-------------|
 | `HttpCodes` | `int` constants for 2xx to 5xx status codes (`HttpCodes.Ok`, `HttpCodes.NotFound`, `HttpCodes.TooManyRequests`, ...) |
 | `ITransactionRunner` | `ValueTask<T> ExecuteAsync<T>(Func<CancellationToken, ValueTask<T>> work, Func<T, bool> shouldCommit, CancellationToken ct = default)`; implemented by `EfCoreTransactionRunner<TDbContext>` (section 10) and used by the Mediator `TransactionBehavior` |
+| `ITransactionCallbacks` | `ValueTask OnCommittedAsync(Func<CancellationToken, ValueTask> callback, CancellationToken ct = default)`: runs the callback after the outermost commit of the current unit, or now when none is open; implemented by `EfCoreTransactionRunner<TDbContext>` |
 
 ---
 
@@ -1304,7 +1305,9 @@ Overriding `OnConfiguring` without calling `base.OnConfiguring` disables interce
 |--------|-------------|
 | `ITransactionRunner` (`CSharpEssentials.Core`, namespace `CSharpEssentials.Transactions`) | `ExecuteAsync(work, shouldCommit, ct)`: runs work in a transaction, commits when `shouldCommit` is true, rolls back otherwise or on exception |
 | `EfCoreTransactionRunner<TDbContext>` | Outermost call: execution strategy + `BeginTransactionAsync`, retry re-runs the whole unit. Nested call on the same context: joins `CurrentTransaction` behind a savepoint |
-| `AddEfCoreTransactionRunner<TDbContext>()` | Registers the runner as the scoped `ITransactionRunner`, replacing an earlier one |
+| `AddEfCoreTransactionRunner<TDbContext>()` | Registers the runner as the scoped `ITransactionRunner` and `ITransactionCallbacks`, replacing earlier ones |
+| `ITransactionCallbacks.OnCommittedAsync(callback, ct)` (`CSharpEssentials.Core`) | `EfCoreTransactionRunner` queues the callback for after the outermost commit; a rollback, a retry or a rolled-back nested unit drops it. Runs it now when no transaction is open; throws `InvalidOperationException` inside a transaction the runner did not start. Failed callbacks throw `AggregateException` after the commit |
+| `BaseDbContext.DeferDomainEventPublishingUntilCommit` | Opt-in: after-save events go to `IDomainEventPublisher` after the commit of the runner unit and are dropped on rollback. Outbox storage is not deferred |
 
 ### Idempotency records
 

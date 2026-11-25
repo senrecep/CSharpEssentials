@@ -310,6 +310,8 @@ Result result = await runner.ExecuteAsync(
 
 The outermost call runs inside `CreateExecutionStrategy()` with a transaction, so retrying strategies work (a retry re-runs the whole unit on a cleared change tracker; the context must have no pending changes at the start). A nested call on the same context instance joins the transaction, behind a savepoint when the provider supports them. It needs a relational provider (the InMemory provider throws on `BeginTransactionAsync`) and does not combine with an ambient `TransactionScope`.
 
+For side effects that must wait for the commit, inject `ITransactionCallbacks` (also registered by `AddEfCoreTransactionRunner`) and call `await callbacks.OnCommittedAsync(token => ..., ct)` inside the unit: the callback runs after the outermost commit and is dropped on rollback, retry or a rolled-back nested unit. With no transaction open it runs at once; inside a transaction the runner did not start it throws. A `BaseDbContext` that overrides `DeferDomainEventPublishingUntilCommit => true` publishes its after-save domain events this way (outbox storage is never deferred).
+
 ---
 
 ## Idempotency records

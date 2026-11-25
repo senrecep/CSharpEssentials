@@ -1,6 +1,7 @@
 using CSharpEssentials.Entity;
 using CSharpEssentials.Entity.Interfaces;
 using CSharpEssentials.EntityFrameworkCore.Interceptors;
+using CSharpEssentials.EntityFrameworkCore.Transactions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -43,7 +44,8 @@ public abstract partial class BaseDbContext<TContext> : DbContext
     /// <para>
     /// After-save events are dispatched once the save has completed, so storing them in an
     /// <see cref="IDomainEventOutbox"/> is not atomic with the save. Inside an explicit transaction they are
-    /// dispatched before that transaction commits. When the save fails, the after-save events are put back on
+    /// dispatched before that transaction commits; <see cref="DeferDomainEventPublishingUntilCommit"/> moves publishing
+    /// after the commit of an <c>EfCoreTransactionRunner</c> unit. When the save fails, the after-save events are put back on
     /// their entities so a retry dispatches them. They are also put back when the default
     /// <see cref="DispatchDomainEventsAsync"/> stores them in the outbox and <see cref="IDomainEventOutbox.StoreAsync"/>
     /// throws; a later <c>SaveChanges</c> dispatches them again even with no pending changes. When
@@ -64,6 +66,18 @@ public abstract partial class BaseDbContext<TContext> : DbContext
     /// </para>
     /// </summary>
     protected virtual bool DispatchDomainEventsOnSaveChanges => false;
+
+    /// <summary>
+    /// When <c>true</c> and <see cref="DispatchDomainEventsOnSaveChanges"/> is enabled, the default
+    /// <see cref="DispatchDomainEventsAsync"/> publishes <see cref="DomainEventTiming.AfterSave"/> events through
+    /// <see cref="IDomainEventPublisher"/> only after the outermost commit of the
+    /// <c>EfCoreTransactionRunner</c> unit that saved them, and drops them when that unit rolls back or retries.
+    /// Outside a runner unit they are published right after the save, as before. Events stored in an
+    /// <see cref="IDomainEventOutbox"/> are not deferred: the outbox write must be part of the transaction.
+    /// A publisher that throws after the commit surfaces as an <see cref="AggregateException"/> from the runner.
+    /// Defaults to <c>false</c>.
+    /// </summary>
+    protected virtual bool DeferDomainEventPublishingUntilCommit => false;
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -207,6 +221,18 @@ public abstract partial class BaseDbContext<TContext> : DbContext
             }
         }
 
+        if (timing == DomainEventTiming.AfterSave && DeferDomainEventPublishingUntilCommit)
+        {
+            IDomainEvent[] deferred = [.. domainEvents];
+            if (AfterCommitCallbacks.TryDefer(this, token => PublishDomainEventsAsync(deferred, token)))
+                return;
+        }
+
+        await PublishDomainEventsAsync(domainEvents, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async ValueTask PublishDomainEventsAsync(IReadOnlyList<IDomainEvent> domainEvents, CancellationToken cancellationToken)
+    {
         IDomainEventPublisher publisher = ServiceProvider.GetRequiredService<IDomainEventPublisher>();
         foreach (IDomainEvent domainEvent in domainEvents)
             await publisher.PublishAsync(domainEvent, cancellationToken).ConfigureAwait(false);
