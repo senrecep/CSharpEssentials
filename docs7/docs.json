@@ -43,6 +43,7 @@
           "libraries/endpoints",
           "libraries/entity",
           "libraries/entityframeworkcore",
+          "libraries/entityframeworkcore-healthchecks",
           "libraries/enums",
           "libraries/errors-exceptions",
           "libraries/errors",

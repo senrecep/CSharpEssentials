@@ -59,6 +59,7 @@
         <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="[9.0.4,)" />
         <PackageVersion Include="Microsoft.Extensions.Http" Version="[9.0.4,)" />
         <PackageVersion Include="Microsoft.Extensions.Options" Version="[9.0.4,)" />
+        <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="[8.0.0,)" />
     </ItemGroup>
 
     <!-- Mediator -->
@@ -87,6 +88,8 @@
         <PackageVersion Include="CSharpEssentials.Core" Version="[$(Version)]" />
         <PackageVersion Include="CSharpEssentials.DependencyInjection" Version="[$(Version)]" />
         <PackageVersion Include="CSharpEssentials.Entity" Version="[$(Version)]" />
+        <PackageVersion Include="CSharpEssentials.EntityFrameworkCore" Version="[$(Version)]" />
+        <PackageVersion Include="CSharpEssentials.EntityFrameworkCore.HealthChecks" Version="[$(Version)]" />
         <PackageVersion Include="CSharpEssentials.Endpoints" Version="[$(Version)]" />
         <PackageVersion Include="CSharpEssentials.Enums" Version="[$(Version)]" />
         <PackageVersion Include="CSharpEssentials.Errors" Version="[$(Version)]" />

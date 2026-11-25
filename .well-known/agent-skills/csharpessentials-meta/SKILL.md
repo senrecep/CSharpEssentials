@@ -1,11 +1,11 @@
 ---
 name: csharpessentials-meta
-description: Use when deciding which CSharpEssentials package to use. Gives an overview of all 27 packages organized by concern, what the CSharpEssentials meta-package bundles, and a quick-reference table mapping problems to packages.
+description: Use when deciding which CSharpEssentials package to use. Gives an overview of all 28 packages organized by concern, what the CSharpEssentials meta-package bundles, and a quick-reference table mapping problems to packages.
 ---
 
 # CSharpEssentials: package index
 
-CSharpEssentials is a modular .NET NuGet ecosystem of 27 packages (26 focused packages plus the `CSharpEssentials` meta-package). Each package is independent; take only what you need.
+CSharpEssentials is a modular .NET NuGet ecosystem of 28 packages (27 focused packages plus the `CSharpEssentials` meta-package). Each package is independent; take only what you need.
 
 ## Meta-package
 
@@ -14,7 +14,7 @@ dotnet add package CSharpEssentials
 # Includes: Any, Clone, Core, Entity, Enums, Errors, Http, Json, Maybe, Results, Rules, These, Time
 ```
 
-Not bundled: Validation, Mediator, Resilience, Endpoints, DependencyInjection, EntityFrameworkCore, AspNetCore (and its OpenApi and Swashbuckle packages), Idempotency (and Idempotency.Testing), RequestResponseLogging and GcpSecretManager. The meta-package assembly also adds `JsonExtensions.TryGetProperty(params string[])` / `TryGetNestedProperty` on `JsonElement` / `JsonDocument` (namespace `CSharpEssentials.Json`) and `TimeExtensions.MsToDateTime(this long?, DateTime?)` (namespace `CSharpEssentials.Time`).
+Not bundled: Validation, Mediator, Resilience, Endpoints, DependencyInjection, EntityFrameworkCore (and EntityFrameworkCore.HealthChecks), AspNetCore (and its OpenApi and Swashbuckle packages), Idempotency (and Idempotency.Testing), RequestResponseLogging and GcpSecretManager. The meta-package assembly also adds `JsonExtensions.TryGetProperty(params string[])` / `TryGetNestedProperty` on `JsonElement` / `JsonDocument` (namespace `CSharpEssentials.Json`) and `TimeExtensions.MsToDateTime(this long?, DateTime?)` (namespace `CSharpEssentials.Time`).
 
 ## All packages
 
@@ -49,6 +49,7 @@ Not bundled: Validation, Mediator, Resilience, Endpoints, DependencyInjection, E
 |---------|---------|-------|
 | `CSharpEssentials.Entity` | `dotnet add package CSharpEssentials.Entity` | `csharpessentials-entity` |
 | `CSharpEssentials.EntityFrameworkCore` | `dotnet add package CSharpEssentials.EntityFrameworkCore` | `csharpessentials-efcore` |
+| `CSharpEssentials.EntityFrameworkCore.HealthChecks` | `dotnet add package CSharpEssentials.EntityFrameworkCore.HealthChecks` | `csharpessentials-efcore` |
 
 ### Web and infrastructure
 
@@ -97,6 +98,7 @@ Not bundled: Validation, Mediator, Resilience, Endpoints, DependencyInjection, E
 | CQRS pipeline behaviors (validate, log, cache, transact) | `CSharpEssentials.Mediator` |
 | DDD aggregate base class + domain events | `CSharpEssentials.Entity` |
 | EF Core audit, slow queries, pagination | `CSharpEssentials.EntityFrameworkCore` |
+| Readiness check that fails on pending EF Core migrations | `CSharpEssentials.EntityFrameworkCore.HealthChecks` |
 | Map errors to HTTP ProblemDetails (privacy-first defaults in 4.0, `UseLegacyDefaults()` for 3.x output) | `CSharpEssentials.AspNetCore` |
 | Organize Minimal API endpoints in classes (source-generated, AOT-safe) | `CSharpEssentials.Endpoints` |
 | Register and decorate services with attributes (source-generated) | `CSharpEssentials.DependencyInjection` |
@@ -133,6 +135,7 @@ using CSharpEssentials.EntityFrameworkCore; // BaseDbContext, DbContextIntercept
 using CSharpEssentials.EntityFrameworkCore.DbErrors;     // DbErrorTranslation, IDbErrorTranslator
 using CSharpEssentials.EntityFrameworkCore.Interceptors; // AuditInterceptor, DomainEventInterceptor, SlowQueryInterceptor
 using CSharpEssentials.EntityFrameworkCore.Pagination;   // PaginateAsync, KeysetPaginateAsync
+using CSharpEssentials.EntityFrameworkCore.HealthChecks; // AddMigrationsCheck (CSharpEssentials.EntityFrameworkCore.HealthChecks)
 using CSharpEssentials.AspNetCore;         // GlobalExceptionHandler, ResultEndpointFilter, AddEnhancedProblemDetails, AddSwagger / AddEnumConventions (Swashbuckle and OpenApi packages)
 using CSharpEssentials.Endpoints;          // IEndpoint, IEndpointGroup, [EndpointGroup<T>]
 using CSharpEssentials.DependencyInjection; // [RegisterScoped], [Decorates], RegistrationStrategy

@@ -1323,6 +1323,14 @@ Namespace `CSharpEssentials.EntityFrameworkCore.Idempotency`; depends on `CSharp
 
 With Mediator, use `IdempotencyPlacement.InsideTransaction` and `TransactionBehavior` over `EfCoreTransactionRunner<TContext>`: a request whose transaction rolls back leaves no record.
 
+### Migrations
+
+| Member | What it does |
+|--------|-------------|
+| `serviceProvider.MigrateDatabaseAsync<TContext>(ct)` | Namespace `CSharpEssentials.EntityFrameworkCore.Migrations`. Resolves `TContext` from a new scope and calls `Database.MigrateAsync`; inside the registered `IDatabaseMigrationLock` when there is one |
+| `IDatabaseMigrationLock.AcquireAsync(context, ct)` | Adapter hook that serializes migrations across instances; returns an `IAsyncDisposable` that releases the lock. No implementation shipped |
+| `healthChecks.AddMigrationsCheck<TContext>(name?, failureStatus?, tags?, timeout?)` | Package `CSharpEssentials.EntityFrameworkCore.HealthChecks`. Adds `DbContextMigrationsHealthCheck<TContext>`: the failure status (default `Unhealthy`) while `GetPendingMigrationsAsync` returns names (listed under the `pendingMigrations` data key), `Healthy` otherwise. Name `"{TContext}-migrations"`, tags `["ready"]` by default |
+
 ### CQRS context registration
 
 | Method | What it does |

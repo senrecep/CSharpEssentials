@@ -314,6 +314,22 @@ For side effects that must wait for the commit, inject `ITransactionCallbacks` (
 
 ---
 
+## Migrations and readiness
+
+```csharp
+using CSharpEssentials.EntityFrameworkCore.Migrations;    // MigrateDatabaseAsync, IDatabaseMigrationLock
+using CSharpEssentials.EntityFrameworkCore.HealthChecks;  // AddMigrationsCheck (package CSharpEssentials.EntityFrameworkCore.HealthChecks)
+
+builder.Services.AddHealthChecks().AddMigrationsCheck<AppDbContext>();   // Unhealthy while migrations are pending, tag "ready"
+
+WebApplication app = builder.Build();
+await app.Services.MigrateDatabaseAsync<AppDbContext>();   // opt-in; runs inside a registered IDatabaseMigrationLock
+```
+
+`IDatabaseMigrationLock` has no built-in implementation: register an adapter (PostgreSQL advisory lock, `sp_getapplock`, Redis) so several instances do not migrate at once.
+
+---
+
 ## Idempotency records
 
 ```csharp

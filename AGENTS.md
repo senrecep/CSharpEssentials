@@ -2,14 +2,14 @@
 
 ## What
 
-CSharpEssentials is a modular .NET NuGet ecosystem (27 packages) that bridges OOP and functional programming in C#. Core patterns: Result/Maybe monads, discriminated unions (Any<T1,T2,...>), a composable Rules engine, DDD base classes (EntityBase), EF Core interceptors and pagination, ASP.NET Core utilities, idempotency, source-generated Minimal API endpoints (CSharpEssentials.Endpoints) and attribute-based DI registration (CSharpEssentials.DependencyInjection).
+CSharpEssentials is a modular .NET NuGet ecosystem (28 packages) that bridges OOP and functional programming in C#. Core patterns: Result/Maybe monads, discriminated unions (Any<T1,T2,...>), a composable Rules engine, DDD base classes (EntityBase), EF Core interceptors and pagination, ASP.NET Core utilities, idempotency, source-generated Minimal API endpoints (CSharpEssentials.Endpoints) and attribute-based DI registration (CSharpEssentials.DependencyInjection).
 
 Target frameworks, per project file:
 
 - Most packages: net11.0, net10.0, net9.0 and netstandard2.1. Core, Clone and Enums add netstandard2.0.
 - DependencyInjection: net11.0 to net8.0 plus netstandard2.1.
 - AspNetCore, AspNetCore.Swashbuckle, Endpoints, RequestResponseLogging and Idempotency.Testing: net11.0 to net8.0, no netstandard.
-- EntityFrameworkCore: net10.0, net9.0 and net8.0 only (no net11.0), each pinned to its EF Core major.
+- EntityFrameworkCore and EntityFrameworkCore.HealthChecks: net10.0, net9.0 and net8.0 only (no net11.0), each pinned to its EF Core major.
 - AspNetCore.OpenApi: net10.0 only.
 
 Current version: 8.0.0 <!-- x-release-please-version -->
