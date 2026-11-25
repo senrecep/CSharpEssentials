@@ -58,7 +58,7 @@ public class DomainEventInterceptorTests
     {
         public List<IDomainEvent> Stored { get; } = [];
 
-        public Task StoreAsync(IReadOnlyList<IDomainEvent> domainEvents, CancellationToken cancellationToken = default)
+        public Task StoreAsync(DbContext context, IReadOnlyList<IDomainEvent> domainEvents, CancellationToken cancellationToken = default)
         {
             Stored.AddRange(domainEvents);
             return Task.CompletedTask;
@@ -67,7 +67,7 @@ public class DomainEventInterceptorTests
 
     private sealed class ThrowingOutbox : IDomainEventOutbox
     {
-        public Task StoreAsync(IReadOnlyList<IDomainEvent> domainEvents, CancellationToken cancellationToken = default) =>
+        public Task StoreAsync(DbContext context, IReadOnlyList<IDomainEvent> domainEvents, CancellationToken cancellationToken = default) =>
             throw new InvalidOperationException("outbox failed");
     }
 

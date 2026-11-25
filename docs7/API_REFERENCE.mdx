@@ -1306,7 +1306,7 @@ Opt-in hooks; both are off by default.
 |--------|---------|-------------|
 | `protected virtual DbContextInterceptors InterceptorsFromServices` | `None` | `OnConfiguring` attaches the selected interceptors (`Audit`, `DomainEvents`, `SlowQuery`, `All`) when registered in DI; skips ones already on the options |
 | `protected virtual bool DispatchDomainEventsOnSaveChanges` | `false` | `SaveChanges`/`SaveChangesAsync` collect domain events, dispatch `BeforeSave` events before saving and `AfterSave` events after a successful save |
-| `protected virtual Task DispatchDomainEventsAsync(IReadOnlyList<IDomainEvent>, DomainEventTiming, CancellationToken)` | outbox / publisher | Override to customize dispatch. Default: `AfterSave` → `IDomainEventOutbox` if registered, else `IDomainEventPublisher`; `BeforeSave` → `IDomainEventPublisher` |
+| `protected virtual Task DispatchDomainEventsAsync(IReadOnlyList<IDomainEvent>, DomainEventTiming, CancellationToken)` | publisher | Override to customize publishing. Default: both timings → `IDomainEventPublisher`. With an `IDomainEventOutbox` registered, `AfterSave` events are stored in it before the write, in the same `SaveChanges`, and never reach this method |
 
 Overriding `OnConfiguring` without calling `base.OnConfiguring` disables interceptor attachment. Use either `DispatchDomainEventsOnSaveChanges` or `DomainEventInterceptor`, not both; events collected by the context are cleared before the interceptor runs, so they are never dispatched twice.
 
@@ -1319,6 +1319,21 @@ Overriding `OnConfiguring` without calling `base.OnConfiguring` disables interce
 | `AddEfCoreTransactionRunner<TDbContext>()` | Registers the runner as the scoped `ITransactionRunner` and `ITransactionCallbacks`, replacing earlier ones |
 | `ITransactionCallbacks.OnCommittedAsync(callback, ct)` (`CSharpEssentials.Core`) | `EfCoreTransactionRunner` queues the callback for after the outermost commit; a rollback, a retry or a rolled-back nested unit drops it. Runs it now when no transaction is open; throws `InvalidOperationException` inside a transaction the runner did not start or an ambient `TransactionScope`. Failed callbacks throw `AggregateException` after the commit |
 | `BaseDbContext.DeferDomainEventPublishingUntilCommit` | Opt-in: after-save events go to `IDomainEventPublisher` after the commit of the runner unit and are dropped on rollback. Outbox storage is not deferred |
+
+### Outbox
+
+Namespace `CSharpEssentials.EntityFrameworkCore.Outbox`.
+
+| Member | What it does |
+|--------|-------------|
+| `IDomainEventOutbox.StoreAsync(DbContext context, IReadOnlyList<IDomainEvent>, CancellationToken)` (namespace `CSharpEssentials.EntityFrameworkCore.Interceptors`) | Called before the write with the saving context; rows added to `context` are written by the same `SaveChanges`. Must not call `SaveChanges`. Rows it added are detached when it or the save throws |
+| `OutboxMessage` | `Id` (event id), `Type`, `Content`, UTC `OccurredAt`, `NextAttemptAt`, `Attempts`, `ClaimToken`, `ProcessedAt`, `DeadLetteredAt`, `Error` |
+| `modelBuilder.AddOutboxMessages(configure?)` | Maps `OutboxMessage`: key `Id`, `Type` max 256, index on (`ProcessedAt`, `DeadLetteredAt`, `NextAttemptAt`). `OutboxMessageModelOptions`: `TableName` (`OutboxMessages`), `Schema`. Throws `ArgumentException` for an empty table name |
+| `EfCoreDomainEventOutbox(serializer, timeProvider?)` | `IDomainEventOutbox` that adds one row per event to the saving context. Throws `InvalidOperationException` when the context does not map `OutboxMessage` |
+| `IOutboxMessageSerializer` | `OutboxPayload Serialize(IDomainEvent)` and `IDomainEvent Deserialize(string type, string content)` |
+| `JsonOutboxMessageSerializer(registry)` | Default serializer: System.Text.Json with the registered `JsonTypeInfo`. Unknown types throw `InvalidOperationException` |
+| `OutboxEventTypeRegistry.Add<TEvent>(name, JsonTypeInfo<TEvent>)` / `Add<TEvent>(name, JsonSerializerOptions?)` | Registers an event type under a stable name (at most 256 characters). The second overload uses reflection. Duplicate names or types throw `ArgumentException` |
+| `services.AddEfCoreOutbox(registerTypes)` | Registers the registry, `JsonOutboxMessageSerializer` (unless an `IOutboxMessageSerializer` is registered) and `EfCoreDomainEventOutbox` as the scoped `IDomainEventOutbox` |
 
 ### Idempotency records
 

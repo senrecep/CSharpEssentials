@@ -389,7 +389,7 @@ public sealed class AfterCommitCallbackTests : IDisposable
 
     private sealed class RecordingOutbox(List<string> log) : IDomainEventOutbox
     {
-        public Task StoreAsync(IReadOnlyList<IDomainEvent> domainEvents, CancellationToken cancellationToken = default)
+        public Task StoreAsync(DbContext context, IReadOnlyList<IDomainEvent> domainEvents, CancellationToken cancellationToken = default)
         {
             log.Add("stored");
             return Task.CompletedTask;

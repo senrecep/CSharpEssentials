@@ -53,7 +53,7 @@ public sealed class DomainEventInterceptorDispatchTests : IDisposable
         public List<IDomainEvent> Stored { get; } = [];
         public List<CancellationToken> Tokens { get; } = [];
 
-        public Task StoreAsync(IReadOnlyList<IDomainEvent> domainEvents, CancellationToken cancellationToken = default)
+        public Task StoreAsync(DbContext context, IReadOnlyList<IDomainEvent> domainEvents, CancellationToken cancellationToken = default)
         {
             Stored.AddRange(domainEvents);
             Tokens.Add(cancellationToken);

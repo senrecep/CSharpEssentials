@@ -3,6 +3,7 @@ using System.Reflection;
 using CSharpEssentials.Entity;
 using CSharpEssentials.Entity.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace CSharpEssentials.EntityFrameworkCore.Interceptors;
 
@@ -60,6 +61,40 @@ internal static class DomainEventCollector
                 entity.Raise(domainEvent);
         }
     }
+
+    /// <summary>
+    /// Calls <see cref="IDomainEventOutbox.StoreAsync"/> and returns the entries it added to <paramref name="context"/>.
+    /// When the outbox throws, the entries it added are detached so a retry does not write them twice.
+    /// </summary>
+    internal static async Task<EntityEntry[]> StoreInOutboxAsync(
+        IDomainEventOutbox outbox, DbContext context, IDomainEvent[] events, CancellationToken cancellationToken)
+    {
+        HashSet<object> before = new(context.ChangeTracker.Entries().Select(static e => e.Entity), ReferenceEqualityComparer.Instance);
+        try
+        {
+            await outbox.StoreAsync(context, events, cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            Detach(AddedSince(context, before));
+            throw;
+        }
+
+        return AddedSince(context, before);
+    }
+
+    /// <summary>Detaches entries that are still tracked, such as outbox rows whose save failed.</summary>
+    internal static void Detach(EntityEntry[] entries)
+    {
+        foreach (EntityEntry entry in entries)
+        {
+            if (entry.State != EntityState.Detached)
+                entry.State = EntityState.Detached;
+        }
+    }
+
+    private static EntityEntry[] AddedSince(DbContext context, HashSet<object> before) =>
+        [.. context.ChangeTracker.Entries().Where(e => e.State == EntityState.Added && !before.Contains(e.Entity))];
 
     internal static (IDomainEvent[] BeforeSave, IDomainEvent[] AfterSave) SplitByTiming(IDomainEvent[] events)
     {

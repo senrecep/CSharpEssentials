@@ -330,6 +330,10 @@ await app.Services.MigrateDatabaseAsync<AppDbContext>();   // opt-in; runs insid
 
 ---
 
+## Outbox
+
+`AddEfCoreOutbox(types => types.Add("orders.placed", AppJsonContext.Default.OrderPlaced))` registers `EfCoreDomainEventOutbox`; call `modelBuilder.AddOutboxMessages()` in `OnModelCreating`. After-save events become `OutboxMessage` rows written by the same `SaveChanges` as the entities (both `DispatchDomainEventsOnSaveChanges` and `DomainEventInterceptor`). Only registered event types are stored; an unregistered one throws and nothing is saved. A custom `IDomainEventOutbox` gets `StoreAsync(DbContext context, events, ct)` and must not call `SaveChanges`.
+
 ## Idempotency records
 
 ```csharp

@@ -303,15 +303,15 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, IServic
 }
 ```
 
-Both hooks are off by default. Interceptors that are not registered in DI, or are already on the options, are skipped. When dispatch is on, `BeforeSave` events go to `IDomainEventPublisher` before the save, and `AfterSave` events go to `IDomainEventOutbox` (if registered) or `IDomainEventPublisher` after the save succeeds. Override `DispatchDomainEventsAsync` to change this. If you override `OnConfiguring`, call `base.OnConfiguring(optionsBuilder)`.
+Both hooks are off by default. Interceptors that are not registered in DI, or are already on the options, are skipped. When dispatch is on, `BeforeSave` events go to `IDomainEventPublisher` before the save, and `AfterSave` events go to `IDomainEventOutbox` before the write, in the same `SaveChanges`, when an outbox is registered, otherwise to `IDomainEventPublisher` after the save succeeds. Override `DispatchDomainEventsAsync` to change how events are published. If you override `OnConfiguring`, call `base.OnConfiguring(optionsBuilder)`.
 
 The two domain event paths differ in when `AfterSave` events are handled:
 
 | | `DispatchDomainEventsOnSaveChanges` | `DomainEventInterceptor` |
 |---|---|---|
-| `AfterSave` events | after the save completes | in `SavingChanges`, before the database write |
-| Outbox write | not atomic with the save: the save is already committed when `StoreAsync` runs; inside an explicit transaction it runs before that transaction commits | before the save, in the same `SaveChanges` call |
-| `SaveChanges` throws | `AfterSave` events are put back on their entities, so a retry dispatches them. They are also put back when `StoreAsync` throws after the save, and a later `SaveChanges` stores them again; they stay cleared when `IDomainEventPublisher` throws while publishing them. An outbox that adds rows to the context and then throws should remove them first, or the retry saves them and stores the events twice. After a rolled-back explicit transaction, a retry stores the put-back events for a row that is not in the database | `AfterSave` events are put back when a `BeforeSave` publish throws or when `StoreAsync` throws. They are not put back when `IDomainEventPublisher` throws while dispatching them, because some may already be published and a retry would publish them twice, or when the database write fails |
+| `AfterSave` events | published after the save completes | in `SavingChanges`, before the database write |
+| Outbox write | before the save, in the same `SaveChanges` call | before the save, in the same `SaveChanges` call |
+| `SaveChanges` throws | `AfterSave` events are put back on their entities, so a retry dispatches them, and the rows the outbox added are detached. They stay cleared when `IDomainEventPublisher` throws while publishing them | `AfterSave` events are put back, and the rows the outbox added detached, when a `BeforeSave` publish throws or when `StoreAsync` throws. They are not put back when `IDomainEventPublisher` throws while dispatching them, because some may already be published and a retry would publish them twice, or when the database write fails |
 
 Use one of them, not both. When `DispatchDomainEventsOnSaveChanges` is `true`, `DbContextInterceptors.DomainEvents` in `InterceptorsFromServices` is ignored and the `DomainEventInterceptor` is not attached. The context's service scope (`ServiceProvider`) is disposed with the context.
 
@@ -694,6 +694,31 @@ The package has no `IStartupTask` or `AddMigrateOnStartup<TContext>()` registrat
 EF Core 9 and later also take a database lock inside `MigrateAsync` on most providers. The hook is for EF Core 8 and for work you want serialized together with the migration.
 
 For a readiness probe that fails while migrations are pending, see [CSharpEssentials.EntityFrameworkCore.HealthChecks](/libraries/entityframeworkcore-healthchecks).
+
+### Outbox
+
+`EfCoreDomainEventOutbox` stores after-save domain events as `OutboxMessage` rows in the context that raised them. The rows are written by the same `SaveChanges` as the entities, so the events exist exactly when the data does. It works with `DispatchDomainEventsOnSaveChanges` and with `DomainEventInterceptor`.
+
+```csharp
+public sealed record OrderPlaced(Guid OrderId) : DomainEvent;
+
+[JsonSerializable(typeof(OrderPlaced))]
+internal sealed partial class AppJsonContext : JsonSerializerContext;
+
+// OnModelCreating
+modelBuilder.AddOutboxMessages(options => options.Schema = "messaging");
+
+// Startup
+services.AddEfCoreOutbox(types => types
+    .Add("orders.placed", AppJsonContext.Default.OrderPlaced));
+```
+
+- Each row keeps the event's `EventId` as its `Id` and its `OccurredAt` when the event implements `IIdentifiedDomainEvent` (the `DomainEvent` base record does). Other events get a new version 7 id and the current time of the registered `TimeProvider`.
+- `Type` is the name you registered, not the CLR name, so you can rename or move event classes. Only registered types are written or read back. Saving an event of another type throws `InvalidOperationException`, writes nothing and puts the events back on their entities.
+- `JsonOutboxMessageSerializer` serializes with the registered `JsonTypeInfo`. Register every type with source-generated metadata (`AppJsonContext.Default.X`) for trimming and Native AOT. `Add<TEvent>(name, options?)` uses reflection and is marked `RequiresUnreferencedCode`.
+- To use another format, register your own `IOutboxMessageSerializer` before `AddEfCoreOutbox`.
+- `AddOutboxMessages` maps the table (`OutboxMessages` by default, with `TableName` and `Schema` options), the primary key and an index on (`ProcessedAt`, `DeadLetteredAt`, `NextAttemptAt`). Add a migration after calling it.
+- A custom `IDomainEventOutbox` receives the saving context in `StoreAsync(context, events, ct)`. It may add rows to it but must not call `SaveChanges`.
 
 ### Idempotency records
 

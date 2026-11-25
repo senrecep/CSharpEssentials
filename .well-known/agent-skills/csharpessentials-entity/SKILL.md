@@ -95,6 +95,8 @@ order.ClearDomainEvents();
 
 ## Guidance
 
+- For events an outbox stores, derive from `DomainEvent` (`public sealed record OrderPlaced(Guid OrderId) : DomainEvent;`). It implements `IIdentifiedDomainEvent` with `EventId` (version 7 GUID) and `OccurredAt` from `TimeProvider.System`, or from the `TimeProvider` passed to `base(clock)`.
+
 - Call `Raise()` only inside entity methods to keep domain events encapsulated in the aggregate.
 - `DomainEvents` is a property; there is no `GetDomainEvents()`. Raising or clearing while iterating it throws `InvalidOperationException`.
 - Audit fields are `UpdatedAt`/`UpdatedBy`, not `ModifiedAt`/`ModifiedBy`.
