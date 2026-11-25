@@ -416,6 +416,7 @@ Result<int[]> values = await tasks.SequenceAsync();
 | `value.ToResult()` / `error.ToResult<T>()` / `errors.ToResult()` | Wraps a value (`Result<T>`), an `Error` or an `Error[]`/`IEnumerable<Error>` into a result |
 | `str.TrimStart(prefix, comparison)` / `str.TrimEnd(suffix, comparison)` | `StringResultExtensions`: `Result<string>`; a null or empty input or affix gives `Error.Validation` (`InputIsEmpty`, `PrefixIsEmpty`, `SuffixIsEmpty`), a missing prefix or suffix leaves the string unchanged |
 | `ResultBaseComparer`, `ResultComparer`, `ResultComparer<T>` | `IEqualityComparer` implementations in namespace `CSharpEssentials.ResultPattern.Comparers`, exposed as `IResultBase.Comparer`, `IResult.Comparer` and `IResult<T>.Comparer`. `ResultComparer` (a `ResultBaseComparer`) compares the success state and the errors; `ResultComparer<T>` also compares the value (optionally with your own `EqualityComparer<T>`) |
+| `ITypedResult` | Public interface on `Result<T, E1..E3>` (namespace `CSharpEssentials.ResultPattern.Interfaces`): `HasValue` and `Value` of the case the result holds, readable without knowing its type arguments |
 
 #### Test assertions
 
@@ -425,7 +426,7 @@ Result<int[]> values = await tasks.SequenceAsync();
 |--------|-------------|
 | `ShouldBeSuccess()` | Passes on a successful `Result`; returns the value of a `Result<T>` or a typed `Result<T, E1..E3>` |
 | `ShouldBeFailure()` / `ShouldHaveError(code)` / `(type)` / `(type, code)` | Return the errors, or the first error that matches |
-| `ShouldBeFailureOf<TError>()` | Returns the `TError` a typed result holds, or the first error of that type in a `Result`/`Result<T>` |
+| `ShouldBeFailureOf<TError>()` | Typed results only: returns the `TError` the result holds |
 | `maybe.ShouldHaveValue()` / `maybe.ShouldBeNone()` | `Maybe<T>` checks; the first returns the value |
 | `response.ShouldBeProblemAsync(status?, code?)` / `response.ShouldBeValidationProblemAsync(keys)` | Check an `HttpResponseMessage` with an `application/problem+json` body and return it as a `JsonElement` |
 

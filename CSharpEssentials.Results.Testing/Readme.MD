@@ -37,9 +37,9 @@ Expected a success, but the result failed with 2 errors:
 | Member | What it does |
 |--------|-------------|
 | `ShouldBeSuccess()` | On `Result`: passes on success. On `Result<T>` and the typed results: returns the value |
-| `ShouldBeFailure()` | Returns the errors. A typed result gives its one error converted to an `Error` |
+| `ShouldBeFailure()` | Returns the errors. A typed result gives its one error converted to an `Error`. On success, the message shows the value of `Result<T>` and the typed results |
 | `ShouldHaveError(code)` / `(type)` / `(type, code)` | Returns the first error that matches. The code is compared ordinally |
-| `ShouldBeFailureOf<TError>()` | On a typed result: returns the error when the result holds a `TError` (a slot type or a base type of one). On `Result` and `Result<T>`: returns the first error that is a `TError` |
+| `ShouldBeFailureOf<TError>()` | Typed results only: returns the error when the result holds a `TError` (a slot type or a base type of one) |
 
 `default(Result<T>)` fails with the `Result.Default` error, as at runtime. A `default` typed result holds no case, and the message says so.
 
@@ -57,7 +57,7 @@ When the result holds another case, the message names it:
 Expected an error of type NotFoundError, but the result holds the error ConflictError { Code = Order.Taken, ... }.
 ```
 
-`ShouldBeFailureOf<TError>()` takes the result as `IResultBase`, so a typed result is boxed for the call. This lets you write only `TError` while the compiler works out the result's own type arguments, which an extension method on `Result<T, E1>` cannot do.
+`Result` and `Result<T>` have no `ShouldBeFailureOf`. They hold `Error` values, never `NotFoundError` or another typed error, so a type check could only match `Error` itself. Use `ShouldHaveError(type)` or `ShouldHaveError(code)` on them instead.
 
 ## Maybe
 

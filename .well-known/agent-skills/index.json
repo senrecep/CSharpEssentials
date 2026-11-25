@@ -87,7 +87,7 @@
     },
     {
       "name": "csharpessentials-meta",
-      "description": "Use when deciding which CSharpEssentials package to use. Gives an overview of all 27 packages organized by concern, what the CSharpEssentials meta-package bundles, and a quick-reference table mapping problems to packages.",
+      "description": "Use when deciding which CSharpEssentials package to use. Gives an overview of all 32 packages organized by concern, what the CSharpEssentials meta-package bundles, and a quick-reference table mapping problems to packages.",
       "files": ["SKILL.md"]
     },
     {

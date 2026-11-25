@@ -42,11 +42,22 @@ public static class ResultAssertionExtensions
         if (result is null)
             throw new ArgumentNullException(nameof(result));
         if (result.IsSuccess)
-            throw new ResultAssertionException(result is IValueResult { BoxedValue: { } value }
-                ? "Expected a failure, but the result succeeded with " + AssertionMessages.Case(value) + "."
-                : "Expected a failure, but the result succeeded.");
+            throw result is ITypedResult typed
+                ? Succeeded(typed.Value)
+                : new ResultAssertionException("Expected a failure, but the result succeeded.");
         return result.Errors;
     }
+
+    /// <summary>Asserts that the result is a failure and returns its errors.</summary>
+    /// <typeparam name="TValue">The value type.</typeparam>
+    /// <param name="result">The result under test.</param>
+    /// <returns>The errors of the result.</returns>
+    /// <exception cref="ResultAssertionException">The result is a success; the message shows the value.</exception>
+    public static Error[] ShouldBeFailure<TValue>(this Result<TValue> result) =>
+        result.IsSuccess ? throw Succeeded(result.Value) : result.Errors;
+
+    internal static ResultAssertionException Succeeded(object? value) =>
+        new("Expected a failure, but the result succeeded with " + AssertionMessages.Case(value) + ".");
 
     /// <summary>Asserts that the result is a failure with an error of the given code and returns that error.</summary>
     /// <typeparam name="TResult">The result type.</typeparam>

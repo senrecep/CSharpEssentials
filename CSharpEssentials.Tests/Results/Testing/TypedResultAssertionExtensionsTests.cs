@@ -79,12 +79,22 @@ public class TypedResultAssertionExtensionsTests
     }
 
     [Fact]
-    public void ShouldBeFailureOf_Should_Return_First_Matching_Error_Of_Untyped_Result()
+    public void ShouldBeFailure_Should_Show_Value_When_Typed_Result_Is_Success()
     {
-        Result<int> result = Error.Conflict("Order.Taken", "Order 3 is already taken.");
+        Result<int, NotFoundError, ConflictError> result = 7;
 
-        Error error = result.ShouldBeFailureOf<Error>();
+        Action act = () => result.ShouldBeFailure();
 
-        error.Code.Should().Be("Order.Taken");
+        act.Should().Throw<ResultAssertionException>().WithMessage("Expected a failure, but the result succeeded with Int32 7.");
+    }
+
+    [Fact]
+    public void ShouldBeFailure_Should_Return_Converted_Error_Of_Typed_Result()
+    {
+        Result<int, NotFoundError> result = Missing;
+
+        Error[] errors = result.ShouldBeFailure();
+
+        errors.Should().ContainSingle().Which.Code.Should().Be("Order.NotFound");
     }
 }

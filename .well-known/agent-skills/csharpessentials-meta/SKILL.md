@@ -1,11 +1,11 @@
 ---
 name: csharpessentials-meta
-description: Use when deciding which CSharpEssentials package to use. Gives an overview of all 31 packages organized by concern, what the CSharpEssentials meta-package bundles, and a quick-reference table mapping problems to packages.
+description: Use when deciding which CSharpEssentials package to use. Gives an overview of all 32 packages organized by concern, what the CSharpEssentials meta-package bundles, and a quick-reference table mapping problems to packages.
 ---
 
 # CSharpEssentials: package index
 
-CSharpEssentials is a modular .NET NuGet ecosystem of 31 packages (30 focused packages plus the `CSharpEssentials` meta-package). Each package is independent; take only what you need.
+CSharpEssentials is a modular .NET NuGet ecosystem of 32 packages (31 focused packages plus the `CSharpEssentials` meta-package). Each package is independent; take only what you need.
 
 ## Meta-package
 
@@ -14,7 +14,7 @@ dotnet add package CSharpEssentials
 # Includes: Any, Clone, Core, Entity, Enums, Errors, Http, Json, Maybe, Results, Rules, These, Time
 ```
 
-Not bundled: Validation, Mediator (and Mediator.Testing), Resilience, Endpoints, DependencyInjection, EntityFrameworkCore (and EntityFrameworkCore.HealthChecks, EntityFrameworkCore.Hosting and EntityFrameworkCore.Locking), AspNetCore (and its OpenApi and Swashbuckle packages), Idempotency (and Idempotency.Testing), RequestResponseLogging and GcpSecretManager. The meta-package assembly also adds `JsonExtensions.TryGetProperty(params string[])` / `TryGetNestedProperty` on `JsonElement` / `JsonDocument` (namespace `CSharpEssentials.Json`) and `TimeExtensions.MsToDateTime(this long?, DateTime?)` (namespace `CSharpEssentials.Time`).
+Not bundled: Results.Testing, Validation, Mediator (and Mediator.Testing), Resilience, Endpoints, DependencyInjection, EntityFrameworkCore (and EntityFrameworkCore.HealthChecks, EntityFrameworkCore.Hosting and EntityFrameworkCore.Locking), AspNetCore (and its OpenApi and Swashbuckle packages), Idempotency (and Idempotency.Testing), RequestResponseLogging and GcpSecretManager. The meta-package assembly also adds `JsonExtensions.TryGetProperty(params string[])` / `TryGetNestedProperty` on `JsonElement` / `JsonDocument` (namespace `CSharpEssentials.Json`) and `TimeExtensions.MsToDateTime(this long?, DateTime?)` (namespace `CSharpEssentials.Time`).
 
 ## All packages
 
@@ -25,6 +25,7 @@ Not bundled: Validation, Mediator (and Mediator.Testing), Resilience, Endpoints,
 | `CSharpEssentials.Results` | `dotnet add package CSharpEssentials.Results` | `csharpessentials-results` |
 | `CSharpEssentials.Errors` | `dotnet add package CSharpEssentials.Errors` | `csharpessentials-errors` |
 | `CSharpEssentials.Maybe` | `dotnet add package CSharpEssentials.Maybe` | `csharpessentials-maybe` |
+| `CSharpEssentials.Results.Testing` | `dotnet add package CSharpEssentials.Results.Testing` | none (see its Readme) |
 | `CSharpEssentials.Any` | `dotnet add package CSharpEssentials.Any` | `csharpessentials-any` |
 | `CSharpEssentials.These` | `dotnet add package CSharpEssentials.These` | `csharpessentials-these` |
 | `CSharpEssentials.Core` | `dotnet add package CSharpEssentials.Core` | `csharpessentials-core` |
@@ -113,6 +114,7 @@ Not bundled: Validation, Mediator (and Mediator.Testing), Resilience, Endpoints,
 | OpenAPI documents with enum schemas and optional route parameters (one per host) | `CSharpEssentials.AspNetCore.Swashbuckle` (net8-net11) or `CSharpEssentials.AspNetCore.OpenApi` (net10, `Microsoft.AspNetCore.OpenApi`) |
 | Idempotency-Key, ETag/304 and If-Match for HTTP endpoints | `CSharpEssentials.AspNetCore` |
 | Run an operation or a message once (`IIdempotencyExecutor`, `IdempotencyInbox`), or a Mediator request (`IdempotencyBehavior`) | `CSharpEssentials.Idempotency`, `CSharpEssentials.Mediator` |
+| Framework-agnostic test assertions for `Result`, `Maybe` and problem details responses | `CSharpEssentials.Results.Testing` |
 | Contract tests for a custom `IIdempotencyRecordStore` (xUnit) | `CSharpEssentials.Idempotency.Testing` |
 | Contract tests for a custom `IResourceLock`, or a recording fake lock (xUnit) | `CSharpEssentials.Mediator.Testing` |
 | Lock Mediator requests across instances with a database lock | `CSharpEssentials.EntityFrameworkCore.Locking` |
@@ -154,6 +156,7 @@ using CSharpEssentials.Json;               // EnhancedJsonSerializerOptions, con
 using CSharpEssentials.RequestResponseLogging; // LoggingOptions, [SkipRequestLogging], [SkipResponseLogging]
 using CSharpEssentials.Idempotency;        // IIdempotencyExecutor, IIdempotencyRecordStore, IdempotencyInbox, IdempotencyKeys, IdempotencyScopes
 using CSharpEssentials.Idempotency.Testing; // IdempotencyRecordStoreContractTests
+using CSharpEssentials.ResultPattern.Testing; // ShouldBeSuccess, ShouldHaveError, ShouldHaveValue, ShouldBeProblemAsync (CSharpEssentials.Results.Testing)
 using CSharpEssentials.Locking.Testing;     // ResourceLockContractTests, RecordingResourceLock (CSharpEssentials.Mediator.Testing)
 using CSharpEssentials.EntityFrameworkCore.Locking; // AddRelationalResourceLock, ResourceLockSqlDialect (CSharpEssentials.EntityFrameworkCore.Locking)
 using CSharpEssentials.GcpSecretManager;   // ProjectSecretConfiguration

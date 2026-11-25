@@ -614,7 +614,7 @@ Do not return the result from a handler as it is. Without a guard its error woul
 
 ### Converting to `Result<T>`
 
-`ToResult()` returns the classic `Result<T>`, and the typed result also implements `IResultBase`, so Mediator behaviors, `ResultEndpointFilter` and other code written for `Result<T>` keep working. Each error becomes one `Error`:
+`ToResult()` returns the classic `Result<T>`, and the typed result also implements `IResultBase` and `ITypedResult` (`HasValue` and `Value` for code that holds a boxed typed result of any shape), so Mediator behaviors, `ResultEndpointFilter` and other code written for `Result<T>` keep working. Each error becomes one `Error`:
 
 - An `Error` stays as it is.
 - Any other `IError` (every `TypedError` kind) keeps its code, description, type and the same `ErrorMetadata` instance.
