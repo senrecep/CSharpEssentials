@@ -29,6 +29,31 @@ public sealed class TypedAsyncResolutionTests
     }
 
     [Fact]
+    public async Task TapIfAsync_Should_AwaitTheTaskHandler_When_ALambdaReturnsATaskOnAValueTaskSource()
+    {
+        ValueTask<Result<int, NotFoundError>> source = new(5);
+        var handler = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        ValueTask<Result<int, NotFoundError>> pending = source.TapIfAsync(v => v > 0, _ => handler.Task);
+        bool completedBeforeHandler = pending.IsCompleted;
+        handler.SetResult(true);
+        Result<int, NotFoundError> result = await pending;
+
+        (completedBeforeHandler, result.Value).Should().Be((false, 5));
+    }
+
+    [Fact]
+    public async Task TapIfAsync_Should_BindTheTaskOverload_When_TheLambdaIsUntypedAsyncOnAValueTaskSource()
+    {
+        ValueTask<Result<int, NotFoundError>> source = new(5);
+        int seen = 0;
+
+        Result<int, NotFoundError> result = await source.TapIfAsync(v => v > 0, async v => seen = await Later(v));
+
+        (result.Value, seen).Should().Be((5, 5));
+    }
+
+    [Fact]
     public async Task MapErrorAsync_Should_BindTheTaskOverload_When_TheLambdaIsUntypedAsync()
     {
         Result<int, NotFoundError> source = TypedFixture.NotFound;

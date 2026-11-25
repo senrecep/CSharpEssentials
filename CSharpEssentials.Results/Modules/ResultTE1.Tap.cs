@@ -253,6 +253,28 @@ public static partial class ResultExtensions
 
     /// <summary>Calls <paramref name="action"/> with the success value when <paramref name="predicate"/> holds. An error passes
     /// through and neither delegate is called.
+    /// Awaits <paramref name="task"/>, then awaits the task that <paramref name="action"/> returns.</summary>
+    /// <typeparam name="T">The success value type.</typeparam>
+    /// <typeparam name="E1">The first error type.</typeparam>
+    /// <param name="task">The pending result.</param>
+    /// <param name="predicate">Called with the success value.</param>
+    /// <param name="action">Called with the success value when <paramref name="predicate"/> returns <see langword="true"/>.</param>
+    /// <param name="cancellationToken">Observed while awaiting <paramref name="task"/> and <paramref name="action"/>.</param>
+    /// <returns>This result.</returns>
+    /// <exception cref="InvalidOperationException">The result is <see langword="default"/>.</exception>
+    [SuppressMessage("Naming", "CA1715:Identifiers should have correct prefix", Justification = "E1..E3 name the error slots, matching the Result<T, E1, E2> shape.")]
+    [OverloadResolutionPriority(1)]
+    public static async ValueTask<Result<T, E1>> TapIfAsync<T, E1>(this ValueTask<Result<T, E1>> task, Func<T, bool> predicate, Func<T, Task> action, CancellationToken cancellationToken = default)
+        where T : notnull
+        where E1 : notnull
+    {
+        Result<T, E1> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await result.TapIfAsync(predicate, action, cancellationToken).ConfigureAwait(false);
+    }
+
+#if NET9_0_OR_GREATER
+    /// <summary>Calls <paramref name="action"/> with the success value when <paramref name="predicate"/> holds. An error passes
+    /// through and neither delegate is called.
     /// Awaits <paramref name="task"/>, then awaits the value task that <paramref name="action"/> returns.</summary>
     /// <typeparam name="T">The success value type.</typeparam>
     /// <typeparam name="E1">The first error type.</typeparam>
@@ -268,10 +290,7 @@ public static partial class ResultExtensions
         where E1 : notnull
     {
         Result<T, E1> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        TypedResultLogic.EnsureInitialized(result.Tag);
-        if (result.Tag == TypedResultLogic.SuccessTag && predicate(result.RawValue))
-            await action(result.RawValue).WithCancellation(cancellationToken).ConfigureAwait(false);
-
-        return result;
+        return await result.TapIfAsync(predicate, action, cancellationToken).ConfigureAwait(false);
     }
+#endif
 }

@@ -607,11 +607,11 @@ public sealed class ResultTE1TapAsyncTests
     }
 
     [Fact]
-    public async Task TapIfAsync_ValueTaskSourceValueTaskHandler_Should_CallTheAction_When_ThePredicateAllowsTheValue()
+    public async Task TapIfAsync_ValueTaskSourceTaskHandler_Should_CallTheAction_When_ThePredicateAllowsTheValue()
     {
         Result<int, NotFoundError> source = 5;
         int calls = 0;
-        Func<int, ValueTask> handler = _ => { calls++; return ValueTask.CompletedTask; };
+        Func<int, Task> handler = _ => { calls++; return Task.CompletedTask; };
 
         Result<int, NotFoundError> result = await new ValueTask<Result<int, NotFoundError>>(source).TapIfAsync(v => v > 0, handler);
 
@@ -621,11 +621,11 @@ public sealed class ResultTE1TapAsyncTests
     }
 
     [Fact]
-    public async Task TapIfAsync_ValueTaskSourceValueTaskHandler_Should_SkipTheAction_When_ThePredicateRejectsTheValue()
+    public async Task TapIfAsync_ValueTaskSourceTaskHandler_Should_SkipTheAction_When_ThePredicateRejectsTheValue()
     {
         Result<int, NotFoundError> source = -5;
         int calls = 0;
-        Func<int, ValueTask> handler = _ => { calls++; return ValueTask.CompletedTask; };
+        Func<int, Task> handler = _ => { calls++; return Task.CompletedTask; };
 
         Result<int, NotFoundError> result = await new ValueTask<Result<int, NotFoundError>>(source).TapIfAsync(v => v > 0, handler);
 
@@ -635,11 +635,11 @@ public sealed class ResultTE1TapAsyncTests
     }
 
     [Fact]
-    public async Task TapIfAsync_ValueTaskSourceValueTaskHandler_Should_PassTheErrorThrough_When_TheResultHoldsNotFoundError()
+    public async Task TapIfAsync_ValueTaskSourceTaskHandler_Should_PassTheErrorThrough_When_TheResultHoldsNotFoundError()
     {
         Result<int, NotFoundError> source = TypedFixture.NotFound;
         int calls = 0;
-        Func<int, ValueTask> handler = _ => { calls++; return ValueTask.CompletedTask; };
+        Func<int, Task> handler = _ => { calls++; return Task.CompletedTask; };
 
         Result<int, NotFoundError> result = await new ValueTask<Result<int, NotFoundError>>(source).TapIfAsync(v => v > 0, handler);
 
@@ -650,11 +650,11 @@ public sealed class ResultTE1TapAsyncTests
     }
 
     [Fact]
-    public async Task TapIfAsync_ValueTaskSourceValueTaskHandler_Should_Throw_When_TheResultIsDefault()
+    public async Task TapIfAsync_ValueTaskSourceTaskHandler_Should_Throw_When_TheResultIsDefault()
     {
         Result<int, NotFoundError> source = default;
         int calls = 0;
-        Func<int, ValueTask> handler = _ => { calls++; return ValueTask.CompletedTask; };
+        Func<int, Task> handler = _ => { calls++; return Task.CompletedTask; };
 
         Func<Task> act = async () => await new ValueTask<Result<int, NotFoundError>>(source).TapIfAsync(v => v > 0, handler);
 
@@ -663,13 +663,13 @@ public sealed class ResultTE1TapAsyncTests
     }
 
     [Fact]
-    public async Task TapIfAsync_ValueTaskSourceValueTaskHandler_Should_Throw_When_TheTokenIsCanceledWhileTheSourceIsPending()
+    public async Task TapIfAsync_ValueTaskSourceTaskHandler_Should_Throw_When_TheTokenIsCanceledWhileTheSourceIsPending()
     {
         TaskCompletionSource<Result<int, NotFoundError>> pending = new();
         using CancellationTokenSource cancellation = new();
         await cancellation.CancelAsync();
         int calls = 0;
-        Func<int, ValueTask> handler = _ => { calls++; return ValueTask.CompletedTask; };
+        Func<int, Task> handler = _ => { calls++; return Task.CompletedTask; };
 
         Func<Task> act = async () => await new ValueTask<Result<int, NotFoundError>>(pending.Task).TapIfAsync(v => v > 0, handler, cancellation.Token);
 
@@ -804,6 +804,77 @@ public sealed class ResultTE1TapAsyncTests
 
         await act.Should().ThrowAsync<OperationCanceledException>();
         calls.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task TapIfAsync_ValueTaskSourceValueTaskHandler_Should_CallTheAction_When_ThePredicateAllowsTheValue()
+    {
+        Result<int, NotFoundError> source = 5;
+        int calls = 0;
+        Func<int, ValueTask> handler = _ => { calls++; return ValueTask.CompletedTask; };
+
+        Result<int, NotFoundError> result = await new ValueTask<Result<int, NotFoundError>>(source).TapIfAsync(v => v > 0, handler);
+
+        calls.Should().Be(1);
+        Result<int, NotFoundError> expected = 5;
+        result.Should().Be(expected);
+    }
+
+    [Fact]
+    public async Task TapIfAsync_ValueTaskSourceValueTaskHandler_Should_SkipTheAction_When_ThePredicateRejectsTheValue()
+    {
+        Result<int, NotFoundError> source = -5;
+        int calls = 0;
+        Func<int, ValueTask> handler = _ => { calls++; return ValueTask.CompletedTask; };
+
+        Result<int, NotFoundError> result = await new ValueTask<Result<int, NotFoundError>>(source).TapIfAsync(v => v > 0, handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError> expected = -5;
+        result.Should().Be(expected);
+    }
+
+    [Fact]
+    public async Task TapIfAsync_ValueTaskSourceValueTaskHandler_Should_PassTheErrorThrough_When_TheResultHoldsNotFoundError()
+    {
+        Result<int, NotFoundError> source = TypedFixture.NotFound;
+        int calls = 0;
+        Func<int, ValueTask> handler = _ => { calls++; return ValueTask.CompletedTask; };
+
+        Result<int, NotFoundError> result = await new ValueTask<Result<int, NotFoundError>>(source).TapIfAsync(v => v > 0, handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError> expected = TypedFixture.NotFound;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.NotFound);
+    }
+
+    [Fact]
+    public async Task TapIfAsync_ValueTaskSourceValueTaskHandler_Should_Throw_When_TheResultIsDefault()
+    {
+        Result<int, NotFoundError> source = default;
+        int calls = 0;
+        Func<int, ValueTask> handler = _ => { calls++; return ValueTask.CompletedTask; };
+
+        Func<Task> act = async () => await new ValueTask<Result<int, NotFoundError>>(source).TapIfAsync(v => v > 0, handler);
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        calls.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task TapIfAsync_ValueTaskSourceValueTaskHandler_Should_Throw_When_TheTokenIsCanceledWhileTheSourceIsPending()
+    {
+        TaskCompletionSource<Result<int, NotFoundError>> pending = new();
+        using CancellationTokenSource cancellation = new();
+        await cancellation.CancelAsync();
+        int calls = 0;
+        Func<int, ValueTask> handler = _ => { calls++; return ValueTask.CompletedTask; };
+
+        Func<Task> act = async () => await new ValueTask<Result<int, NotFoundError>>(pending.Task).TapIfAsync(v => v > 0, handler, cancellation.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+        calls.Should().Be(0);
     }
 #endif
 }

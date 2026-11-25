@@ -493,6 +493,10 @@ def join(members: list[list[str]]) -> list[str]:
 TAP_CELLS = [("this", "Task", False, True), ("this", "ValueTask", True, False),
              ("Task", "sync", False, False), ("Task", "Task", False, False),
              ("ValueTask", "sync", False, False), ("ValueTask", "ValueTask", False, False)]
+# TapIfAsync adds a Task handler on a ValueTask source next to the gated ValueTask one, as on Ensure.
+TAP_IF_CELLS = [("this", "Task", False, True), ("this", "ValueTask", True, False),
+                ("Task", "sync", False, False), ("Task", "Task", False, False),
+                ("ValueTask", "sync", False, False), ("ValueTask", "Task", False, True), ("ValueTask", "ValueTask", True, False)]
 TAP_ERROR_CELLS = [("this", "Task", False, True), ("this", "ValueTask", True, False),
                    ("Task", "Task", False, False),
                    ("ValueTask", "Task", False, True), ("ValueTask", "ValueTask", True, False)]
@@ -541,7 +545,7 @@ def tap(n: int) -> list[Op]:
             "through and neither delegate is called.</summary>",
             '<param name="predicate">Called with the success value.</param>',
             '<param name="action">Called with the success value when <paramref name="predicate"/> returns <see langword="true"/>.</param>', *common,
-        ], body(" && predicate({r}RawValue)"), leading=[("Func<T, bool>", "predicate")]),
+        ], body(" && predicate({r}RawValue)"), leading=[("Func<T, bool>", "predicate")], cells=TAP_IF_CELLS),
     ]
 
 
@@ -800,15 +804,17 @@ def get_value(n: int) -> tuple[list[Op], list[str], list[str]]:
     ])
     ext = []
     for receiver in ("Task", "ValueTask"):
-        for name, out, extra, call, doc in (
-            ("GetValueOrDefault", "T?", "", "GetValueOrDefault()", []),
-            ("GetValueOr", "T", "T fallback, ", "GetValueOr(fallback)", ['<param name="fallback">The value to return when the result holds no success value.</param>']),
+        for name, out, extra, call, doc, returns in (
+            ("GetValueOrDefault", "T?", "", "GetValueOrDefault()", [], "The success value or <see langword=\"default\"/>."),
+            ("GetValueOr", "T", "T fallback, ", "GetValueOr(fallback)", ['<param name="fallback">The value to return when the result holds no success value.</param>'],
+             "The success value or <paramref name=\"fallback\"/>."),
         ):
             ext.append(method(
-                [f"<summary>Awaits <paramref name=\"task\"/>, then calls <c>{name}</c>. It throws only when the token is canceled.</summary>",
+                [f"<summary>Awaits <paramref name=\"task\"/>, then calls <c>{name}</c>. It throws only what awaiting <paramref name=\"task\"/>",
+                 "throws: a faulted or canceled task, or a canceled token.</summary>",
                  *ext_typeparams(errors), '<param name="task">The pending result.</param>', *doc,
                  '<param name="cancellationToken">Observed while awaiting <paramref name="task"/>.</param>',
-                 "<returns>The success value or the fallback.</returns>"],
+                 f"<returns>{returns}</returns>"],
                 f"public static async {receiver}<{out}> {name}Async<{', '.join(['T', *errors])}>(this {receiver}<{source}> task, {extra}{CT_PARAM})",
                 ["T", *errors],
                 [f"{source} result = await task{AWAIT_TOKEN};", f"return result.{call};"],
@@ -1558,7 +1564,7 @@ def async_ops(n: int, family: str) -> list[AsyncOp]:
             AsyncCase("CallTheAction_When_ThePredicateAllowsTheValue", OK, "", OK, 1),
             AsyncCase("SkipTheAction_When_ThePredicateRejectsTheValue", FAILING_OK, "", FAILING_OK, 0),
             AsyncCase(f"PassTheErrorThrough_When_{case_name(errors[-1])}", FIXTURE[errors[-1]], "", FIXTURE[errors[-1]], 0, errors[-1]),
-        ], leading="v => v > 0, "))
+        ], leading="v => v > 0, ", cells=TAP_IF_CELLS))
     elif family == "TapError":
         for e in errors:
             ops.append(AsyncOp(family, "TapError", f"TapError{e}", src, e, None, src, "", "e", [

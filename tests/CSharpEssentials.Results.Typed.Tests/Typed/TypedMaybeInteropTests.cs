@@ -129,4 +129,15 @@ public sealed class TypedMaybeInteropTests
 
         result.FirstError.Should().Be(maybe.ToResult(null).FirstError);
     }
+
+    [Fact]
+    public void ToResult_Should_UseTheFallbackError_When_TheErrorVariableHoldsDefault()
+    {
+        Maybe<int> maybe = Maybe<int>.None;
+        Error error = default;
+
+        Result<int> result = maybe.ToResult(error);
+
+        result.FirstError.Should().Be(maybe.ToResult(null).FirstError);
+    }
 }

@@ -41,13 +41,14 @@ public readonly partial struct Result<T, E1, E2>
 
 public static partial class ResultExtensions
 {
-    /// <summary>Awaits <paramref name="task"/>, then calls <c>GetValueOrDefault</c>. It throws only when the token is canceled.</summary>
+    /// <summary>Awaits <paramref name="task"/>, then calls <c>GetValueOrDefault</c>. It throws only what awaiting <paramref name="task"/>
+    /// throws: a faulted or canceled task, or a canceled token.</summary>
     /// <typeparam name="T">The success value type.</typeparam>
     /// <typeparam name="E1">The first error type.</typeparam>
     /// <typeparam name="E2">The second error type.</typeparam>
     /// <param name="task">The pending result.</param>
     /// <param name="cancellationToken">Observed while awaiting <paramref name="task"/>.</param>
-    /// <returns>The success value or the fallback.</returns>
+    /// <returns>The success value or <see langword="default"/>.</returns>
     [SuppressMessage("Naming", "CA1715:Identifiers should have correct prefix", Justification = "E1..E3 name the error slots, matching the Result<T, E1, E2> shape.")]
     public static async Task<T?> GetValueOrDefaultAsync<T, E1, E2>(this Task<Result<T, E1, E2>> task, CancellationToken cancellationToken = default)
         where T : notnull
@@ -58,14 +59,15 @@ public static partial class ResultExtensions
         return result.GetValueOrDefault();
     }
 
-    /// <summary>Awaits <paramref name="task"/>, then calls <c>GetValueOr</c>. It throws only when the token is canceled.</summary>
+    /// <summary>Awaits <paramref name="task"/>, then calls <c>GetValueOr</c>. It throws only what awaiting <paramref name="task"/>
+    /// throws: a faulted or canceled task, or a canceled token.</summary>
     /// <typeparam name="T">The success value type.</typeparam>
     /// <typeparam name="E1">The first error type.</typeparam>
     /// <typeparam name="E2">The second error type.</typeparam>
     /// <param name="task">The pending result.</param>
     /// <param name="fallback">The value to return when the result holds no success value.</param>
     /// <param name="cancellationToken">Observed while awaiting <paramref name="task"/>.</param>
-    /// <returns>The success value or the fallback.</returns>
+    /// <returns>The success value or <paramref name="fallback"/>.</returns>
     [SuppressMessage("Naming", "CA1715:Identifiers should have correct prefix", Justification = "E1..E3 name the error slots, matching the Result<T, E1, E2> shape.")]
     public static async Task<T> GetValueOrAsync<T, E1, E2>(this Task<Result<T, E1, E2>> task, T fallback, CancellationToken cancellationToken = default)
         where T : notnull
@@ -76,13 +78,14 @@ public static partial class ResultExtensions
         return result.GetValueOr(fallback);
     }
 
-    /// <summary>Awaits <paramref name="task"/>, then calls <c>GetValueOrDefault</c>. It throws only when the token is canceled.</summary>
+    /// <summary>Awaits <paramref name="task"/>, then calls <c>GetValueOrDefault</c>. It throws only what awaiting <paramref name="task"/>
+    /// throws: a faulted or canceled task, or a canceled token.</summary>
     /// <typeparam name="T">The success value type.</typeparam>
     /// <typeparam name="E1">The first error type.</typeparam>
     /// <typeparam name="E2">The second error type.</typeparam>
     /// <param name="task">The pending result.</param>
     /// <param name="cancellationToken">Observed while awaiting <paramref name="task"/>.</param>
-    /// <returns>The success value or the fallback.</returns>
+    /// <returns>The success value or <see langword="default"/>.</returns>
     [SuppressMessage("Naming", "CA1715:Identifiers should have correct prefix", Justification = "E1..E3 name the error slots, matching the Result<T, E1, E2> shape.")]
     public static async ValueTask<T?> GetValueOrDefaultAsync<T, E1, E2>(this ValueTask<Result<T, E1, E2>> task, CancellationToken cancellationToken = default)
         where T : notnull
@@ -93,14 +96,15 @@ public static partial class ResultExtensions
         return result.GetValueOrDefault();
     }
 
-    /// <summary>Awaits <paramref name="task"/>, then calls <c>GetValueOr</c>. It throws only when the token is canceled.</summary>
+    /// <summary>Awaits <paramref name="task"/>, then calls <c>GetValueOr</c>. It throws only what awaiting <paramref name="task"/>
+    /// throws: a faulted or canceled task, or a canceled token.</summary>
     /// <typeparam name="T">The success value type.</typeparam>
     /// <typeparam name="E1">The first error type.</typeparam>
     /// <typeparam name="E2">The second error type.</typeparam>
     /// <param name="task">The pending result.</param>
     /// <param name="fallback">The value to return when the result holds no success value.</param>
     /// <param name="cancellationToken">Observed while awaiting <paramref name="task"/>.</param>
-    /// <returns>The success value or the fallback.</returns>
+    /// <returns>The success value or <paramref name="fallback"/>.</returns>
     [SuppressMessage("Naming", "CA1715:Identifiers should have correct prefix", Justification = "E1..E3 name the error slots, matching the Result<T, E1, E2> shape.")]
     public static async ValueTask<T> GetValueOrAsync<T, E1, E2>(this ValueTask<Result<T, E1, E2>> task, T fallback, CancellationToken cancellationToken = default)
         where T : notnull

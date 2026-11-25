@@ -58,6 +58,12 @@ public sealed class TypedAsyncMatrixCompletenessTests
             new("Task", "sync", false, false), new("Task", "Task", false, false),
             new("ValueTask", "sync", false, false), new("ValueTask", "ValueTask", false, false),
         ],
+        ["TapIf"] =
+        [
+            new("this", "Task", false, true), new("this", "ValueTask", true, false),
+            new("Task", "sync", false, false), new("Task", "Task", false, false),
+            new("ValueTask", "sync", false, false), new("ValueTask", "Task", false, true), new("ValueTask", "ValueTask", true, false),
+        ],
         ["TapError"] =
         [
             new("this", "Task", false, true), new("this", "ValueTask", true, false),
@@ -90,7 +96,7 @@ public sealed class TypedAsyncMatrixCompletenessTests
         ["MapError"] = "MapError",
         ["Compensate"] = "Compensate",
         ["Tap"] = "Tap",
-        ["TapIf"] = "Tap",
+        ["TapIf"] = "TapIf",
         ["TapError"] = "TapError",
         ["TryCatch"] = "TryCatch",
         ["Finally"] = "Finally",

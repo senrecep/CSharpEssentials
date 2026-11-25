@@ -512,7 +512,8 @@ Query syntax has one name for both `SelectMany` forms, so it cannot use separate
 | `EnsureAsync`, `FailIfAsync` | `Task`, `ValueTask` (.NET 9+) | sync, `Task` | sync, `Task`, `ValueTask` (.NET 9+) |
 | `MapErrorAsync` | `Task`, `ValueTask` | sync, `Task` | sync, `ValueTask` |
 | `CompensateAsync` | `Task`, `ValueTask` (.NET 9+) | `Task` | `Task`, `ValueTask` (.NET 9+) |
-| `TapAsync`, `TapIfAsync` | `Task`, `ValueTask` (.NET 9+) | sync, `Task` | sync, `ValueTask` |
+| `TapAsync` | `Task`, `ValueTask` (.NET 9+) | sync, `Task` | sync, `ValueTask` |
+| `TapIfAsync` | `Task`, `ValueTask` (.NET 9+) | sync, `Task` | sync, `Task`, `ValueTask` (.NET 9+) |
 | `TapErrorAsync` | `Task`, `ValueTask` (.NET 9+) | `Task` | `Task`, `ValueTask` (.NET 9+) |
 | `TryCatchAsync` | none | sync | sync |
 | `FinallyAsync` (`Func`) | none | sync, `Task` | sync, `ValueTask` (.NET 9+) |
