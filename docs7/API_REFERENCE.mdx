@@ -1044,7 +1044,7 @@ Result<Product> product = await ResiliencePolicy<Product>
 | `ResiliencePolicy.Create(options)` | Builds from `ResiliencePolicyOptions` |
 | `ResiliencePolicy.Create(Action<ResiliencePipelineBuilder>)` | Configures the Polly builder directly |
 | `ResiliencePolicy.FromPipeline(pipeline)` / `.ToPipeline()` | Wraps or exposes a Polly `ResiliencePipeline` |
-| `.WithRetry(maxAttempts = 3, delay, exponentialBackoff = true)` / `.WithRetry(RetryOptions)` | Adds retry strategy. `maxAttempts` counts retries after the first call, so `3` allows up to 4 executions; `delay` defaults to 1 second |
+| `.WithRetry(maxAttempts = 3, delay, exponentialBackoff = true, useJitter = false, maxDelay = null)` / `.WithRetry(RetryOptions)` | Adds retry strategy. `maxAttempts` counts retries after the first call, so `3` allows up to 4 executions; `delay` defaults to 1 second; `useJitter` randomizes each delay; `maxDelay` caps it |
 | `.WithTimeout(timeout)` / `.WithTimeout(TimeoutOptions)` | Adds timeout strategy; Polly validates the timeout range and throws `ValidationException` for a value outside it |
 | `.WithCircuitBreaker(minimumThroughput = 10, samplingDuration, breakDuration, failureRatio = 0.5)` / `.WithCircuitBreaker(CircuitBreakerOptions)` | Adds circuit breaker; `samplingDuration` defaults to 1 minute and `breakDuration` to 30 seconds |
 | `.ExecuteAsync(ct => Task)` / `.ExecuteAsync(ct => Task<Result>)` | Executes through the pipeline, returns `Result` |
@@ -1129,7 +1129,7 @@ Result<User> user = await ResiliencePolicy
     .ExecuteAsync(_ => _db.GetUser(id));
 ```
 
-Defaults: `RetryOptions` (`MaxAttempts` 3, `Delay` 1 s, `ExponentialBackoff` true), `TimeoutOptions` (`Timeout` 30 s), `CircuitBreakerOptions` (`MinimumThroughput` 10, `SamplingDuration` 1 min, `BreakDuration` 30 s, `FailureRatio` 0.5). A `null` section of `ResiliencePolicyOptions` adds no strategy.
+Defaults: `RetryOptions` (`MaxAttempts` 3, `Delay` 1 s, `ExponentialBackoff` true, `UseJitter` false, `MaxDelay` null), `TimeoutOptions` (`Timeout` 30 s), `CircuitBreakerOptions` (`MinimumThroughput` 10, `SamplingDuration` 1 min, `BreakDuration` 30 s, `FailureRatio` 0.5). A `null` section of `ResiliencePolicyOptions` adds no strategy.
 
 ---
 

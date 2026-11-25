@@ -8,6 +8,7 @@
 - `ErrorType.Unknown` is the `[EnumFallback]` member: data reads map a type name or number they do not know to `Unknown`.
 - `CSharpEssentials.Validation` stores the property path under the `field` metadata key on every error its built-in rules and `AddError(code, message)` record, so those errors no longer equal an `Error` built without metadata, and the AspNetCore `AllErrors` output (also `All` and `UseLegacyDefaults()`) writes that metadata.
 - Request input bound through the AspNetCore enum conventions (`Input` mode) no longer accepts `unknown` or `7` for an `ErrorType` value and returns 400, and the OpenAPI description marks `Unknown` as response-only.
+- `CSharpEssentials.Resilience`: `ResiliencePolicy.WithRetry` and `ResiliencePolicy<T>.WithRetry` take two more optional parameters, `useJitter` and `maxDelay`. Source that calls them compiles unchanged; an assembly compiled against 8.x must be recompiled (`MissingMethodException` otherwise).
 - `CSharpEssentials.Time`: `DateTimeProvider.TimeZone` returns the `LocalTimeZone` of the wrapped `TimeProvider` instead of always `TimeZoneInfo.Local`. With `TimeProvider.System` nothing changes. Over `FakeTimeProvider` it is UTC unless the test calls `SetLocalTimeZone`, and `GetAge(dateTimeProvider)` follows it.
 
 ## Exceptions become `Unexpected` (`CSharpEssentials.Errors`)

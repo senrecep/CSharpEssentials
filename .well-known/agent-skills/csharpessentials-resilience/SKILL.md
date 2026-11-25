@@ -39,7 +39,7 @@ using CSharpEssentials.Errors;         // Error, ErrorType
 | `ResiliencePolicy` | Non-generic policy; `ExecuteAsync` accepts `Task`, `Task<T>`, `Task<Result>` and `Task<Result<T>>` callbacks |
 | `ResiliencePolicy<T>` | Generic policy for `Result<T>` operations; adds `WithFallback` |
 | `ResiliencePolicyOptions` | `Retry`, `Timeout`, `CircuitBreaker` records for the non-generic `Create(options)` |
-| `RetryOptions` | `MaxAttempts` (3), `Delay` (1 s), `ExponentialBackoff` (true) |
+| `RetryOptions` | `MaxAttempts` (3), `Delay` (1 s), `ExponentialBackoff` (true), `UseJitter` (false), `MaxDelay` (null, no cap) |
 | `TimeoutOptions` | `Timeout` (30 s) |
 | `CircuitBreakerOptions` | `MinimumThroughput` (10), `SamplingDuration` (1 min), `BreakDuration` (30 s), `FailureRatio` (0.5) |
 
@@ -69,7 +69,7 @@ ResiliencePolicy fromOptions = ResiliencePolicy.Create(new ResiliencePolicyOptio
 ```
 
 - `maxAttempts` is the number of retries after the first attempt, so the operation runs at most `maxAttempts + 1` times.
-- `WithRetry` takes `maxAttempts` (3), `delay` (1 s), `exponentialBackoff` (`true`). `WithCircuitBreaker` takes `minimumThroughput` (10), `samplingDuration` (1 min), `breakDuration` (30 s), `failureRatio` (0.5). `WithTimeout` accepts 1 second to 1 day (Polly throws `ValidationException` otherwise).
+- `WithRetry` takes `maxAttempts` (3), `delay` (1 s), `exponentialBackoff` (`true`), `useJitter` (`false`) and `maxDelay` (no cap). Turn on jitter when many callers can fail at once, and set `maxDelay` so exponential backoff stays bounded. `WithCircuitBreaker` takes `minimumThroughput` (10), `samplingDuration` (1 min), `breakDuration` (30 s), `failureRatio` (0.5). `WithTimeout` accepts 1 second to 1 day (Polly throws `ValidationException` otherwise).
 - Strategies nest in the order you add them, the first one outermost: `WithRetry(3).WithTimeout(t)` times out each attempt, `WithTimeout(t).WithRetry(3)` limits all attempts together. `WithFallback` always wraps the strategies of the policy it is called on.
 - Build a policy once and reuse it; building per call costs far more than executing.
 
