@@ -33,7 +33,7 @@ public sealed class OutboxEventTypeRegistry
 
     /// <summary>Registers <typeparamref name="TEvent"/> under <paramref name="name"/>, serialized with reflection.</summary>
     /// <param name="name">The stable type name; at most <see cref="OutboxMessageModelOptions.TypeMaxLength"/> characters.</param>
-    /// <param name="options">The serializer options; <see cref="JsonSerializerOptions.Default"/> when <see langword="null"/>.</param>
+    /// <param name="options">The serializer options, copied so yours stay editable; <see cref="JsonSerializerOptions.Default"/> when <see langword="null"/>.</param>
     /// <returns>This registry.</returns>
     /// <exception cref="ArgumentException">The name is empty or too long, or the name or type is already registered.</exception>
     [RequiresUnreferencedCode("Reflection-based JSON metadata; use the JsonTypeInfo overload for trimming.")]
@@ -41,7 +41,9 @@ public sealed class OutboxEventTypeRegistry
     public OutboxEventTypeRegistry Add<TEvent>(string name, JsonSerializerOptions? options = null)
         where TEvent : IDomainEvent
     {
-        JsonSerializerOptions resolved = options ?? JsonSerializerOptions.Default;
+        JsonSerializerOptions resolved = options is null || options.IsReadOnly
+            ? options ?? JsonSerializerOptions.Default
+            : new JsonSerializerOptions(options);
         if (!resolved.IsReadOnly)
             resolved.MakeReadOnly(populateMissingResolver: true);
         return Register(typeof(TEvent), name, resolved.GetTypeInfo(typeof(TEvent)));
