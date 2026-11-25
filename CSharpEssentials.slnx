@@ -12,6 +12,7 @@
   <Project Path="CSharpEssentials.EntityFrameworkCore/CSharpEssentials.EntityFrameworkCore.csproj" />
   <Project Path="CSharpEssentials.EntityFrameworkCore.HealthChecks/CSharpEssentials.EntityFrameworkCore.HealthChecks.csproj" />
   <Project Path="CSharpEssentials.EntityFrameworkCore.Hosting/CSharpEssentials.EntityFrameworkCore.Hosting.csproj" />
+  <Project Path="CSharpEssentials.EntityFrameworkCore.Locking/CSharpEssentials.EntityFrameworkCore.Locking.csproj" />
   <Project Path="CSharpEssentials.EntityFrameworkCore.CodeFixes/CSharpEssentials.EntityFrameworkCore.CodeFixes.csproj" />
   <Project Path="CSharpEssentials.EntityFrameworkCore.Generators/CSharpEssentials.EntityFrameworkCore.Generators.csproj" />
   <Project Path="CSharpEssentials.Endpoints/CSharpEssentials.Endpoints.csproj" />
@@ -31,6 +32,7 @@
 
   <Project Path="CSharpEssentials.Maybe/CSharpEssentials.Maybe.csproj" />
   <Project Path="CSharpEssentials.Mediator/CSharpEssentials.Mediator.csproj" />
+  <Project Path="CSharpEssentials.Mediator.Testing/CSharpEssentials.Mediator.Testing.csproj" />
   <Project Path="CSharpEssentials.RequestResponseLogging/CSharpEssentials.RequestResponseLogging.csproj" />
   <Project Path="CSharpEssentials.Resilience/CSharpEssentials.Resilience.csproj" />
   <Project Path="CSharpEssentials.Results/CSharpEssentials.Results.csproj" />

@@ -1711,6 +1711,10 @@ Singleton behavior between `LoggingBehavior` and `CachingBehavior`. It activates
 |------|-------------|
 | `IResourceLock` (namespace `CSharpEssentials.Locking`) | `AcquireAsync(key, timeout, ct)` waits for the lock and returns a handle that releases it on dispose (throws `TimeoutException`); `TryAcquireAsync(key, ct)` returns `Maybe<IAsyncDisposable>.None` when the key is held |
 | `InProcessResourceLock` | Default: one `SemaphoreSlim` per key, removed when the last holder or waiter leaves. Serializes only within one process; register a distributed implementation for several instances |
+| `AddRelationalResourceLock<TContext>(dialect, configure?)` (`CSharpEssentials.EntityFrameworkCore.Locking`) | Registers `RelationalResourceLock<TContext>` as the singleton `IResourceLock`, replacing the in-process one. Each held lock owns a scope and an open connection of `TContext`; `AcquireAsync` polls every `PollInterval` (100 ms) |
+| `ResourceLockSqlDialect.PostgreSql` / `.SqlServer` / `new(tryAcquireSql, releaseSql)` | Session locks: `pg_try_advisory_lock(hashtextextended(key, 0))`, `sp_getapplock` with `@LockOwner = 'Session'`, or your SQL. Key placeholder `{0}`; try-acquire returns `Value` = 1 when taken |
+| `ResourceLockContractTests` (`CSharpEssentials.Mediator.Testing`, namespace `CSharpEssentials.Locking.Testing`) | xUnit contract tests: implement `CreateLock()`. See the package Readme |
+| `RecordingResourceLock` (`CSharpEssentials.Mediator.Testing`) | In-process lock that records `Acquisitions`, `Releases` and `HeldKeys`; `FailWith` makes calls throw |
 | `ILockedRequest` | `LockKey` and optional `LockTimeout` (default `null`) |
 | `LockPlacement` | `OutsideTransaction` (lock held until the transaction has committed) or `InsideTransaction` (lock taken inside the transaction, for transaction-scoped locks such as `pg_advisory_xact_lock`) |
 

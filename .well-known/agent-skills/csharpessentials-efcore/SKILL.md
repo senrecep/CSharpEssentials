@@ -336,6 +336,10 @@ await app.Services.MigrateDatabaseAsync<AppDbContext>();   // opt-in; runs insid
 
 Relay with `AddOutboxProcessor<AppDbContext>(o => ...)` plus a registered `IOutboxMessageHandler`; call `IOutboxProcessor.ProcessBatchAsync` yourself or add `CSharpEssentials.EntityFrameworkCore.Hosting` and `AddOutboxProcessorHostedService()`. Delivery is at least once (dedupe on `OutboxMessage.Id`); failures get `Error`, a backoff `NextAttemptAt` and, after `MaxAttempts`, `DeadLetteredAt`. For PostgreSQL or SQL Server set `o.Claimer = new SqlOutboxMessageClaimer(OutboxClaimDialect.PostgreSql)` (SKIP LOCKED / READPAST); no provider package is needed.
 
+## Distributed lock
+
+`CSharpEssentials.EntityFrameworkCore.Locking`: `services.AddRelationalResourceLock<AppDbContext>(ResourceLockSqlDialect.PostgreSql)` registers a database-session `IResourceLock` for Mediator's `LockBehavior` (PostgreSQL advisory locks, `ResourceLockSqlDialect.SqlServer` for `sp_getapplock`, or `new ResourceLockSqlDialect(tryAcquireSql, releaseSql)` with `{0}` as the key). Each held lock keeps one connection open; keep `LockPlacement.OutsideTransaction`.
+
 ## Idempotency records
 
 ```csharp
