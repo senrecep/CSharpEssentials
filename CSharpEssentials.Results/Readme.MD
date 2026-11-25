@@ -537,7 +537,7 @@ An untyped `async` lambda fits both the `Task` and the `ValueTask` handler; `[Ov
 
 ### `default`
 
-`default(Result<T, E1, E2>)` holds no case. The compiler cannot catch it, so the members behave as follows:
+`default(Result<T, E1, E2>)` holds no case. The compiler cannot catch it, and the [CSE5001](#diagnostics) analyzer reports only where one is created in source, so the members behave as follows:
 
 | Member | On `default` |
 |---|---|
@@ -604,6 +604,19 @@ Without the registration, a Native AOT app throws `NotSupportedException` with t
 - Anything else becomes an `Unexpected` error whose code is the name of the slot type.
 
 `IResultBase.Errors` and the related members never throw, for any slot type. The typed results do not plug into the Mediator failure conversion: when a handler that returns a typed result throws, `ExceptionHandlingBehavior` lets the original exception through unchanged.
+
+### Diagnostics
+
+The package ships analyzers for the typed results. They load in any SDK whose compiler is Roslyn 4.8 or later, and every rule is a warning, so `TreatWarningsAsErrors` turns it into a build error. Change a severity in `.editorconfig` (`dotnet_diagnostic.CSE5001.severity = none`).
+
+| ID | Reports |
+|---|---|
+| CSE5001 | A typed result created as `default`: `default`, `default(R)`, `new R()`, `new R[n]` without an initializer, and a field or auto-property without an initializer that no code of its type assigns. Comparing with `default` (`r == default`) is not reported. |
+| CSE5002 | A typed result type that repeats an error type, such as `Result<Dto, NotFoundError, NotFoundError>`. |
+| CSE5003 | Error slots where one converts to another, such as `Result<Dto, TypedError, NotFoundError>`: a `NotFoundError` whose static type is `TypedError` goes to the `TypedError` slot. User-defined conversions are not reported. |
+| CSE5004 | A success type that converts to an error slot or from one, such as `Result<object, NotFoundError>`. |
+| CSE5005 | A type whose `[ErrorKind]` names another kind than the nearest base that declares one, such as `[ErrorKind(ErrorType.Conflict)]` on a record derived from `NotFoundError`. |
+| CSE5006 | `Ensure<F>`, `FailIf<F>`, `BindWiden`, `TryCatch`, a query `SelectMany` or their async forms returning a result whose added slot repeats, converts to or accepts a slot it already had: a derived error passed to `Ensure`, or `BindWiden` with an inner result whose errors the outer result already has. Slots the source result already had are reported by CSE5003, not here. The fixes are in [Combinators](#combinators). |
 
 ## Upgrading to 8.0
 

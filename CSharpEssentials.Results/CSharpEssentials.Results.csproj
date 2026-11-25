@@ -11,7 +11,8 @@
     <Description>Result pattern implementation for functional error handling in C#.
       Provides Result&lt;T&gt; and Result types for railway-oriented programming, eliminating
       exceptions for expected failures.
-      Foundation for functional programming patterns and robust error handling.</Description>
+      Foundation for functional programming patterns and robust error handling.
+      Bundles analyzers for the typed results (CSE5001-CSE5006).</Description>
     <PackageTags>
       Result,ResultPattern,FunctionalProgramming,ErrorHandling,RailwayOriented,CSharpEssentials
     </PackageTags>
@@ -44,6 +45,8 @@
     <ProjectReference Include="..\CSharpEssentials.Json\CSharpEssentials.Json.csproj"
       Condition="'$(UseProjectReferences)' == 'true'" />
   </ItemGroup>
+
+  <Import Project="..\build\PackGenerator.targets" />
 
   <ItemGroup>
     <InternalsVisibleTo Include="CSharpEssentials.AspNetCore" />

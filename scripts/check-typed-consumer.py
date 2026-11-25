@@ -2,8 +2,9 @@
 """Build every case of tests/TypedResultConsumer with the real SDK and check the C# diagnostics it reports.
 
 The in-process Roslyn harness in tests/CSharpEssentials.Results.Typed.Tests is not the compiler a consumer builds with. This
-script builds against the packed packages in artifacts/feed with the SDK pinned in global.json and compares the set of CS
-diagnostic ids of each case with the expected set: a case that expects none must build clean with TreatWarningsAsErrors on,
+script builds against the packed packages in artifacts/feed with the SDK pinned in global.json and compares the set of CS and
+CSE diagnostic ids of each case with the expected set (the CSE ids come from the analyzers packed into the Results package, so a
+case that expects one proves they load): a case that expects none must build clean with TreatWarningsAsErrors on,
 a case that expects ids must fail with exactly those. Every case is built for each target framework of the fixture: net11.0 uses
 the runtime UnionAttribute and IUnion, net10.0 the internal polyfill shipped in the package.
 
@@ -28,16 +29,17 @@ CASES = {
     "ReturningStatement": {"CS0161"},
     "TypedAllArms": set(),
     "TypedMissingArm": {"CS8509"},
-    "TypedDuplicateSlot": {"CS0457"},
+    "TypedDuplicateSlot": {"CS0457", "CSE5002"},
     "TypedForeignError": {"CS0029"},
     "TypedReturningStatement": {"CS0161"},
     "TypedAsyncChain": set(),
     "TypedQuerySyntax": set(),
+    "TypedDefault": {"CSE5001"},
 }
 
 FRAMEWORKS = ("net11.0", "net10.0")
 
-DIAGNOSTIC = re.compile(r"\b(?:error|warning) (CS\d{4})\b")
+DIAGNOSTIC = re.compile(r"\b(?:error|warning) (CSE?\d{4})\b")
 
 
 def build(case: str, framework: str, version: str, configuration: str) -> tuple[int, set[str], str]:

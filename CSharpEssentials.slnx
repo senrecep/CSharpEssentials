@@ -32,6 +32,7 @@
   <Project Path="CSharpEssentials.RequestResponseLogging/CSharpEssentials.RequestResponseLogging.csproj" />
   <Project Path="CSharpEssentials.Resilience/CSharpEssentials.Resilience.csproj" />
   <Project Path="CSharpEssentials.Results/CSharpEssentials.Results.csproj" />
+  <Project Path="CSharpEssentials.Results.Generators/CSharpEssentials.Results.Generators.csproj" />
   <Project Path="CSharpEssentials.Rules/CSharpEssentials.Rules.csproj" />
   <Project Path="CSharpEssentials.Tests/CSharpEssentials.Tests.csproj" />
   <Project Path="CSharpEssentials.These/CSharpEssentials.These.csproj" />
