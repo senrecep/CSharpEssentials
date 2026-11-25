@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Typed result endpoints for the OpenAPI golden and runtime tests of CSharpEssentials.AspNetCore.OpenApi.Tests, compiled
+       without the request delegate generator. CSharpEssentials.Tests.Fixtures.TypedHttpRdg compiles the same source with it. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\CSharpEssentials.AspNetCore\CSharpEssentials.AspNetCore.csproj" />
+  </ItemGroup>
+
+</Project>

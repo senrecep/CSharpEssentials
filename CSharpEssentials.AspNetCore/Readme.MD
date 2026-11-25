@@ -8,6 +8,7 @@ Benchmarks against plain ASP.NET Core, Hellang.Middleware.ProblemDetails, Marvin
 
 - Problem details: one ProblemDetails pipeline for Minimal API, MVC, the exception handler and status code pages, with privacy-first defaults and the extension points `IProblemDetailsEnricher`, `IErrorStatusCodeMapper` and `IExceptionProblemMapper`.
 - Global exception handler: unknown exceptions return 500; the exception message goes to the log, not to the response.
+- Typed results over HTTP: `Result<T, E1..E3>.ToHttpResult()` sends the value or a ProblemDetails response, and the OpenAPI document lists one problem response per error slot.
 - Result endpoint filter: `Result<T>` becomes `200 OK` or a ProblemDetails response.
 - Validation endpoint filter: runs `CSharpEssentials.Validation` validators for a handler argument and returns 400 on failure.
 - Idempotency: `Idempotency-Key` handling for opted-in endpoints. A retry with the same key and request gets the stored response; records live in an `IIdempotencyRecordStore` from `CSharpEssentials.Idempotency`.
@@ -139,6 +140,41 @@ v2.MapGet("/ping", () => "pong");             // GET /v2/ping
 v2.MapAppsEndpoints();                        // CSharpEssentials.Endpoints registry under /v2
 ```
 
+### Typed results
+
+A `Result<T, E1..E3>` from `CSharpEssentials.Results` becomes an HTTP response with `ToHttpResult()`:
+
+```csharp
+app.MapGet("/orders/{id:int}", async (int id, IOrderService orders, CancellationToken ct) =>
+    await orders.GetAsync(id, ct).ToHttpResult());            // HttpResult<Ok<OrderDto>, NotFoundError, OrderErrors.Locked>
+
+app.MapPost("/orders", (CreateOrder command, IOrderService orders) =>
+    orders.Create(command).ToCreated(o => $"/orders/{o.Id}")); // HttpResult<Created<OrderDto>, ValidationError, ConflictError>
+```
+
+| Method | Success response |
+|---|---|
+| `ToHttpResult()`, `ToOk()` | `200 OK` with the value |
+| `ToHttpResult(v => ...)` | any `IResult` that is also an `IEndpointMetadataProvider`, such as `TypedResults.Accepted(uri, v)` |
+| `ToCreated(v => location)` | `201 Created` with the value and the `Location` header |
+| `ToNoContent()` | `204 No Content`, the value is dropped |
+
+Each one works on the result, on `Task<Result<...>>` and on `ValueTask<Result<...>>`, and throws `InvalidOperationException` for a `default` result. The error slots must implement `IError`. Convert an exception slot with `MapError` first.
+
+An error goes out through the same path as `ToProblemResult()`: the typed error becomes an `Error` with the same code, description, type and metadata, and the registered `IErrorStatusCodeMapper`, `EnhancedProblemDetailsOptions` and enrichers build the response. A typed error and the equivalent `Error` give the same problem body.
+
+`HttpResult<TSuccess, E1..E3>` implements `IEndpointMetadataProvider`. The endpoint metadata, which the OpenAPI document reads, lists the responses of `TSuccess` and one `application/problem+json` response of `EnhancedProblemDetails` per status that `IErrorStatusCodeMapper.GetDeclaredStatusCodes(Type)` returns for each slot. The default reads `[ErrorKind]` from the slot type, which `NotFoundError`, `ConflictError` and the other kinds carry and their subtypes inherit. For the GET endpoint above that is 200, 404 and 409. The request delegate generator (`EnableRequestDelegateGenerator`, used for Native AOT) gives the same metadata.
+
+- A slot of type `Error`, or of a type without `[ErrorKind]`, declares nothing. Add `ProducesProblem(status)` for it.
+- A mapper that sends errors of a type with another status by code or by metadata should override `GetDeclaredStatusCodes` so the document lists that status too. The default declares the status that `GetStatusCode` returns for an error of the slot's kind, so a mapper that maps a whole kind elsewhere is covered without an override. `DefaultErrorStatusCodeMapper` does not declare the statuses it gives by code (`Http.PreconditionFailed` and the idempotency codes): the conditional request and idempotency conventions declare those, and typed errors should not reuse those codes.
+- `WithValidation<T>()` declares its 400 problem response, once, also when a slot already declares 400.
+
+#### Forgetting `ToHttpResult()`
+
+A typed result returned as it is would be serialized as a `200` response with the error in the body. `AddEnhancedProblemDetails` puts a converter first in the Minimal API and MVC JSON options (`Microsoft.AspNetCore.Http.Json.JsonOptions` and `Microsoft.AspNetCore.Mvc.JsonOptions`) that throws `InvalidOperationException` when such a result is written, before any byte of the body. `TypedResults.Ok(result)` throws the same way, and a controller's `Ok(result)` goes through the MVC options that carry the same converter. Since nothing was written yet, the request ends as a 500. Under Native AOT the converter cannot be created, so it throws earlier, when the endpoint's JSON type information is first resolved. Other serializer options, including those of response caching and idempotency replay, keep the type's own `{"case":...,"value":...}` converter, and reading a typed result from JSON still works. The `CSharpEssentials.Endpoints` analyzer reports the mistake at build time as CSE1013.
+
+`ResultEndpointFilter` converts a typed result at runtime as well (see below), but the endpoint metadata still describes the handler's return type, so the OpenAPI document only shows a 200 of the result type. Prefer `ToHttpResult()`.
+
 ### Result endpoint filter
 
 ```csharp
@@ -150,6 +186,8 @@ app.MapGet("/users/{id}", (int id) => GetUser(id))
 // Returns 200 with value on success; on failure the mapper's result (resolved per request),
 // or a ProblemDetails response when no mapper is registered
 ```
+
+The filter also converts `Result<T, E1..E3>`: the error becomes an `Error` the same way as `ToResult()`, and a `default` typed result becomes a 500 problem.
 
 ### Validation endpoint filter
 

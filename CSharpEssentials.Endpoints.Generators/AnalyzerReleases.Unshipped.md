@@ -17,3 +17,4 @@ CSE1009 | CSharpEssentials.Endpoints | Warning | EndpointsAnalyzer
 CSE1010 | CSharpEssentials.Endpoints | Warning | EndpointsAnalyzer
 CSE1011 | CSharpEssentials.Endpoints | Info | EndpointsAnalyzer
 CSE1012 | CSharpEssentials.Endpoints | Warning | EndpointsAnalyzer
+CSE1013 | CSharpEssentials.Endpoints | Warning | TypedResultReturnAnalyzer

@@ -130,4 +130,14 @@ internal static class EndpointDiagnostics
         isEnabledByDefault: true,
         description: "The generator maps a non-partial type only when the type declares static Map itself. A non-partial class that inherits Map from an endpoint base class is left out of the generated registry, so MapAllEndpoints does not map it.",
         helpLinkUri: HelpLink);
+
+    public static readonly DiagnosticDescriptor UnconvertedTypedResult = new(
+        "CSE1013",
+        "Route handler returns a typed result without converting it",
+        "Route handler returns '{0}'; convert it with ToHttpResult(), ToOk(), ToCreated() or ToNoContent() so errors are sent as problem responses",
+        Category,
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true,
+        description: "A Result<T, E1..E3> returned from a Map* handler is serialized as a 200 response, so its error looks like a success, and the OpenAPI document lists only that 200. CSharpEssentials.AspNetCore converts it with ToHttpResult() and declares one problem response per error slot. AddEnhancedProblemDetails makes the unconverted response throw at runtime; ResultEndpointFilter converts it at runtime but does not describe the errors.",
+        helpLinkUri: HelpLink);
 }

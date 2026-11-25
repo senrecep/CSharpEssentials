@@ -590,6 +590,10 @@ internal sealed partial class AppJsonContext : JsonSerializerContext;
 
 Without the registration, a Native AOT app throws `NotSupportedException` with the name of the converter to add. A context that lacks a slot type throws `NotSupportedException` when that case is written or read.
 
+### HTTP responses
+
+`CSharpEssentials.AspNetCore` turns a typed result into an HTTP response with `ToHttpResult()`, `ToOk()`, `ToCreated(...)` or `ToNoContent()`, and lists one problem response per error slot in the OpenAPI document. See [Typed results](../CSharpEssentials.AspNetCore/Readme.MD#typed-results). Do not return the result from a handler as it is: its error would go out as a 200.
+
 ### Converting to `Result<T>`
 
 `ToResult()` returns the classic `Result<T>`, and the typed result also implements `IResultBase`, so Mediator behaviors, `ResultEndpointFilter` and other code written for `Result<T>` keep working. Each error becomes one `Error`:

@@ -16,7 +16,8 @@ public static partial class Extensions
     /// Registers ProblemDetails with the CSharpEssentials enrichment and default options. Every problem response
     /// (CSharpEssentials results, <see cref="GlobalExceptionHandler"/>, status code pages, the framework exception
     /// handler) then goes through the same <see cref="IProblemDetailsEnricher"/> pipeline. A JSON request body failure
-    /// that reaches <see cref="GlobalExceptionHandler"/> becomes a 400 validation problem keyed by the JSON path.
+    /// that reaches <see cref="GlobalExceptionHandler"/> becomes a 400 validation problem keyed by the JSON path. A typed result
+    /// (<c>Result&lt;T, E1..E3&gt;</c>) returned from an endpoint without <c>ToHttpResult()</c> throws instead of being written.
     /// </summary>
     public static IServiceCollection AddEnhancedProblemDetails(this IServiceCollection services) =>
         services.AddEnhancedProblemDetails(static _ => { });
@@ -36,6 +37,8 @@ public static partial class Extensions
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IExceptionProblemMapper, BindingExceptionProblemMapper>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<ProblemDetailsOptions>, EnhancedProblemDetailsPostConfigure>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<Microsoft.AspNetCore.Http.Json.JsonOptions>, EnhancedProblemDetailsJsonOptionsSetup>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<Microsoft.AspNetCore.Http.Json.JsonOptions>, TypedResultHttpJsonGuardSetup>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<Microsoft.AspNetCore.Mvc.JsonOptions>, TypedResultHttpJsonGuardSetup>());
         return services;
     }
 

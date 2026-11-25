@@ -1,0 +1,88 @@
+{
+  "GET /typed/async/{id}": {
+    "200": {
+      "description": "OK",
+      "content": {
+        "application/json": "#/components/schemas/TypedOrder"
+      }
+    },
+    "404": {
+      "description": "Not Found",
+      "content": {
+        "application/problem\u002Bjson": "#/components/schemas/EnhancedProblemDetails"
+      }
+    },
+    "409": {
+      "description": "Conflict",
+      "content": {
+        "application/problem\u002Bjson": "#/components/schemas/EnhancedProblemDetails"
+      }
+    }
+  },
+  "GET /typed/filtered/{id}": {
+    "200": {
+      "description": "OK",
+      "content": {
+        "application/json": "#/components/schemas/ResultOfTypedOrderAndNotFoundErrorAndTypedOrderLocked"
+      }
+    }
+  },
+  "POST /typed/orders": {
+    "201": {
+      "description": "Created",
+      "content": {
+        "application/json": "#/components/schemas/TypedOrder"
+      }
+    },
+    "404": {
+      "description": "Not Found",
+      "content": {
+        "application/problem\u002Bjson": "#/components/schemas/EnhancedProblemDetails"
+      }
+    },
+    "409": {
+      "description": "Conflict",
+      "content": {
+        "application/problem\u002Bjson": "#/components/schemas/EnhancedProblemDetails"
+      }
+    }
+  },
+  "DELETE /typed/orders/{id}": {
+    "204": {
+      "description": "No Content",
+      "content": {}
+    },
+    "404": {
+      "description": "Not Found",
+      "content": {
+        "application/problem\u002Bjson": "#/components/schemas/EnhancedProblemDetails"
+      }
+    },
+    "409": {
+      "description": "Conflict",
+      "content": {
+        "application/problem\u002Bjson": "#/components/schemas/EnhancedProblemDetails"
+      }
+    }
+  },
+  "GET /typed/orders/{id}": {
+    "200": {
+      "description": "OK",
+      "content": {
+        "application/json": "#/components/schemas/TypedOrder"
+      }
+    },
+    "404": {
+      "description": "Not Found",
+      "content": {
+        "application/problem\u002Bjson": "#/components/schemas/EnhancedProblemDetails"
+      }
+    },
+    "409": {
+      "description": "Conflict",
+      "content": {
+        "application/problem\u002Bjson": "#/components/schemas/EnhancedProblemDetails"
+      }
+    }
+  }
+}

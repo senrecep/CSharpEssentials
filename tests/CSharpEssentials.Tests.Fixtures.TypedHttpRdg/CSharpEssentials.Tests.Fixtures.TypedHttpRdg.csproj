@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- The endpoints of CSharpEssentials.Tests.Fixtures.TypedHttp compiled with the request delegate generator (the Native AOT
+       path), so the tests can compare metadata and responses of both. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Library</OutputType>
+    <IsPackable>false</IsPackable>
+    <EnableRequestDelegateGenerator>true</EnableRequestDelegateGenerator>
+    <DefineConstants>$(DefineConstants);TYPED_HTTP_RDG</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\CSharpEssentials.Tests.Fixtures.TypedHttp\TypedHttpApi.cs" Link="TypedHttpApi.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\CSharpEssentials.AspNetCore\CSharpEssentials.AspNetCore.csproj" />
+  </ItemGroup>
+
+</Project>
