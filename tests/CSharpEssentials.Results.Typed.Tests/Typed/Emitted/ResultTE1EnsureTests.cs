@@ -61,6 +61,18 @@ public sealed class ResultTE1EnsureTests
     }
 
     [Fact]
+    public void EnsureNotFoundError_Should_Throw_When_TheErrorIsNullAndThePredicateRejectsTheValue()
+    {
+        Result<int, NotFoundError> source = -5;
+        int calls = 0;
+
+        Action act = () => _ = source.Ensure(v => { calls++; return v > 0; }, (NotFoundError)null!);
+
+        act.Should().Throw<ArgumentNullException>();
+        calls.Should().Be(1);
+    }
+
+    [Fact]
     public void EnsureAdded_Should_KeepTheValue_When_ThePredicateAllowsIt()
     {
         Result<int, NotFoundError> source = 5;
@@ -111,6 +123,18 @@ public sealed class ResultTE1EnsureTests
 
         act.Should().Throw<InvalidOperationException>();
         calls.Should().Be(0);
+    }
+
+    [Fact]
+    public void EnsureAdded_Should_Throw_When_TheErrorIsNullAndThePredicateRejectsTheValue()
+    {
+        Result<int, NotFoundError> source = -5;
+        int calls = 0;
+
+        Action act = () => _ = source.Ensure(v => { calls++; return v > 0; }, (ValidationError)null!);
+
+        act.Should().Throw<ArgumentNullException>();
+        calls.Should().Be(1);
     }
 
     [Fact]
@@ -167,6 +191,18 @@ public sealed class ResultTE1EnsureTests
     }
 
     [Fact]
+    public void FailIfNotFoundError_Should_Throw_When_TheErrorIsNullAndThePredicateRejectsTheValue()
+    {
+        Result<int, NotFoundError> source = -5;
+        int calls = 0;
+
+        Action act = () => _ = source.FailIf(v => { calls++; return v < 0; }, (NotFoundError)null!);
+
+        act.Should().Throw<ArgumentNullException>();
+        calls.Should().Be(1);
+    }
+
+    [Fact]
     public void FailIfAdded_Should_KeepTheValue_When_ThePredicateAllowsIt()
     {
         Result<int, NotFoundError> source = 5;
@@ -217,5 +253,17 @@ public sealed class ResultTE1EnsureTests
 
         act.Should().Throw<InvalidOperationException>();
         calls.Should().Be(0);
+    }
+
+    [Fact]
+    public void FailIfAdded_Should_Throw_When_TheErrorIsNullAndThePredicateRejectsTheValue()
+    {
+        Result<int, NotFoundError> source = -5;
+        int calls = 0;
+
+        Action act = () => _ = source.FailIf(v => { calls++; return v < 0; }, (ValidationError)null!);
+
+        act.Should().Throw<ArgumentNullException>();
+        calls.Should().Be(1);
     }
 }

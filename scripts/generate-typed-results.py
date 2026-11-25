@@ -419,6 +419,9 @@ def ensure_tests(n: int) -> list[Test]:
             for (case, value), e in zip(source_cases(errors), errors):
                 tests.append(Test(f"{prefix}_Should_PassTheErrorThrough_When_{case}", src, value, call, out, value, 0, e))
             tests.append(Test(f"{prefix}_Should_Throw_When_TheResultIsDefault", src, "default", call, None, None, 0, throws="InvalidOperationException"))
+            if error not in STRUCTS:  # a struct error cannot be null
+                null_call = f"{name}(v => {counted(predicate)}, ({error})null!)"
+                tests.append(Test(f"{prefix}_Should_Throw_When_TheErrorIsNullAndThePredicateRejectsTheValue", src, FAILING_OK, null_call, None, None, 1, throws="ArgumentNullException"))
     return tests
 
 
