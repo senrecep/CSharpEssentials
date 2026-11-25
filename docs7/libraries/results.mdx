@@ -564,6 +564,34 @@ Two typed results are equal when they hold the same case: the same slot, and a v
 
 Error types may be structs. A struct error is boxed when it is stored, because all slots share one `object` field. `default` of a struct error type is a valid error with whatever its fields default to, often a `null` code; the bridge below turns an `IError` without a code into an `Unexpected` error instead of throwing.
 
+### JSON
+
+A typed result serializes with `System.Text.Json` as an envelope with the case name and its value:
+
+```text
+{"case":"Success","value":{"id":3}}
+{"case":"NotFoundError","value":{"Code":"User.NotFound","Description":"User not found.", ...}}
+```
+
+The case is `Success` or the name of the slot type; when two slots share a type name, both use the full name. The value is written and read as the slot type, so a `Result<int, NotFoundError, UserErrors.Locked>` reads a `UserErrors.Locked` back into its own slot with its own fields, and the error types need no `[JsonDerivedType]` registration. A derived error in a base slot is written as the base type: `new UserErrors.Locked(7)` in a `ConflictError` slot comes back as a plain `ConflictError` with the same code and description. Struct errors round-trip like class errors.
+
+`default` is written as `null`, and `null` reads back as `default`. Reading throws `JsonException` for an unknown case, a missing `case` or `value`, a `null` value, or any other property. The two properties may come in either order, and their names are matched case-sensitively, whatever `PropertyNameCaseInsensitive` says.
+
+Error metadata comes back with `JsonElement` values, so an error with metadata keeps its code but is no longer equal to the original. Match on the code. The Mediator caching and idempotency behaviors replay a typed response through this envelope, so the replayed result holds the same slot and error type as the one the handler returned.
+
+The result types carry a converter factory that builds the converter through reflection. Under Native AOT that is not available: register the closed converter, and list the success type and every error type in the context:
+
+```csharp
+[JsonSourceGenerationOptions(Converters = [typeof(TypedResultJsonConverter<UserDto, NotFoundError, ConflictError>)])]
+[JsonSerializable(typeof(Result<UserDto, NotFoundError, ConflictError>))]
+[JsonSerializable(typeof(UserDto))]
+[JsonSerializable(typeof(NotFoundError))]
+[JsonSerializable(typeof(ConflictError))]
+internal sealed partial class AppJsonContext : JsonSerializerContext;
+```
+
+Without the registration, a Native AOT app throws `NotSupportedException` with the name of the converter to add. A context that lacks a slot type throws `NotSupportedException` when that case is written or read.
+
 ### Converting to `Result<T>`
 
 `ToResult()` returns the classic `Result<T>`, and the typed result also implements `IResultBase`, so Mediator behaviors, `ResultEndpointFilter` and other code written for `Result<T>` keep working. Each error becomes one `Error`:

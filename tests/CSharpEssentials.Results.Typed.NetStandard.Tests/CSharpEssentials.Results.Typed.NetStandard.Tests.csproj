@@ -48,10 +48,10 @@
                       SkipGetTargetFrameworkProperties="true" />
   </ItemGroup>
 
-  <!-- The Mediator tests need the net9.0 Mediator asset, which would bring a second (net9.0) Results next to the netstandard2.1 one. -->
+  <!-- The Mediator and replay tests need the net9.0 Mediator asset, which would bring a second (net9.0) Results next to the netstandard2.1 one. -->
   <ItemGroup>
     <Compile Include="..\CSharpEssentials.Results.Typed.Tests\**\*.cs"
-             Exclude="..\CSharpEssentials.Results.Typed.Tests\bin\**;..\CSharpEssentials.Results.Typed.Tests\obj\**;..\CSharpEssentials.Results.Typed.Tests\Typed\TypedResultMediatorTests.cs"
+             Exclude="..\CSharpEssentials.Results.Typed.Tests\bin\**;..\CSharpEssentials.Results.Typed.Tests\obj\**;..\CSharpEssentials.Results.Typed.Tests\Typed\TypedResultMediatorTests.cs;..\CSharpEssentials.Results.Typed.Tests\Typed\TypedResultReplayTests.cs"
              LinkBase="Shared" />
   </ItemGroup>
 

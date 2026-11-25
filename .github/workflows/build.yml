@@ -122,3 +122,6 @@ jobs:
 
       - name: Publish Native AOT example
         run: dotnet publish examples/Examples.Endpoints/Examples.Endpoints.csproj --configuration Release --runtime linux-x64 -warnaserror
+
+      - name: Publish and run the Native AOT probe
+        run: bash benchmarks/aot-probe/run-aot-probe.sh

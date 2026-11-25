@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+using System.Text.Json.Serialization;
 using CSharpEssentials.Errors;
 using CSharpEssentials.ResultPattern.Interfaces;
 
@@ -21,6 +22,7 @@ namespace CSharpEssentials.ResultPattern;
 /// <typeparam name="E3">The third error type.</typeparam>
 [SuppressMessage("Naming", "CA1715:Identifiers should have correct prefix", Justification = "E1..E3 name the error slots, matching the documented Result<T, E1, E2> shape.")]
 [Union]
+[JsonConverter(typeof(TypedResultJsonConverterFactory))]
 public readonly partial struct Result<T, E1, E2, E3> : IUnion, IValueResult, IEquatable<Result<T, E1, E2, E3>>
     where T : notnull
     where E1 : notnull
