@@ -133,6 +133,26 @@ public class HttpResultTests
         (await InvokeAsync(app, "/orders/{id:int}", 0)).Status.Should().Be(StatusCodes.Status410Gone);
     }
 
+    private static readonly Dictionary<string, int> CodeMappedStatuses = new(StringComparer.Ordinal)
+    {
+        [ConditionalRequestErrors.PreconditionFailedCode] = StatusCodes.Status412PreconditionFailed,
+        [CSharpEssentials.Idempotency.IdempotencyErrorCodes.KeyReused] = StatusCodes.Status422UnprocessableEntity,
+        [CSharpEssentials.Idempotency.IdempotencyErrorCodes.InFlight] = StatusCodes.Status409Conflict,
+        [CSharpEssentials.Idempotency.IdempotencyErrorCodes.KeyMissing] = StatusCodes.Status400BadRequest,
+        [CSharpEssentials.Idempotency.IdempotencyErrorCodes.KeyInvalid] = StatusCodes.Status400BadRequest,
+        [CSharpEssentials.Idempotency.IdempotencyErrorCodes.ScopeRequired] = StatusCodes.Status400BadRequest,
+    };
+
+    [Fact]
+    public void GetDeclaredStatusCodes_Should_LeaveTheCodeMappedStatusesUndeclared()
+    {
+        IEnumerable<int> declared = DefaultErrorStatusCodeMapper.Instance.GetDeclaredStatusCodes(typeof(ConflictError));
+
+        declared.Should().Equal(StatusCodes.Status409Conflict);
+        DefaultErrorStatusCodeMapper.Instance.GetStatusCode(new ConflictError(CSharpEssentials.Idempotency.IdempotencyErrorCodes.KeyReused, "Reused.").ToError())
+            .Should().Be(StatusCodes.Status422UnprocessableEntity);
+    }
+
     public static TheoryData<Type> ErrorKinds() =>
     [
         .. typeof(TypedError).Assembly.GetTypes().Where(static type => !type.IsAbstract && type.IsSubclassOf(typeof(TypedError))),
@@ -145,14 +165,16 @@ public class HttpResultTests
     {
         foreach (IErrorStatusCodeMapper mapper in (IErrorStatusCodeMapper[])[DefaultErrorStatusCodeMapper.Instance, new GoneMapper(), new NotFoundAsGoneMapper()])
         {
-            foreach (string code in (string[])["Order.NotFound", "Order.Gone", "Some.Code"])
+            foreach (string code in (string[])["Order.NotFound", "Order.Gone", "Some.Code", .. CodeMappedStatuses.Keys])
             {
                 IError error = kind == typeof(OrderLocked)
                     ? new OrderLocked(1)
                     : (IError)Activator.CreateInstance(kind, code, "Description.", null)!;
-                int status = mapper.GetStatusCode(Error.Create(error.Code, error.Description, error.Type, error.Metadata));
+                Error untyped = Error.Create(error.Code, error.Description, error.Type, error.Metadata);
+                int status = mapper.GetStatusCode(untyped);
 
-                mapper.GetDeclaredStatusCodes(kind).Should().Contain(status, $"{mapper.GetType().Name} sends {status} for {kind.Name} '{error.Code}'");
+                if (!mapper.GetDeclaredStatusCodes(kind).Contains(status))
+                    CodeMappedStatuses.Should().Contain(error.Code, status, $"only the default code-mapped statuses may go undeclared: {mapper.GetType().Name} sends {status} for {kind.Name} '{error.Code}'");
             }
         }
     }
@@ -213,6 +235,35 @@ public class HttpResultTests
         string json = JsonSerializer.Serialize(locked, JsonSerializerOptions.Web);
         json.Should().Contain("\"case\":\"OrderLocked\"");
         JsonSerializer.Deserialize<Result<OrderDto, NotFoundError, OrderLocked>>(json, http).Should().Be(locked);
+    }
+
+    public sealed record OrderBatch(Result<OrderDto, NotFoundError, OrderLocked> First);
+
+    [Fact]
+    public void Guard_Should_WriteANestedTypedResultAsTheEnvelope()
+    {
+        using WebApplication app = Build();
+        JsonSerializerOptions http = app.Services.GetRequiredService<IOptions<HttpJsonOptions>>().Value.SerializerOptions;
+
+        string list = JsonSerializer.Serialize(new List<Result<OrderDto, NotFoundError, OrderLocked>> { GetOrder(7), GetOrder(3) }, http);
+        string record = JsonSerializer.Serialize(new OrderBatch(GetOrder(0)), http);
+
+        list.Should().Be(JsonSerializer.Serialize(new List<Result<OrderDto, NotFoundError, OrderLocked>> { GetOrder(7), GetOrder(3) }, JsonSerializerOptions.Web));
+        list.Should().Contain("\"case\":\"OrderLocked\"");
+        JsonSerializer.Deserialize<OrderBatch>(record, http).Should().Be(new OrderBatch(GetOrder(0)));
+    }
+
+    [Fact]
+    public async Task Guard_Should_LetAnEndpointReturnTypedResultsNestedInTheBody()
+    {
+        await using WebApplication app = Build(map: app =>
+            app.MapGet("/orders/{id:int}", (int id) => new List<Result<OrderDto, NotFoundError, OrderLocked>> { GetOrder(id) }));
+
+        Response response = await InvokeAsync(app, "/orders/{id:int}", 7);
+
+        response.Exception.Should().BeNull();
+        response.Status.Should().Be(StatusCodes.Status200OK);
+        response.Body.Should().Contain("\"case\":\"OrderLocked\"");
     }
 
     [Fact]
