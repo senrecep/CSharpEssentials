@@ -32,7 +32,7 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
 | Member | What it does |
 |--------|-------------|
 | `AddMigrationsCheck<TContext>(name?, failureStatus?, tags?, timeout?)` | Adds the check. `name` defaults to `"{TContext}-migrations"`, `tags` to `["ready"]`, `failureStatus` to `Unhealthy` |
-| `DbContextMigrationsHealthCheck<TContext>` | Calls `Database.GetPendingMigrationsAsync()` on a context from the health check scope. No pending migrations: `Healthy`. Otherwise the failure status, with the names under the `pendingMigrations` data key |
+| `DbContextMigrationsHealthCheck<TContext>` | Calls `Database.GetPendingMigrationsAsync()` on a context from the health check scope. Pending migrations: the failure status, with the names under the `pendingMigrations` data key. All applied but `Database.HasPendingModelChanges()` is true (the model changed and no migration covers it): `Degraded`. Otherwise `Healthy` |
 | `MigrationsHealthCheckBuilderExtensions.ReadyTag` | `"ready"` |
 
 A database that does not exist yet has every migration pending. When the database cannot be reached, the query throws and the health check service reports the failure status with the exception. Either way the check fails, so it also covers connectivity.

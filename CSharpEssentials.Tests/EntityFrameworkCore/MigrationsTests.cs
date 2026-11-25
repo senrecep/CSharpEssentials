@@ -35,6 +35,23 @@ public sealed class CreateItemsMigration : Migration
             constraints: table => table.PrimaryKey("PK_Items", item => item.Id));
 }
 
+[DbContext(typeof(MigratedDbContext))]
+public sealed class MigratedDbContextModelSnapshot : ModelSnapshot
+{
+    protected override void BuildModel(ModelBuilder modelBuilder) =>
+        modelBuilder.Entity("CSharpEssentials.Tests.EntityFrameworkCore.MigratedItem", item =>
+        {
+            item.Property<int>("Id").ValueGeneratedOnAdd().HasColumnType("INTEGER");
+            item.HasKey("Id");
+            item.ToTable("Items");
+        });
+}
+
+public sealed class UnmigratedDbContext(DbContextOptions<UnmigratedDbContext> options) : DbContext(options)
+{
+    public DbSet<MigratedItem> Items => Set<MigratedItem>();
+}
+
 public sealed class MigrationsTests : IDisposable
 {
     private sealed class RecordingLock(List<string> log) : IDatabaseMigrationLock
@@ -53,6 +70,11 @@ public sealed class MigrationsTests : IDisposable
             log.Add($"acquired, pending {(await context.Database.GetPendingMigrationsAsync(cancellationToken)).Count()}");
             return new Release(log);
         }
+    }
+
+    private sealed class NullLock : IDatabaseMigrationLock
+    {
+        public ValueTask<IAsyncDisposable> AcquireAsync(DbContext context, CancellationToken cancellationToken) => new(default(IAsyncDisposable)!);
     }
 
     private readonly SqliteConnection _connection = new("DataSource=:memory:");
@@ -88,6 +110,33 @@ public sealed class MigrationsTests : IDisposable
 
         HealthReport after = await health.CheckHealthAsync();
         after.Status.Should().Be(HealthStatus.Healthy);
+    }
+
+    [Fact]
+    public async Task Model_Changes_Without_A_Migration_Report_Degraded()
+    {
+        await using ServiceProvider provider = BuildServices(services =>
+        {
+            services.AddDbContext<UnmigratedDbContext>(options => options.UseSqlite(_connection));
+            services.AddHealthChecks().AddMigrationsCheck<UnmigratedDbContext>();
+        });
+
+        HealthReport report = await provider.GetRequiredService<HealthCheckService>()
+            .CheckHealthAsync(check => check.Name == "UnmigratedDbContext-migrations");
+
+        report.Status.Should().Be(HealthStatus.Degraded);
+    }
+
+    [Fact]
+    public async Task MigrateDatabaseAsync_Throws_Before_Migrating_When_The_Lock_Returns_Null()
+    {
+        await using ServiceProvider provider = BuildServices(services => services.AddSingleton<IDatabaseMigrationLock>(new NullLock()));
+
+        Func<Task> act = () => provider.MigrateDatabaseAsync<MigratedDbContext>();
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("NullLock.AcquireAsync returned null.");
+        await using AsyncServiceScope scope = provider.CreateAsyncScope();
+        (await scope.ServiceProvider.GetRequiredService<MigratedDbContext>().Database.GetPendingMigrationsAsync()).Should().HaveCount(1);
     }
 
     [Fact]

@@ -27,7 +27,8 @@ public static class DatabaseMigrationExtensions
             return;
         }
 
-        IAsyncDisposable handle = await migrationLock.AcquireAsync(context, cancellationToken).ConfigureAwait(false);
+        IAsyncDisposable handle = await migrationLock.AcquireAsync(context, cancellationToken).ConfigureAwait(false)
+            ?? throw new InvalidOperationException($"{migrationLock.GetType().Name}.AcquireAsync returned null.");
         await using ConfiguredAsyncDisposable release = handle.ConfigureAwait(false);
         await context.Database.MigrateAsync(cancellationToken).ConfigureAwait(false);
     }

@@ -11,6 +11,7 @@ using FluentAssertions;
 
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -25,6 +26,13 @@ public sealed class AfterCommitCallbackTests : IDisposable
 
         protected override TimeSpan? GetNextDelay(Exception lastException) =>
             base.GetNextDelay(lastException) is null ? null : TimeSpan.Zero;
+    }
+
+    private sealed class CancelOnCommitInterceptor(CancellationTokenSource source) : DbTransactionInterceptor
+    {
+        public override async Task TransactionCommittedAsync(
+            System.Data.Common.DbTransaction transaction, TransactionEndEventData eventData, CancellationToken cancellationToken = default) =>
+            await source.CancelAsync();
     }
 
     private readonly SqliteConnection _connection;
@@ -90,6 +98,37 @@ public sealed class AfterCommitCallbackTests : IDisposable
 
         _log.Should().Equal("committed");
         storedWhenCallbackRan.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Callbacks_Run_With_An_Uncancelled_Token_When_The_Caller_Cancels_After_Commit()
+    {
+        using CancellationTokenSource source = new();
+        DbContextOptions<NotesDbContext> options = new DbContextOptionsBuilder<NotesDbContext>()
+            .UseSqlite(_connection)
+            .AddInterceptors(new CancelOnCommitInterceptor(source))
+            .Options;
+        await using NotesDbContext context = new(options);
+        EfCoreTransactionRunner<NotesDbContext> runner = new(context);
+        bool? callbackSawCancellation = null;
+
+        await runner.ExecuteAsync(
+            async token =>
+            {
+                await SaveNoteAsync(context, token);
+                await runner.OnCommittedAsync(token =>
+                {
+                    callbackSawCancellation = token.IsCancellationRequested;
+                    return ValueTask.CompletedTask;
+                }, token);
+                return true;
+            },
+            _ => true,
+            source.Token);
+
+        source.IsCancellationRequested.Should().BeTrue();
+        callbackSawCancellation.Should().BeFalse();
+        StoredCount().Should().Be(1);
     }
 
     [Fact]

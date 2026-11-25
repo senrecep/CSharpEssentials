@@ -6,7 +6,8 @@ namespace CSharpEssentials.EntityFrameworkCore.HealthChecks;
 /// <summary>
 /// Reports the registration's failure status (<see cref="HealthStatus.Unhealthy"/> by default) while
 /// <typeparamref name="TContext"/> has migrations that are not applied, and <see cref="HealthStatus.Healthy"/> once
-/// they all are. A database that does not exist has every migration pending. When the database cannot be reached,
+/// they all are, or <see cref="HealthStatus.Degraded"/> when they are applied but the model has changes no migration
+/// covers (<c>Database.HasPendingModelChanges()</c>). A database that does not exist has every migration pending. When the database cannot be reached,
 /// the query throws and the health check service reports the failure status with the exception.
 /// </summary>
 public sealed class DbContextMigrationsHealthCheck<TContext>(TContext dbContext) : IHealthCheck
@@ -18,12 +19,17 @@ public sealed class DbContextMigrationsHealthCheck<TContext>(TContext dbContext)
         ArgumentNullException.ThrowIfNull(context);
 
         string[] pending = [.. await dbContext.Database.GetPendingMigrationsAsync(cancellationToken).ConfigureAwait(false)];
-        if (pending.Length == 0)
-            return HealthCheckResult.Healthy();
+        if (pending.Length > 0)
+        {
+            return new HealthCheckResult(
+                context.Registration.FailureStatus,
+                $"{typeof(TContext).Name} has {pending.Length} pending migration(s).",
+                data: new Dictionary<string, object> { ["pendingMigrations"] = pending });
+        }
 
-        return new HealthCheckResult(
-            context.Registration.FailureStatus,
-            $"{typeof(TContext).Name} has {pending.Length} pending migration(s).",
-            data: new Dictionary<string, object> { ["pendingMigrations"] = pending });
+        if (dbContext.Database.HasPendingModelChanges())
+            return HealthCheckResult.Degraded($"{typeof(TContext).Name} has model changes that no migration covers.");
+
+        return HealthCheckResult.Healthy();
     }
 }

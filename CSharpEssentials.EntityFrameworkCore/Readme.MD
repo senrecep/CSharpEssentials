@@ -601,6 +601,7 @@ await transactionRunner.ExecuteAsync(async ct =>
 
 - Pass `session.Transaction` to every command. It is `null` when no transaction is open; most providers reject a command without it while one is open.
 - `ISqlSession.Connection` and `DbContextSqlSession<T>.Create()` return the context's own connection. Do not dispose or close it.
+- `AddDbContextSqlSession` replaces any `ISqlConnectionFactory` registered before it, so code that takes `ISqlConnectionFactory` then gets the shared connection. Code that wraps `factory.Create()` in `using` must move to `ISqlSession`, or keep its own factory and not call `AddDbContextSqlSession`.
 - A connection from `DbDataSourceSqlConnectionFactory` is new and closed. The caller owns it and should dispose it.
 
 ### Transaction runner
@@ -641,6 +642,7 @@ await transactionRunner.ExecuteAsync(async ct =>
 ```
 
 - Callbacks run in registration order after the outermost commit, once the execution strategy has returned, so a retried attempt never runs them twice.
+- A queued callback gets `CancellationToken.None`, not the token passed to `ExecuteAsync`. The data is committed by then, so a request cancelled or timed out right after the commit still runs the side effect. Put your own timeout inside the callback if it needs one.
 - A unit that does not commit, throws or is retried drops the callbacks it queued. A nested unit that rolls back to its savepoint drops only its own.
 - With no transaction open, `OnCommittedAsync` runs the callback at once. With a transaction the runner did not start (`Database.BeginTransactionAsync` called by hand, or an ambient `TransactionScope`), it throws `InvalidOperationException`, because it cannot see that commit.
 - The callbacks are kept per `DbContext` instance, so any runner over the same context sees them.
@@ -682,6 +684,10 @@ public sealed class PostgresMigrationLock : IDatabaseMigrationLock
 
 builder.Services.AddSingleton<IDatabaseMigrationLock, PostgresMigrationLock>();
 ```
+
+If `AcquireAsync` returns `null`, `MigrateDatabaseAsync` throws `InvalidOperationException` before it migrates.
+
+The package has no `IStartupTask` or `AddMigrateOnStartup<TContext>()` registration. A hosted service would need `Microsoft.Extensions.Hosting.Abstractions`, a dependency this package does not take, and the one awaited call above runs before the host serves, which a hosted service does not guarantee.
 
 EF Core 9 and later also take a database lock inside `MigrateAsync` on most providers. The hook is for EF Core 8 and for work you want serialized together with the migration.
 

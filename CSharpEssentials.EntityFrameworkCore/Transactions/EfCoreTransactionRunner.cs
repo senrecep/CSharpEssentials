@@ -23,7 +23,9 @@ namespace CSharpEssentials.EntityFrameworkCore.Transactions;
 /// <see cref="OnCommittedAsync"/> queues callbacks on the context for the outermost unit. They run in order after
 /// the commit, once the execution strategy has returned, so a retried attempt never runs them. A rollback or a
 /// retry drops them, and a nested unit that rolls back to its savepoint drops the ones it queued. When callbacks
-/// throw, the others still run and an <see cref="AggregateException"/> is thrown after the commit.
+/// throw, the others still run and an <see cref="AggregateException"/> is thrown after the commit. They get
+/// <see cref="CancellationToken.None"/>, not the caller's token: the data is durable, so a request that is cancelled
+/// right after the commit must not drop the side effects.
 /// </para>
 /// </summary>
 public sealed class EfCoreTransactionRunner<TDbContext>(TDbContext dbContext) : ITransactionRunner, ITransactionCallbacks
@@ -79,7 +81,7 @@ public sealed class EfCoreTransactionRunner<TDbContext>(TDbContext dbContext) : 
         }
 
         if (committed && callbacks.Count > 0)
-            await AfterCommitCallbacks.RunAsync(callbacks, cancellationToken).ConfigureAwait(false);
+            await AfterCommitCallbacks.RunAsync(callbacks, CancellationToken.None).ConfigureAwait(false);
         return outcome;
     }
 
