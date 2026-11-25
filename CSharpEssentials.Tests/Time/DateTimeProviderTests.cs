@@ -54,10 +54,21 @@ public class DateTimeProviderTests
     }
 
     [Fact]
-    public void TimeZone_ShouldReturnLocalTimeZone()
+    public void TimeZone_ShouldReturnTheLocalTimeZoneOfTheTimeProvider()
     {
         FakeTimeProvider fakeTimeProvider = new();
+        TimeZoneInfo istanbul = TimeZones.Find("Europe/Istanbul");
+        fakeTimeProvider.SetLocalTimeZone(istanbul);
+
         DateTimeProvider provider = new(fakeTimeProvider);
+
+        provider.TimeZone.Should().Be(istanbul);
+    }
+
+    [Fact]
+    public void TimeZone_WithSystemTimeProvider_ShouldReturnLocalTimeZone()
+    {
+        DateTimeProvider provider = new(TimeProvider.System);
 
         provider.TimeZone.Should().Be(TimeZoneInfo.Local);
     }
@@ -156,7 +167,7 @@ public class DateTimeProviderTests
         FakeTimeProvider fakeTimeProvider = new();
         var provider = new DateTimeProvider(fakeTimeProvider);
 
-        provider.TimeZone.Should().Be(TimeZoneInfo.Local);
+        provider.TimeZone.Should().Be(fakeTimeProvider.LocalTimeZone);
         provider.TimeZoneUtc.Should().Be(TimeZoneInfo.Utc);
         provider.UtcNow.Should().Be(fakeTimeProvider.GetUtcNow());
         provider.UtcNowDateTime.Should().Be(fakeTimeProvider.GetUtcNow().UtcDateTime);

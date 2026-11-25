@@ -1733,15 +1733,17 @@ Analyzers CSE0002 to CSE0016 (CSE0011 is not used) check duplicate wire names an
 | Type or method | What it does |
 |-------------|-------------|
 | `IDateTimeProvider` | Interface: `UtcNow` (`DateTimeOffset`), `UtcNowDateTime` (`Kind` is `Utc`), `UtcNowDate`, `UtcNowTime`, `TimeZone`, `TimeZoneUtc` |
-| `DateTimeProvider(TimeProvider)` | Production implementation: reads the clock of the `TimeProvider` you pass (for example `TimeProvider.System`); `TimeZone` is `TimeZoneInfo.Local` |
-| `FakeDateTimeProvider(DateTimeOffset)` | Test clock with `Advance(TimeSpan)` and `SetTime(DateTimeOffset)`; `TimeZone` is UTC |
+| `DateTimeProvider(TimeProvider)` | Production implementation: reads the clock of the `TimeProvider` you pass (for example `TimeProvider.System`); `TimeZone` is its `LocalTimeZone` (`TimeZoneInfo.Local` for `TimeProvider.System`) |
+| `FakeDateTimeProvider(DateTimeOffset)` | Test clock with `Advance(TimeSpan)` and `SetTime(DateTimeOffset)`; `TimeZone` is UTC; not a `TimeProvider`, so for code that waits wrap `FakeTimeProvider` in `DateTimeProvider` instead |
+| `TimeZones.Find(id)` / `TimeZones.TryFind(id, out zone)` | `TimeZoneInfo` for an IANA or Windows id on any OS (converted through ICU on .NET 8+); `Find` throws `TimeZoneNotFoundException` naming the id |
+| `provider.NowIn(zone)` / `provider.TodayIn(zone)` | The provider's current time (`DateTimeOffset` with the zone's offset) and date (`DateOnly`) in `zone` |
 | `ToTimeOnly()` | Extension: `DateTime` to `TimeOnly` |
 | `ToDateOnly()` | Extension: `DateTime` to `DateOnly` |
 | `NextDayOfWeek(dayOfWeek, includeCurrent = false)` | Next given weekday for a `DateTime` or `DateOnly`; `includeCurrent` returns the date itself when it already matches |
 | `PreviousDayOfWeek(dayOfWeek, includeCurrent = false)` | Previous given weekday, same rules |
-| `birthDate.GetAge(today)` / `birthDate.GetAge(dateTimeProvider)` | Age in whole years for a `DateOnly` birth date; the provider form uses its `TimeZone`. Throws `ArgumentOutOfRangeException` when the birth date is after the reference date |
+| `birthDate.GetAge(today)` / `birthDate.GetAge(dateTimeProvider)` / `birthDate.GetAge(dateTimeProvider, zone)` | Age in whole years for a `DateOnly` birth date; the provider forms use its `TimeZone` or `zone`. Throws `ArgumentOutOfRangeException` when the birth date is after the reference date |
 
-On `netstandard2.1` the `DateOnly`/`TimeOnly` members (`UtcNowDate`, `UtcNowTime`, `ToTimeOnly`, `ToDateOnly`, the `DateOnly` overloads, `GetAge`) are not available. Register the provider yourself, for example `services.AddSingleton<IDateTimeProvider>(new DateTimeProvider(TimeProvider.System))`; the package has no registration helper.
+On `netstandard2.1` the `DateOnly`/`TimeOnly` members (`UtcNowDate`, `UtcNowTime`, `ToTimeOnly`, `ToDateOnly`, the `DateOnly` overloads, `TodayIn`, `GetAge`) are not available. Register the provider yourself, for example `services.AddSingleton<IDateTimeProvider>(new DateTimeProvider(TimeProvider.System))`; the package has no registration helper.
 
 ```csharp
 var clock = new FakeDateTimeProvider(new DateTimeOffset(2026, 10, 6, 0, 0, 0, TimeSpan.Zero));
