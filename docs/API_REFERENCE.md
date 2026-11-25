@@ -833,7 +833,7 @@ Base classes for entities with audit fields, domain events and soft deletion.
 | `SetCreatedInfo(at, by)` | method | Sets creation audit fields; throws `ArgumentOutOfRangeException` for `DateTimeOffset.MinValue` |
 | `SetUpdatedInfo(at, by)` | method | Sets update audit fields |
 
-The audit properties have private setters; use the two `Set*Info` methods (the EF Core `AuditInterceptor` calls them). Namespace `CSharpEssentials.Entity`; the interfaces (`IEntityBase`, `IEntityBase<TId>`, `ICreationAudit`, `IModificationAudit`, `IDomainEventHolder`, `IDomainEvent`, `ISoftDeletable`, `ISoftDeletableBase`, `ISoftDeletableEntityBase`, `IDeletableEntityBase`) are in `CSharpEssentials.Entity.Interfaces`.
+The audit properties have private setters; use the two `Set*Info` methods (the EF Core `AuditInterceptor` calls them). Namespace `CSharpEssentials.Entity`; the interfaces (`IEntityBase`, `IEntityBase<TId>`, `ICreationAudit`, `IModificationAudit`, `IDomainEventHolder`, `IDomainEvent`, `IIdentifiedDomainEvent`, `ISoftDeletable`, `ISoftDeletableBase`, `ISoftDeletableEntityBase`, `IDeletableEntityBase`) are in `CSharpEssentials.Entity.Interfaces`.
 
 ### EntityBase\<TId\>
 
@@ -852,6 +852,17 @@ Extends `EntityBase` with (`SoftDeletableEntityBase<TId>` adds the typed `Id`):
 | `MarkAsDeleted(at, by)` | method | Sets `IsDeleted`, `DeletedAt` and `DeletedBy` |
 | `Restore()` | method | Clears `IsDeleted`, `DeletedAt`, `DeletedBy` and `IsHardDeleted` |
 | `MarkAsHardDeleted()` | method | Sets `IsHardDeleted` |
+
+### DomainEvent
+
+`abstract record DomainEvent : IIdentifiedDomainEvent`. `IIdentifiedDomainEvent` extends the `IDomainEvent` marker with `Guid EventId` and `DateTimeOffset OccurredAt`.
+
+| Member | Description |
+|--------|-------------|
+| `DomainEvent()` | protected; stamps `OccurredAt` from `TimeProvider.System` |
+| `DomainEvent(TimeProvider)` | protected; stamps `OccurredAt` from the given clock; throws `ArgumentNullException` for `null` |
+| `EventId` | `Guid` (init); `Guider.NewGuid(OccurredAt)`, a version 7 GUID |
+| `OccurredAt` | `DateTimeOffset` (init); UTC creation time |
 
 ### Domain event timing
 

@@ -7,7 +7,8 @@ Base classes for DDD entities with audit fields, soft deletion and domain events
 - `EntityBase<TId>`: a typed `Id` (protected setter) plus creation and modification audit fields. `EntityBase` is the same without an ID.
 - `SoftDeletableEntityBase<TId>` and `SoftDeletableEntityBase`: add `MarkAsDeleted`, `Restore` and `MarkAsHardDeleted`.
 - Domain events: `Raise`, `DomainEvents` and `ClearDomainEvents`, with `[DomainEventTiming]` to choose when the EF Core package publishes each event.
-- Interfaces for code that works with any entity: `IEntityBase`, `IEntityBase<TId>`, `ISoftDeletable`, `ICreationAudit`, `IModificationAudit`, `IDomainEventHolder` and `IDomainEvent`, in namespace `CSharpEssentials.Entity.Interfaces`.
+- `DomainEvent`: a base record that gives each event an `EventId` (version 7 GUID) and an `OccurredAt` time read from a `TimeProvider`.
+- Interfaces for code that works with any entity: `IEntityBase`, `IEntityBase<TId>`, `ISoftDeletable`, `ICreationAudit`, `IModificationAudit`, `IDomainEventHolder`, `IDomainEvent` and `IIdentifiedDomainEvent`, in namespace `CSharpEssentials.Entity.Interfaces`.
 
 Benchmarks of the `EntityBase` domain event list against a hand-written list (read, raise and clear, collect) are in [BENCHMARKS.md](/benchmarks/entity).
 
@@ -79,6 +80,25 @@ order.ClearDomainEvents();
 ```
 
 `Raise` throws `ArgumentNullException` for `null`. `DomainEvents` is a read-only live view of the entity's events, so reading it does not copy the list. Raising or clearing events while you loop over it throws `InvalidOperationException`; copy it first with `[.. order.DomainEvents]`, as above, when you clear before you dispatch. The EF Core package collects the events of tracked entities and dispatches them; see `CSharpEssentials.EntityFrameworkCore`.
+
+### Events with an id and a time
+
+`IDomainEvent` is an empty marker. An event that also implements `IIdentifiedDomainEvent` carries `EventId` and `OccurredAt`, which an outbox stores as the message id (dedupe key) and the delivery order. The `DomainEvent` base record fills both: `OccurredAt` comes from `TimeProvider.System` or the `TimeProvider` you pass, and `EventId` is `Guider.NewGuid(OccurredAt)`, so ids sort by time and a fake clock gives a known timestamp.
+
+```csharp
+using CSharpEssentials.Entity;
+
+public sealed record OrderPlaced(Guid OrderId) : DomainEvent;
+
+public sealed record OrderShipped : DomainEvent
+{
+    public OrderShipped(Guid orderId, TimeProvider clock) : base(clock) => OrderId = orderId;
+
+    public Guid OrderId { get; init; }
+}
+```
+
+Both properties are `init`, so System.Text.Json restores the stored values when it reads the event back.
 
 ### Event timing
 
