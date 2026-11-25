@@ -8,7 +8,7 @@ namespace CSharpEssentials.Tests.Packaging;
 /// may reference. The test reads each project file, plus the repository files it imports, and fails when a reference is added or
 /// removed without updating <see cref="AllowedReferences"/>. A new third-party dependency, or a layering change such as Results
 /// referencing EF Core, has to be made on purpose in this list. Directory.Build.props adds SourceLink and SonarAnalyzer to every
-/// project as private build assets; they are not listed.
+/// project as private build assets; they are pinned by <see cref="AllowedRootReferences"/> instead of the per-project lists.
 /// </summary>
 public class PackageDependencyAllowListTests
 {
@@ -59,6 +59,8 @@ public class PackageDependencyAllowListTests
         ["CSharpEssentials"] = ["CSharpEssentials.Any", "CSharpEssentials.Clone", "CSharpEssentials.Core", "CSharpEssentials.Entity", "CSharpEssentials.Enums", "CSharpEssentials.Errors", "CSharpEssentials.Http", "CSharpEssentials.Json", "CSharpEssentials.Maybe", "CSharpEssentials.Results", "CSharpEssentials.Rules", "CSharpEssentials.These", "CSharpEssentials.Time"],
     };
 
+    private static readonly string[] AllowedRootReferences = ["Microsoft.SourceLink.GitHub", "SonarAnalyzer.CSharp"];
+
     public static TheoryData<string> SourceProjects()
     {
         TheoryData<string> projects = [];
@@ -84,6 +86,21 @@ public class PackageDependencyAllowListTests
             .BeEmpty($"{project} may only reference what its allow-list names; add a new dependency to the list on purpose");
         AllowedReferences[project].Except(actual, StringComparer.Ordinal).Should()
             .BeEmpty($"{project} no longer references these, so remove them from its allow-list");
+    }
+
+    [Fact]
+    public void RootBuildFiles_Should_ReferenceOnlyAllowedPackages()
+    {
+        string solution = FindSolutionDirectory();
+
+        string[] actual = new[] { "Directory.Build.props", "Directory.Build.targets" }
+            .Select(file => Path.Combine(solution, file))
+            .Where(File.Exists)
+            .SelectMany(static file => XDocument.Load(file).Descendants("PackageReference").Select(static element => (string?)element.Attribute("Include")))
+            .OfType<string>()
+            .ToArray();
+
+        actual.Should().BeEquivalentTo(AllowedRootReferences, "every project imports these files, so a package added there ships in every package");
     }
 
     [Fact]

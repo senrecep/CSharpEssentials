@@ -55,7 +55,7 @@ Releases are automated with [release-please](https://github.com/googleapis/relea
 
 `<Version>` in `Directory.Build.props` is the only version source. Internal package pins (`[$(Version)]`), `AssemblyVersion` and `FileVersion` derive from it.
 
-`dotnet pack` runs package validation (`EnablePackageValidation` in `Directory.Build.props`). It checks that the target frameworks of each package expose compatible APIs. The intended differences between frameworks are recorded in the `CompatibilitySuppressions.xml` next to the project (Enums, Results and Time). There is no baseline version yet, because 9.0 breaks the 8.x API on purpose. After 9.0.0 is on NuGet, add a baseline so later releases are checked against it:
+`dotnet pack` runs package validation (`EnablePackageValidation` in `Directory.Build.props`). It checks that the target frameworks of each package expose compatible APIs. No package has a `CompatibilitySuppressions.xml`: every framework asset exposes the API of the assets below it, so a library built against a lower asset still loads on a higher one. Fix a validation error with an overload or a default interface member, not a suppression. There is no baseline version yet, because 9.0 breaks the 8.x API on purpose. After 9.0.0 is on NuGet, add a baseline so later releases are checked against it:
 
 1. Set `<PackageValidationBaselineVersion>9.0.0</PackageValidationBaselineVersion>` in `Directory.Build.props`.
 2. A package first published after that version has nothing to compare with: set `<PackageValidationBaselineVersion></PackageValidationBaselineVersion>` in its project file until it ships.

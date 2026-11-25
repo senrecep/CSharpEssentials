@@ -1,4 +1,5 @@
 using CSharpEssentials.Enums;
+using CSharpEssentials.Errors;
 using CSharpEssentials.Tests.Enums;
 using FluentAssertions;
 
@@ -41,6 +42,53 @@ public class EnumInfoParserTests
             error.Should().BeNull();
             value.Should().Be(expected);
         }
+    }
+
+    [Fact]
+    public void EnumInfoStringOverloads_Should_Parse_When_TextIsAString()
+    {
+        string text = "in_progress";
+        EnumInfo<ParserStatus> info = Info<ParserStatus>();
+
+        bool[] results =
+        [
+            info.TryParse(text, EnumReadMode.Data, Defaults, out ParserStatus withError, out EnumValueError? error),
+            info.TryParse(text, EnumReadMode.Data, Defaults, out ParserStatus withoutError),
+            info.TryParseWire(text, out ParserStatus wire),
+        ];
+
+        results.Should().AllSatisfy(result => result.Should().BeTrue());
+        new[] { withError, withoutError, wire }.Should().AllBeEquivalentTo(ParserStatus.InProgress);
+        error.Should().BeNull();
+    }
+
+    [Fact]
+    public void EnumValueParserStringOverloads_Should_Parse_When_TextIsAString()
+    {
+        string text = "validation";
+
+        bool parsedWithError = EnumValueParser.TryParse(text, EnumReadMode.Data, Defaults, out ErrorType withError, out EnumValueError? error);
+        bool parsed = EnumValueParser.TryParse(text, EnumReadMode.Data, Defaults, out ErrorType withoutError);
+
+        parsedWithError.Should().BeTrue();
+        parsed.Should().BeTrue();
+        withError.Should().Be(ErrorType.Validation);
+        withoutError.Should().Be(ErrorType.Validation);
+        error.Should().BeNull();
+    }
+
+    [Fact]
+    public void StringOverloads_Should_Reject_When_TextIsNull()
+    {
+        string? text = null;
+        EnumInfo<ParserStatus> info = Info<ParserStatus>();
+
+        bool parsed = info.TryParse(text, EnumReadMode.Data, Defaults, out _, out EnumValueError? error);
+
+        parsed.Should().BeFalse();
+        error.Should().NotBeNull();
+        info.TryParseWire(text, out _).Should().BeFalse();
+        EnumValueParser.TryParse<ErrorType>(text, EnumReadMode.Data, Defaults, out _).Should().BeFalse();
     }
 
     [Theory]

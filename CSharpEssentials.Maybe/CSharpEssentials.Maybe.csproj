@@ -47,4 +47,8 @@
       Condition="'$(UseProjectReferences)' == 'true'" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Include="..\CSharpEssentials.Results\Polyfills\MemberNotNullWhenAttribute.cs" Link="Polyfills\MemberNotNullWhenAttribute.cs" />
+  </ItemGroup>
+
 </Project>

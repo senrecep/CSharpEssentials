@@ -184,6 +184,26 @@ public class DateTimeProviderTests
         provider.UtcNowTime.Should().Be(new TimeOnly(22, 0));
     }
 
+    [Fact]
+    public void UtcNowDateAndTime_Should_DeriveFromUtcNowDateTime_When_ImplementationOmitsThem()
+    {
+        IDateTimeProvider provider = new MinimalDateTimeProvider(new DateTime(2024, 6, 15, 12, 30, 45, DateTimeKind.Utc));
+
+        DateOnly date = provider.UtcNowDate;
+        TimeOnly time = provider.UtcNowTime;
+
+        date.Should().Be(new DateOnly(2024, 6, 15));
+        time.Should().Be(new TimeOnly(12, 30, 45));
+    }
+
+    private sealed class MinimalDateTimeProvider(DateTime utcNow) : IDateTimeProvider
+    {
+        public TimeZoneInfo TimeZone => TimeZoneInfo.Utc;
+        public TimeZoneInfo TimeZoneUtc => TimeZoneInfo.Utc;
+        public DateTime UtcNowDateTime => utcNow;
+        public DateTimeOffset UtcNow => new(utcNow);
+    }
+
     private sealed class OffsetTimeProvider(DateTimeOffset now) : TimeProvider
     {
         public override DateTimeOffset GetUtcNow() => now;
