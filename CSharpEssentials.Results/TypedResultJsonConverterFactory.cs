@@ -41,7 +41,9 @@ public sealed class TypedResultJsonConverterFactory : JsonConverterFactory
         $"<{string.Join(", ", typeToConvert.GetGenericArguments().Select(TypedResultJson.TypeName))}>) " +
         "to JsonSourceGenerationOptions.Converters or JsonSerializerOptions.Converters.";
 
+#if NET7_0_OR_GREATER
     [RequiresDynamicCode("Closes the typed result converter over the result's type arguments.")]
+#endif
     private static JsonConverter CreateClosed(Type[] arguments)
     {
         Type closed = arguments.Length switch
