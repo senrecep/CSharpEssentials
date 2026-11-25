@@ -1,0 +1,33 @@
+{
+  "securitySchemes": {
+    "Bearer": {
+      "type": "http",
+      "scheme": "bearer",
+      "bearerFormat": "JWT"
+    }
+  },
+  "operations": {
+    "GET /bearer/anonymous": null,
+    "GET /bearer/controller/anonymous": null,
+    "GET /bearer/controller/secure": [
+      {
+        "Bearer": []
+      }
+    ],
+    "GET /bearer/group/anonymous": null,
+    "GET /bearer/group/secure": [
+      {
+        "Bearer": []
+      }
+    ],
+    "GET /bearer/plain": null,
+    "GET /bearer/secure": [
+      {
+        "Bearer": []
+      }
+    ],
+    "GET /minimal-all/{rest}": null,
+    "GET /minimal-default/{page}": null,
+    "GET /minimal/{id}": null
+  }
+}

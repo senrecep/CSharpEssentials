@@ -104,6 +104,31 @@ Each such operation gets:
 
 An endpoint that already documents a 400, 409 or 422 keeps its description (ours is appended), headers and schema (the content becomes a `oneOf` of both). Header names are read from the options when the document is generated. `CSharpEssentials.AspNetCore.Swashbuckle` produces the same description.
 
+## Bearer security
+
+`options.AddBearerSecurityScheme()` (opt-in) adds an HTTP `bearer` scheme to `components.securitySchemes` and a requirement for it to the operations that need authorization:
+
+```csharp
+builder.Services.AddAuthorization();
+builder.Services.AddOpenApi("v1", o => o.AddBearerSecurityScheme());
+
+app.MapGet("/orders", GetOrders).RequireAuthorization();          // security: [{ "Bearer": [] }]
+app.MapGet("/health", GetHealth);                                 // no security
+app.MapGet("/status", GetStatus).RequireAuthorization().AllowAnonymous(); // no security
+```
+
+```json
+"securitySchemes": {
+  "Bearer": { "type": "http", "scheme": "bearer", "bearerFormat": "JWT" }
+}
+```
+
+- An operation gets the requirement when its endpoint metadata has `IAuthorizeData` (`[Authorize]` on the action, controller or a base class, `.RequireAuthorization()` on the endpoint or its group) and no `IAllowAnonymous` (`[AllowAnonymous]`, `.AllowAnonymous()`). Other operations get none.
+- `RequireAuthorization(AuthorizationPolicy)`, `RequireAuthorization(policy => ...)` and the `FallbackPolicy` add no `IAuthorizeData`, so those endpoints are not described as secured. Add `[Authorize]` or `.RequireAuthorization()` (with or without a policy name) to them.
+- `schemeName` (default `Bearer`), `bearerFormat` (default `JWT`) and `description` (default none) are parameters: `o.AddBearerSecurityScheme("Jwt", "JWT", "Access token from the identity server.")`. A scheme already registered under the same name is replaced; an operation that already requires the scheme is not given a second requirement.
+
+`CSharpEssentials.AspNetCore.Swashbuckle` has no per-operation equivalent: its `AddSwagger` registers the scheme you pass and requires it on every operation.
+
 ## Scalar
 
 No helper is needed; list the documents:
