@@ -20,7 +20,7 @@ namespace CSharpEssentials.ResultPattern;
 /// <typeparam name="E2">The second error type.</typeparam>
 [SuppressMessage("Naming", "CA1715:Identifiers should have correct prefix", Justification = "E1..E3 name the error slots, matching the documented Result<T, E1, E2> shape.")]
 [Union]
-public readonly struct Result<T, E1, E2> : IUnion, IValueResult
+public readonly struct Result<T, E1, E2> : IUnion, IValueResult, IEquatable<Result<T, E1, E2>>
     where T : notnull
     where E1 : notnull
     where E2 : notnull
@@ -212,6 +212,31 @@ public readonly struct Result<T, E1, E2> : IUnion, IValueResult
     /// <param name="result">The result to convert.</param>
     public static implicit operator Result<T, E1, E2>(Result<T, E2, E1> result) =>
         new(TypedResultLogic.Remap(result.Tag, 3, 2), result.RawValue, result.RawError);
+
+    /// <summary>
+    /// Returns whether both results hold the same case: the same slot, and an equal value or error. Two <see langword="default"/>
+    /// results are equal. The same error in different slots is not.
+    /// </summary>
+    /// <param name="other">The result to compare with.</param>
+    /// <returns><see langword="true"/> when both results hold the same case.</returns>
+    public bool Equals(Result<T, E1, E2> other) =>
+        TypedResultLogic.CaseEquals(Tag, RawValue, RawError, other.Tag, other.RawValue, other.RawError);
+
+    /// <inheritdoc/>
+    public override bool Equals(object? obj) => obj is Result<T, E1, E2> other && Equals(other);
+
+    /// <inheritdoc/>
+    public override int GetHashCode() => TypedResultLogic.CaseHashCode(Tag, RawValue, RawError);
+
+    /// <summary>Returns whether both results hold the same case.</summary>
+    /// <param name="left">The first result.</param>
+    /// <param name="right">The second result.</param>
+    public static bool operator ==(Result<T, E1, E2> left, Result<T, E1, E2> right) => left.Equals(right);
+
+    /// <summary>Returns whether the results hold different cases.</summary>
+    /// <param name="left">The first result.</param>
+    /// <param name="right">The second result.</param>
+    public static bool operator !=(Result<T, E1, E2> left, Result<T, E1, E2> right) => !left.Equals(right);
 
     private Error CurrentError() => Tag switch
     {

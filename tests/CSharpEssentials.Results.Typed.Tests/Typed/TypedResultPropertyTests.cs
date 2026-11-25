@@ -71,7 +71,7 @@ public sealed class TypedResultPropertyTests
                 return;
             }
 
-            var typed = (TypedError)result.Value!;
+            var typed = (TypedError)result.Value;
             classic.FirstError.Should().Be(typed.ToError());
             classic.FirstError.Metadata.Should().BeSameAs(typed.Metadata);
         }, iter: Iterations);

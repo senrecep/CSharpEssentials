@@ -1,6 +1,19 @@
 using System.Runtime.CompilerServices;
 using CSharpEssentials.Errors;
 
+#if !NET11_0_OR_GREATER
+namespace System.Runtime.CompilerServices
+{
+    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, AllowMultiple = false, Inherited = false)]
+    internal sealed class UnionAttribute : Attribute;
+
+    internal interface IUnion
+    {
+        object? Value { get; }
+    }
+}
+#endif
+
 [Union]
 public readonly struct R<T, E1, E2> : IUnion
     where T : notnull where E1 : notnull where E2 : notnull

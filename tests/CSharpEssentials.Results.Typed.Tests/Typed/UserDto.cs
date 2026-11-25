@@ -1,6 +1,6 @@
 namespace CSharpEssentials.Results.Typed.Tests.Typed;
 
-public sealed class UserDto(int id)
+internal sealed class UserDto(int id)
 {
     public int Id { get; } = id;
 }

@@ -151,7 +151,7 @@ public sealed class TypedResultTests
     }
 
     [Fact]
-    public void Default_Should_ThrowInvalidOperationException_From_MatchSwitchAndToResult()
+    public void Default_Should_ThrowInvalidOperationException_From_MatchSwitchAndToResult_For_Arity3()
     {
         Result<UserDto, NotFoundError, ConflictError, ValidationError> result = default;
 
@@ -201,6 +201,38 @@ public sealed class TypedResultTests
         }
     }
 
+    [Theory]
+    [InlineData(0, "ok")]
+    [InlineData(1, "not found")]
+    public void Match_Should_CallOnlyTheFunctionOfTheHeldCase_For_Arity1(int slot, string expected)
+    {
+        Result<UserDto, NotFoundError> result = slot == 0 ? new UserDto(1) : UserErrors.NotFound;
+
+        string matched = result.Match(_ => "ok", _ => "not found");
+
+        matched.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData(0, "ok")]
+    [InlineData(1, "not found")]
+    [InlineData(2, "locked")]
+    [InlineData(3, "invalid")]
+    public void Match_Should_CallOnlyTheFunctionOfTheHeldCase_For_Arity3(int slot, string expected)
+    {
+        Result<UserDto, NotFoundError, UserErrors.Locked, ValidationError> result = slot switch
+        {
+            0 => new UserDto(1),
+            1 => UserErrors.NotFound,
+            2 => new UserErrors.Locked(1),
+            _ => Invalid,
+        };
+
+        string matched = result.Match(_ => "ok", _ => "not found", _ => "locked", _ => "invalid");
+
+        matched.Should().Be(expected);
+    }
+
     [Fact]
     public void Match_Should_PassTheHeldErrorInstance()
     {
@@ -212,15 +244,85 @@ public sealed class TypedResultTests
         matched.Should().BeSameAs(locked);
     }
 
-    [Fact]
-    public void Switch_Should_CallOnlyTheActionOfTheHeldCase()
+    [Theory]
+    [InlineData(0, "ok")]
+    [InlineData(1, "not found")]
+    public void Switch_Should_CallOnlyTheActionOfTheHeldCase_For_Arity1(int slot, string expected)
     {
         var calls = new List<string>();
-        Result<UserDto, NotFoundError, UserErrors.Locked, ValidationError> result = Invalid;
+        Result<UserDto, NotFoundError> result = slot == 0 ? new UserDto(1) : UserErrors.NotFound;
 
-        result.Switch(_ => calls.Add("ok"), _ => calls.Add("not found"), _ => calls.Add("locked"), error => calls.Add(error.Code));
+        result.Switch(_ => calls.Add("ok"), _ => calls.Add("not found"));
 
-        calls.Should().Equal(UserErrors.Codes.Invalid);
+        calls.Should().Equal(expected);
+    }
+
+    [Theory]
+    [InlineData(0, "ok")]
+    [InlineData(1, "not found")]
+    [InlineData(2, "locked")]
+    public void Switch_Should_CallOnlyTheActionOfTheHeldCase_For_Arity2(int slot, string expected)
+    {
+        var calls = new List<string>();
+        Result<UserDto, NotFoundError, UserErrors.Locked> result = slot switch
+        {
+            0 => new UserDto(1),
+            1 => UserErrors.NotFound,
+            _ => new UserErrors.Locked(1),
+        };
+
+        result.Switch(_ => calls.Add("ok"), _ => calls.Add("not found"), _ => calls.Add("locked"));
+
+        calls.Should().Equal(expected);
+    }
+
+    [Theory]
+    [InlineData(0, "ok")]
+    [InlineData(1, "not found")]
+    [InlineData(2, "locked")]
+    [InlineData(3, "invalid")]
+    public void Switch_Should_CallOnlyTheActionOfTheHeldCase_For_Arity3(int slot, string expected)
+    {
+        var calls = new List<string>();
+        Result<UserDto, NotFoundError, UserErrors.Locked, ValidationError> result = slot switch
+        {
+            0 => new UserDto(1),
+            1 => UserErrors.NotFound,
+            2 => new UserErrors.Locked(1),
+            _ => Invalid,
+        };
+
+        result.Switch(_ => calls.Add("ok"), _ => calls.Add("not found"), _ => calls.Add("locked"), _ => calls.Add("invalid"));
+
+        calls.Should().Equal(expected);
+    }
+
+    [Fact]
+    public void Default_Should_ThrowInvalidOperationException_From_MatchSwitchAndToResult_For_Arity1()
+    {
+        Result<UserDto, NotFoundError> result = default;
+
+        Action match = () => result.Match(_ => 1, _ => 2);
+        Action @switch = () => result.Switch(_ => { }, _ => { });
+        Action toResult = () => result.ToResult();
+
+        match.Should().ThrowExactly<InvalidOperationException>().WithMessage("*default-initialized*");
+        @switch.Should().ThrowExactly<InvalidOperationException>().WithMessage("*default-initialized*");
+        toResult.Should().ThrowExactly<InvalidOperationException>().WithMessage("*default-initialized*");
+    }
+
+    [Fact]
+    public void Default_Should_ThrowInvalidOperationException_From_MatchSwitchAndToResult_For_Arity2()
+    {
+        Result<UserDto, NotFoundError, ConflictError> result = default;
+
+        Action match = () => result.Match(_ => 1, _ => 2, _ => 3);
+        Action @switch = () => result.Switch(_ => { }, _ => { }, _ => { });
+        Action toResult = () => result.ToResult();
+
+        match.Should().ThrowExactly<InvalidOperationException>().WithMessage("*default-initialized*");
+        @switch.Should().ThrowExactly<InvalidOperationException>().WithMessage("*default-initialized*");
+        toResult.Should().ThrowExactly<InvalidOperationException>().WithMessage("*default-initialized*");
     }
 
     [Fact]

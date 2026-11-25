@@ -21,6 +21,16 @@ internal static class TypedResultLogic
     internal static InvalidOperationException DefaultInitialized() =>
         new("Result was default-initialized: it holds neither a value nor an error. Create it from a value or an error.");
 
+    /// <summary>Compares two cases: the tags must match, then the values for the success tag or the errors for an error tag.</summary>
+    internal static bool CaseEquals<T>(byte tag, T value, object? error, byte otherTag, T otherValue, object? otherError) =>
+        tag == otherTag && (tag == SuccessTag
+            ? EqualityComparer<T>.Default.Equals(value, otherValue)
+            : Equals(error, otherError));
+
+    /// <summary>Hashes the tag with the value for the success tag or with the error for an error tag.</summary>
+    internal static int CaseHashCode<T>(byte tag, T value, object? error) =>
+        tag == SuccessTag ? HashCode.Combine(tag, value) : HashCode.Combine(tag, error);
+
     /// <summary>
     /// Moves the error tags of a source result to the slots of a target result. Tags 0 and 1 stay as they are.
     /// </summary>

@@ -18,21 +18,14 @@ public sealed class TypedResultCompileTests
     [InlineData("public static int M(Result<Dto, NotFoundError> r) => r switch { Dto d => d.Id, NotFoundError => 404 };")]
     [InlineData("public static int M(Result<int, NotFoundError, ConflictError, ValidationError> r) => r switch { int v => v, NotFoundError => 404, ConflictError => 409, ValidationError => 400 };")]
     [InlineData("public static int M(Result<int, NotFoundError, ConflictError, ValidationError> r) => r switch { int v => v, NotFoundError => 404, ConflictError => 409, ValidationError => 400, null => 500 };")]
-    public void Compile_Should_ReportNothing_When_EveryCaseHasAnArm(string members)
-    {
-        IReadOnlyList<Diagnostic> diagnostics = CompileHarness.Compile(TypedSnippet.With(members), LanguageVersion.CSharp15);
-
-        diagnostics.Should().BeEmpty();
-    }
-
-    [Theory]
     [InlineData("public static Result<Dto, NotFoundError, UserErrors.Locked> M(Result<Dto, NotFoundError> r) => r;")]
     [InlineData("public static Result<Dto, NotFoundError, UserErrors.Locked> M(Result<Dto, UserErrors.Locked> r) => r;")]
     [InlineData("public static Result<Dto, UserErrors.Locked, NotFoundError> M(int i) => Get(i);")]
     [InlineData("public static Result<Dto, NotFoundError, UserErrors.Locked, ValidationError> M(int i) => Get(i);")]
     [InlineData("public static Result<Dto, ValidationError, UserErrors.Locked, NotFoundError> M(int i) => Get(i);")]
     [InlineData("public static Result<Dto, NotFoundError> M() => UserErrors.NotFound;")]
-    public void Compile_Should_ReportNothing_When_WideningOrReordering(string members)
+    [InlineData("public static bool M(int i) => Get(i) == default || default(Result<Dto, NotFoundError>) != UserErrors.NotFound;")]
+    public void Compile_Should_ReportNothing_When_EveryCaseHasAnArmOrTheResultWidens(string members)
     {
         IReadOnlyList<Diagnostic> diagnostics = CompileHarness.Compile(TypedSnippet.With(members), LanguageVersion.CSharp15);
 

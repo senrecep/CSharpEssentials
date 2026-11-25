@@ -4,7 +4,8 @@
 The in-process Roslyn harness in tests/CSharpEssentials.Results.Typed.Tests is not the compiler a consumer builds with. This
 script builds against the packed packages in artifacts/feed with the SDK pinned in global.json and compares the set of CS
 diagnostic ids of each case with the expected set: a case that expects none must build clean with TreatWarningsAsErrors on,
-a case that expects ids must fail with exactly those.
+a case that expects ids must fail with exactly those. Every case is built for each target framework of the fixture: net11.0 uses
+the runtime UnionAttribute and IUnion, net10.0 the internal polyfill shipped in the package.
 
 Usage, from the repository root after packing to artifacts/feed:
     python3 scripts/check-typed-consumer.py --version <packed version>
@@ -32,13 +33,16 @@ CASES = {
     "TypedReturningStatement": {"CS0161"},
 }
 
+FRAMEWORKS = ("net11.0", "net10.0")
+
 DIAGNOSTIC = re.compile(r"\b(?:error|warning) (CS\d{4})\b")
 
 
-def build(case: str, version: str, configuration: str) -> tuple[int, set[str], str]:
+def build(case: str, framework: str, version: str, configuration: str) -> tuple[int, set[str], str]:
     result = subprocess.run(
         [
             "dotnet", "build", str(PROJECT),
+            "--framework", framework,
             "--configuration", configuration,
             "--no-incremental",
             f"-p:FixtureCase={case}",
@@ -65,16 +69,17 @@ def main() -> int:
         return 1
 
     failed = 0
-    for case, expected in CASES.items():
-        code, actual, output = build(case, args.version, args.configuration)
-        built = code == 0
-        if actual == expected and built == (not expected):
-            print(f"ok   {case}: {sorted(actual) or 'clean build'}")
-            continue
+    for framework in FRAMEWORKS:
+        for case, expected in CASES.items():
+            code, actual, output = build(case, framework, args.version, args.configuration)
+            built = code == 0
+            if actual == expected and built == (not expected):
+                print(f"ok   {framework} {case}: {sorted(actual) or 'clean build'}")
+                continue
 
-        failed += 1
-        print(f"::error::{case}: expected {sorted(expected) or 'a clean build'}, got {sorted(actual)} (exit code {code})")
-        print(output)
+            failed += 1
+            print(f"::error::{framework} {case}: expected {sorted(expected) or 'a clean build'}, got {sorted(actual)} (exit code {code})")
+            print(output)
 
     return 1 if failed else 0
 

@@ -444,8 +444,13 @@ Result<UserDto, UserErrors.Locked, NotFoundError> reordered = Get(id);
 | switch expression without a `null` arm | throws `SwitchExpressionException` |
 | `Match`, `Switch`, `ToResult` | throw `InvalidOperationException` |
 | `IResultBase.Errors`, `FirstError`, `LastError` | an `Unexpected` error with code `Result.Default` |
+| `==` | equal to another `default`, and to nothing else |
 
 Create a typed result from a value or an error. Uninitialized fields, `new Result<T, E1>()` and array elements are all `default`.
+
+### Equality
+
+Two typed results are equal when they hold the same case: the same slot, and a value equal by `EqualityComparer<T>.Default` or an error equal by `Equals`. The same error instance in two different slots is not equal. `==`, `!=`, `Equals` and `GetHashCode` all follow this rule. Error kinds are records, so two errors with the same code, description and metadata are equal.
 
 ### Struct error types
 
