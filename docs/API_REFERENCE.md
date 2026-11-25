@@ -1328,7 +1328,12 @@ With Mediator, use `IdempotencyPlacement.InsideTransaction` and `TransactionBeha
 | `AddReadDbContext<TContext>(...)` | Registers a pooled read context (no tracking), same overloads |
 | `AddCqrsDbContexts<TWriteContext, TReadContext>(...)` | Registers both read and write contexts |
 | `AddPooledDbContext<TContext>(...)` / `RegisterDbContextFactory<TContext>(...)` | Same overloads; a pooled context or an `IDbContextFactory<TContext>` without the read/write presets |
-| `ISqlConnectionFactory` / `ISqlReadOnlyConnectionFactory` | `IDbConnection Create()` abstractions for raw SQL access (no implementation shipped) |
+| `ISqlConnectionFactory` / `ISqlReadOnlyConnectionFactory` | `IDbConnection Create()` abstractions for raw SQL access |
+| `ISqlSession` | `Connection` (the context's `DbConnection`, do not dispose) and `Transaction` (the open `DbTransaction` or `null`) for SQL that joins the `DbContext` transaction |
+| `DbContextSqlSession<TDbContext>` | `ISqlSession` and `ISqlConnectionFactory` over the context; `Create()` returns the context's own connection |
+| `DbDataSourceSqlConnectionFactory(DbDataSource)` | `ISqlReadOnlyConnectionFactory`; `Create()` returns a new closed connection outside any transaction |
+| `AddDbContextSqlSession<TDbContext>()` | Registers the session as the scoped `ISqlSession` and `ISqlConnectionFactory`, replacing earlier ones |
+| `AddDbDataSourceReadOnlyConnectionFactory(dataSource?)` | Registers the singleton `ISqlReadOnlyConnectionFactory` over the given `DbDataSource` or the registered one |
 | `DbContextRegistrationOptions` | `EnableDetailedErrors`, `EnableSensitiveDataLogging`, `QueryTrackingBehavior`, `EnableAuditInterceptor` / `EnableDomainEventInterceptor` / `EnableSlowQueryInterceptor` (attached when registered in DI), `MigrationsAssembly`, `RetryOptions` (`DbContextRetryOptions`: `MaxRetryCount` 3, `MaxRetryDelay` 5 s, `AdditionalErrorCodes`), `QuerySplittingBehavior` |
 | `UseAsWriteContext()` | Configures context for write operations |
 | `UseAsReadContext()` | Configures context for read operations (no tracking) |

@@ -263,7 +263,7 @@ db.HardDelete(entity);                        // MarkAsHardDeleted + Remove (the
 await db.MigrateDataAsync<Country, CountrySeed>(seed, (set, data) => set.Any(), s => new Country { Code = s.Code }, ct);
 ```
 
-`ApplySoftDeleteQueryFilter()` adds an anonymous `!IsDeleted` filter to every root `ISoftDeletableBase` type; `AddQueryFilter<T>(expression)` ANDs your filter with the existing anonymous one. `MigrateDataAsync` also has an overload with `MigrateDataOptions<TEntity, TSeed, TKey>` for a key-based add/update/remove diff. `ISqlConnectionFactory` and `ISqlReadOnlyConnectionFactory` are interfaces for Dapper-style code; you implement and register them.
+`ApplySoftDeleteQueryFilter()` adds an anonymous `!IsDeleted` filter to every root `ISoftDeletableBase` type; `AddQueryFilter<T>(expression)` ANDs your filter with the existing anonymous one. `MigrateDataAsync` also has an overload with `MigrateDataOptions<TEntity, TSeed, TKey>` for a key-based add/update/remove diff. For Dapper-style code, `AddDbContextSqlSession<TContext>()` registers `ISqlSession` (the context's connection and open transaction; pass `session.Transaction` to every command and never dispose the connection) and `AddDbDataSourceReadOnlyConnectionFactory()` registers an `ISqlReadOnlyConnectionFactory` that opens new connections from a `DbDataSource`.
 
 ---
 

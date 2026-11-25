@@ -581,7 +581,27 @@ await db.MigrateDataAsync(seed, new MigrateDataOptions<Country, CountrySeed, str
 
 ### SQL connection factories
 
-`ISqlConnectionFactory` (`IDbConnection Create()`) and `ISqlReadOnlyConnectionFactory` are interfaces only. Implement and register them yourself for Dapper or raw ADO.NET code that should not go through the `DbContext`.
+`ISqlSession` gives Dapper or raw ADO.NET code the context's connection and its open transaction, so the SQL commits or rolls back with the `DbContext` work, including a unit run by `EfCoreTransactionRunner`. `DbDataSourceSqlConnectionFactory` creates a new connection from a `DbDataSource` for reads outside any transaction.
+
+```csharp
+// namespace: CSharpEssentials.EntityFrameworkCore.Sql
+services.AddDbContextSqlSession<AppDbContext>();      // scoped ISqlSession and ISqlConnectionFactory
+services.AddDbDataSourceReadOnlyConnectionFactory();  // singleton ISqlReadOnlyConnectionFactory over the registered DbDataSource
+
+await transactionRunner.ExecuteAsync(async ct =>
+{
+    await session.Connection.ExecuteAsync(
+        "UPDATE stock SET quantity = quantity - @Quantity WHERE sku = @Sku",
+        command, transaction: session.Transaction);
+    db.Orders.Add(order);
+    await db.SaveChangesAsync(ct);
+    return Result.Success();
+}, outcome => outcome.IsSuccess, cancellationToken);
+```
+
+- Pass `session.Transaction` to every command. It is `null` when no transaction is open; most providers reject a command without it while one is open.
+- `ISqlSession.Connection` and `DbContextSqlSession<T>.Create()` return the context's own connection. Do not dispose or close it.
+- A connection from `DbDataSourceSqlConnectionFactory` is new and closed. The caller owns it and should dispose it.
 
 ### Transaction runner
 
