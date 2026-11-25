@@ -55,7 +55,7 @@ EnhancedJsonSerializerOptions.DefaultOptions.ApplyTo(target);
 
 ### Required value-type constructor parameters
 
-System.Text.Json binds a missing JSON property to `default` when the constructor parameter is a value type, so an omitted quantity reads as `0` and an omitted enum as its first member. `JsonTypeInfoModifiers.RequireValueTypeConstructorParameters` marks those properties as required: a parameter that is a non-nullable value type (`int`, an enum, `DateTime`, `Guid`, a struct) and has no default value. Reference types, `Nullable<T>` and parameters with a default stay optional. A missing required property throws `JsonException`, and serialization does not change.
+System.Text.Json binds a missing JSON property to `default` when the constructor parameter is a value type, so an omitted quantity reads as `0` and an omitted enum as its first member. `JsonTypeInfoModifiers.RequireValueTypeConstructorParameters` marks those properties as required: a parameter that is a non-nullable value type (`int`, an enum, `DateTime`, `Guid`, a struct) and has no default value. Reference types, `Nullable<T>` and parameters with a default stay optional, and so does a property without a setter (a get-only property assigned in the constructor, or a record property redeclared as `{ get; }`), because System.Text.Json rejects a required property it cannot set. A missing required property throws `JsonException`, and serialization does not change.
 
 ```csharp
 public sealed record CreateOrder(int Quantity, Size Size, int? Discount, string? Note, int Priority = 5);

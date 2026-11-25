@@ -24,6 +24,8 @@ public static class ResilienceResultExtensions
     /// <c>maxAttempts + 1</c> times.</param>
     /// <param name="delay">Delay before the first retry. Defaults to one second.</param>
     /// <param name="exponentialBackoff">When <see langword="true"/>, the delay doubles after each retry.</param>
+    /// <param name="useJitter">When <see langword="true"/>, each delay is spread randomly so callers that failed together do not retry in lockstep.</param>
+    /// <param name="maxDelay">The longest delay between attempts, after backoff and jitter; <see langword="null"/> leaves it uncapped.</param>
     /// <param name="cancellationToken">Caller token. Cancelling it stops retrying and throws
     /// <see cref="OperationCanceledException"/>.</param>
     public static async ValueTask<Result<T>> RetryIfFailed<T>(
@@ -31,9 +33,11 @@ public static class ResilienceResultExtensions
         int maxAttempts = 3,
         TimeSpan? delay = null,
         bool exponentialBackoff = true,
+        bool useJitter = false,
+        TimeSpan? maxDelay = null,
         CancellationToken cancellationToken = default)
     {
-        ResiliencePipeline<Result<T>> pipeline = RetryPipelineCache<Result<T>>.Get(maxAttempts, delay, exponentialBackoff, usesPredicate: false);
+        ResiliencePipeline<Result<T>> pipeline = RetryPipelineCache<Result<T>>.Get(maxAttempts, delay, exponentialBackoff, useJitter, maxDelay, usesPredicate: false);
 
         Result<T> result;
         try
@@ -51,15 +55,17 @@ public static class ResilienceResultExtensions
         return ResilienceClassifier.ThrowIfCallerCancelled(result, cancellationToken);
     }
 
-    /// <inheritdoc cref="RetryIfFailed{T}(Func{CancellationToken, Task{Result{T}}}, int, TimeSpan?, bool, CancellationToken)"/>
+    /// <inheritdoc cref="RetryIfFailed{T}(Func{CancellationToken, Task{Result{T}}}, int, TimeSpan?, bool, bool, TimeSpan?, CancellationToken)"/>
     public static async ValueTask<Result> RetryIfFailed(
         this Func<CancellationToken, Task<Result>> operation,
         int maxAttempts = 3,
         TimeSpan? delay = null,
         bool exponentialBackoff = true,
+        bool useJitter = false,
+        TimeSpan? maxDelay = null,
         CancellationToken cancellationToken = default)
     {
-        ResiliencePipeline<Result> pipeline = RetryPipelineCache<Result>.Get(maxAttempts, delay, exponentialBackoff, usesPredicate: false);
+        ResiliencePipeline<Result> pipeline = RetryPipelineCache<Result>.Get(maxAttempts, delay, exponentialBackoff, useJitter, maxDelay, usesPredicate: false);
 
         Result result;
         try
@@ -95,6 +101,8 @@ public static class ResilienceResultExtensions
     /// <c>maxAttempts + 1</c> times.</param>
     /// <param name="delay">Delay before the first retry. Defaults to one second.</param>
     /// <param name="exponentialBackoff">When <see langword="true"/>, the delay doubles after each retry.</param>
+    /// <param name="useJitter">When <see langword="true"/>, each delay is spread randomly so callers that failed together do not retry in lockstep.</param>
+    /// <param name="maxDelay">The longest delay between attempts, after backoff and jitter; <see langword="null"/> leaves it uncapped.</param>
     /// <param name="cancellationToken">Caller token. Cancelling it stops retrying and throws
     /// <see cref="OperationCanceledException"/>.</param>
     public static async ValueTask<Result<T>> RetryIfFailed<T>(
@@ -103,6 +111,8 @@ public static class ResilienceResultExtensions
         int maxAttempts = 3,
         TimeSpan? delay = null,
         bool exponentialBackoff = true,
+        bool useJitter = false,
+        TimeSpan? maxDelay = null,
         CancellationToken cancellationToken = default)
     {
 #if NET6_0_OR_GREATER
@@ -112,7 +122,7 @@ public static class ResilienceResultExtensions
             throw new ArgumentNullException(nameof(shouldRetry));
 #endif
 
-        ResiliencePipeline<Result<T>> pipeline = RetryPipelineCache<Result<T>>.Get(maxAttempts, delay, exponentialBackoff, usesPredicate: true);
+        ResiliencePipeline<Result<T>> pipeline = RetryPipelineCache<Result<T>>.Get(maxAttempts, delay, exponentialBackoff, useJitter, maxDelay, usesPredicate: true);
         ResilienceContext context = ResilienceContextPool.Shared.Get(cancellationToken);
         context.Properties.Set(ShouldRetryKey, shouldRetry);
 
@@ -136,13 +146,15 @@ public static class ResilienceResultExtensions
         return ResilienceClassifier.ThrowIfCallerCancelled(result, shouldRetry, cancellationToken);
     }
 
-    /// <inheritdoc cref="RetryIfFailed{T}(Func{CancellationToken, Task{Result{T}}}, Func{Error, bool}, int, TimeSpan?, bool, CancellationToken)"/>
+    /// <inheritdoc cref="RetryIfFailed{T}(Func{CancellationToken, Task{Result{T}}}, Func{Error, bool}, int, TimeSpan?, bool, bool, TimeSpan?, CancellationToken)"/>
     public static async ValueTask<Result> RetryIfFailed(
         this Func<CancellationToken, Task<Result>> operation,
         Func<Error, bool> shouldRetry,
         int maxAttempts = 3,
         TimeSpan? delay = null,
         bool exponentialBackoff = true,
+        bool useJitter = false,
+        TimeSpan? maxDelay = null,
         CancellationToken cancellationToken = default)
     {
 #if NET6_0_OR_GREATER
@@ -152,7 +164,7 @@ public static class ResilienceResultExtensions
             throw new ArgumentNullException(nameof(shouldRetry));
 #endif
 
-        ResiliencePipeline<Result> pipeline = RetryPipelineCache<Result>.Get(maxAttempts, delay, exponentialBackoff, usesPredicate: true);
+        ResiliencePipeline<Result> pipeline = RetryPipelineCache<Result>.Get(maxAttempts, delay, exponentialBackoff, useJitter, maxDelay, usesPredicate: true);
         ResilienceContext context = ResilienceContextPool.Shared.Get(cancellationToken);
         context.Properties.Set(ShouldRetryKey, shouldRetry);
 
@@ -180,15 +192,11 @@ public static class ResilienceResultExtensions
         int maxAttempts,
         TimeSpan delay,
         bool exponentialBackoff,
+        bool useJitter,
+        TimeSpan? maxDelay,
         Func<RetryPredicateArguments<TResult>, ValueTask<bool>> shouldHandle) =>
         new ResiliencePipelineBuilder<TResult>()
-            .AddRetry(new RetryStrategyOptions<TResult>
-            {
-                MaxRetryAttempts = maxAttempts,
-                Delay = delay,
-                BackoffType = exponentialBackoff ? DelayBackoffType.Exponential : DelayBackoffType.Constant,
-                ShouldHandle = shouldHandle
-            })
+            .AddRetry(RetryStrategyFactory.Create<RetryStrategyOptions<TResult>, TResult>(maxAttempts, delay, exponentialBackoff, useJitter, maxDelay, shouldHandle))
             .Build();
 
     private static class RetryPipelineCache<TResult>
@@ -198,11 +206,11 @@ public static class ResilienceResultExtensions
         // so concurrent callers can overshoot it slightly, which is acceptable for a cache bound.
         private const int MaxEntries = 64;
 
-        private static readonly ConcurrentDictionary<(int MaxAttempts, TimeSpan Delay, bool ExponentialBackoff, bool UsesPredicate), ResiliencePipeline<TResult>> Pipelines = new();
+        private static readonly ConcurrentDictionary<(int MaxAttempts, TimeSpan Delay, bool ExponentialBackoff, bool UseJitter, TimeSpan? MaxDelay, bool UsesPredicate), ResiliencePipeline<TResult>> Pipelines = new();
 
-        internal static ResiliencePipeline<TResult> Get(int maxAttempts, TimeSpan? delay, bool exponentialBackoff, bool usesPredicate)
+        internal static ResiliencePipeline<TResult> Get(int maxAttempts, TimeSpan? delay, bool exponentialBackoff, bool useJitter, TimeSpan? maxDelay, bool usesPredicate)
         {
-            (int MaxAttempts, TimeSpan Delay, bool ExponentialBackoff, bool UsesPredicate) key = (maxAttempts, delay ?? DefaultDelay, exponentialBackoff, usesPredicate);
+            (int MaxAttempts, TimeSpan Delay, bool ExponentialBackoff, bool UseJitter, TimeSpan? MaxDelay, bool UsesPredicate) key = (maxAttempts, delay ?? DefaultDelay, exponentialBackoff, useJitter, maxDelay, usesPredicate);
             if (Pipelines.TryGetValue(key, out ResiliencePipeline<TResult>? cached))
             {
                 return cached;
@@ -212,6 +220,8 @@ public static class ResilienceResultExtensions
                 key.MaxAttempts,
                 key.Delay,
                 key.ExponentialBackoff,
+                key.UseJitter,
+                key.MaxDelay,
                 key.UsesPredicate
                     ? static args => new ValueTask<bool>(ShouldHandleWithPredicate(args))
                     : static args => new ValueTask<bool>(ShouldHandle(args)));

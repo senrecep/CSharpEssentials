@@ -102,7 +102,7 @@ Func<CancellationToken, Task<User>> getUserWithToken = ct => _db.GetUser(id, ct)
 Result<User> userWithToken = await getUserWithToken.ExecuteAsync(cancellationToken);
 ```
 
-`RetryIfFailed` retries a `Func<CancellationToken, Task<Result<T>>>` or `Func<CancellationToken, Task<Result>>` with the same classification as `WithRetry` and its `maxAttempts`, `delay` and `exponentialBackoff` parameters and defaults. It has no `useJitter` or `maxDelay`; use a `ResiliencePolicy` for those:
+`RetryIfFailed` retries a `Func<CancellationToken, Task<Result<T>>>` or `Func<CancellationToken, Task<Result>>` with the same classification as `WithRetry` and its `maxAttempts`, `delay`, `exponentialBackoff`, `useJitter` and `maxDelay` parameters and defaults:
 
 ```csharp
 Func<CancellationToken, Task<Result<User>>> operation = ct => _db.TryGetUser(id, ct);
@@ -115,7 +115,7 @@ Result<User> classified = await operation.RetryIfFailed(
     delay: TimeSpan.FromSeconds(1));
 ```
 
-Both forms reuse a cached pipeline, keyed by `(maxAttempts, delay, exponentialBackoff)` and by whether a predicate is used, up to 64 entries per result type. The predicate form passes the delegate through a pooled `ResilienceContext`, so it does not allocate per call.
+Both forms reuse a cached pipeline, keyed by `(maxAttempts, delay, exponentialBackoff, useJitter, maxDelay)` and by whether a predicate is used, up to 64 entries per result type. The predicate form passes the delegate through a pooled `ResilienceContext`, so it does not allocate per call.
 
 `shouldRetry` replaces the default classification. An exception thrown by the operation is converted to the error that would be returned for it (`ErrorType.Unexpected`) and passed to the predicate too, so an exception the predicate rejects is not retried. The predicate can run more than once for the same attempt, so keep it pure and cheap. If it throws, retrying stops and the exception is returned as an `Unexpected` error.
 

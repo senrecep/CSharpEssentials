@@ -1090,10 +1090,10 @@ Result<User> retried = await getUser.RetryIfFailed(
 
 | Method | What it does |
 |--------|-------------|
-| `func.RetryIfFailed(maxAttempts = 3, delay, exponentialBackoff = true, ct)` | Retries a `Func<CancellationToken, Task<Result<T>>>` or `Task<Result>` while the result is a retryable failure, at most `maxAttempts` times after the first call; returns `ValueTask<Result<T>>` / `ValueTask<Result>` |
-| `func.RetryIfFailed(shouldRetry, maxAttempts = 3, delay, exponentialBackoff = true, ct)` | Same, with a `Func<Error, bool>` deciding which failures are retried |
+| `func.RetryIfFailed(maxAttempts = 3, delay, exponentialBackoff = true, useJitter = false, maxDelay = null, ct)` | Retries a `Func<CancellationToken, Task<Result<T>>>` or `Task<Result>` while the result is a retryable failure, at most `maxAttempts` times after the first call; returns `ValueTask<Result<T>>` / `ValueTask<Result>` |
+| `func.RetryIfFailed(shouldRetry, maxAttempts = 3, delay, exponentialBackoff = true, useJitter = false, maxDelay = null, ct)` | Same, with a `Func<Error, bool>` deciding which failures are retried |
 
-`RetryIfFailed` reuses a cached Polly pipeline per (`maxAttempts`, `delay`, `exponentialBackoff`, predicate or not) combination (up to 64 per result type) instead of building one per call; the `shouldRetry` predicate travels in the execution context.
+`RetryIfFailed` reuses a cached Polly pipeline per (`maxAttempts`, `delay`, `exponentialBackoff`, `useJitter`, `maxDelay`, predicate or not) combination (up to 64 per result type) instead of building one per call; the `shouldRetry` predicate travels in the execution context.
 | `func.ExecuteAsync(ct)` | Runs a `Func<Task>`, `Func<Task<T>>`, `Func<Task<Result<T>>>` (or their `CancellationToken` forms) and returns `Result` / `Result<T>` |
 
 ### Error handling
@@ -1345,7 +1345,7 @@ Preconfigured `System.Text.Json` options, enum and date converters, and polymorp
 | `EnhancedJsonSerializerOptions.DefaultOptions` | Web defaults with camelCase, case-insensitive reads, `null` properties omitted on write, cycles ignored, relaxed escaping, plus the enum conventions (`EnumConventions.Default`), `MultiFormatDateTimeConverterFactory`, `PolymorphicJsonConverterFactory` and `AddPolymorphismWithReflection()` |
 | `EnhancedJsonSerializerOptions.DefaultOptionsWithoutConverters` | The same settings without any converter |
 | `EnhancedJsonSerializerOptions.StrictOptions` | Case-sensitive property names, no trailing commas or comments, unmapped members rejected, non-nullable value-type constructor parameters without a default required; no converters, but `AddPolymorphismWithReflection()` |
-| `options.RequireValueTypeConstructorParameters()` / `JsonTypeInfoModifiers.RequireValueTypeConstructorParameters` | Marks properties bound to non-nullable value-type constructor parameters without a default as required, so a missing one throws `JsonException` instead of binding as `default`; the extension wraps `TypeInfoResolver` (must be set) and goes before `AddPolymorphism`; trim and AOT safe |
+| `options.RequireValueTypeConstructorParameters()` / `JsonTypeInfoModifiers.RequireValueTypeConstructorParameters` | Marks properties bound to non-nullable value-type constructor parameters without a default as required, so a missing one throws `JsonException` instead of binding as `default`; a property without a setter stays optional; the extension wraps `TypeInfoResolver` (must be set) and goes before `AddPolymorphism`; trim and AOT safe |
 | `.DefaultOptionsWithDateTimeConverter` | Options with multi-format date parsing |
 | `source.ApplyTo(target)` / `target.ApplyFrom(source)` | Copies the serializer settings and any converter type the target lacks from one `JsonSerializerOptions` to another |
 | `options.Create(configure)` | Copies options and applies a configuration delegate |

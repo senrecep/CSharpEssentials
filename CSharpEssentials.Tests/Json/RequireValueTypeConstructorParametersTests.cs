@@ -20,6 +20,18 @@ public class RequireValueTypeConstructorParametersTests
         public int Quantity { get; set; }
     }
 
+    public sealed class GetOnly
+    {
+        public GetOnly(int quantity) => Quantity = quantity;
+
+        public int Quantity { get; }
+    }
+
+    public sealed record ExplicitGetOnly(int Quantity)
+    {
+        public int Quantity { get; } = Quantity;
+    }
+
     private const string Complete = """{"quantity":2,"size":1,"id":"6ba7b810-9dad-11d1-80b4-00c04fd430c8"}""";
 
     private static JsonSerializerOptions Options() =>
@@ -126,5 +138,26 @@ public class RequireValueTypeConstructorParametersTests
         EnhancedJsonSerializerOptions.DefaultOptionsWithoutConverters.ApplyTo(target);
 
         JsonSerializer.Deserialize<Order>("""{"size":1,"id":"6ba7b810-9dad-11d1-80b4-00c04fd430c8"}""", target)!.Quantity.Should().Be(0);
+    }
+
+    [Fact]
+    public void GetOnlyConstructorProperty_ShouldStayOptional_AndSerialize()
+    {
+        foreach (JsonSerializerOptions options in new[] { Options(), EnhancedJsonSerializerOptions.StrictOptions })
+        {
+            JsonSerializer.Deserialize<GetOnly>("{}", options)!.Quantity.Should().Be(0);
+            JsonSerializer.Deserialize<GetOnly>("""{"quantity":3}""", options)!.Quantity.Should().Be(3);
+            JsonSerializer.Serialize(new GetOnly(3), options).Should().Contain("3");
+        }
+    }
+
+    [Fact]
+    public void ExplicitGetOnlyRecordProperty_ShouldStayOptional_AndSerialize()
+    {
+        foreach (JsonSerializerOptions options in new[] { Options(), EnhancedJsonSerializerOptions.StrictOptions })
+        {
+            JsonSerializer.Deserialize<ExplicitGetOnly>("{}", options)!.Quantity.Should().Be(0);
+            JsonSerializer.Serialize(new ExplicitGetOnly(4), options).Should().Contain("4");
+        }
     }
 }

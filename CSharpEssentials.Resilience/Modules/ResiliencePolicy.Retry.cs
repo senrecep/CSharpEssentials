@@ -12,17 +12,15 @@ public readonly partial struct ResiliencePolicy
         TimeSpan effectiveDelay = delay ?? TimeSpan.FromSeconds(1);
 
         ResiliencePipeline pipeline = new ResiliencePipelineBuilder()
-            .AddRetry(new RetryStrategyOptions
-            {
-                MaxRetryAttempts = maxAttempts,
-                Delay = effectiveDelay,
-                BackoffType = exponentialBackoff ? DelayBackoffType.Exponential : DelayBackoffType.Constant,
-                UseJitter = useJitter,
-                MaxDelay = maxDelay,
-                ShouldHandle = static args => new ValueTask<bool>(args.Outcome.Exception is { } ex
+            .AddRetry(RetryStrategyFactory.Create<RetryStrategyOptions, object>(
+                maxAttempts,
+                effectiveDelay,
+                exponentialBackoff,
+                useJitter,
+                maxDelay,
+                static args => new ValueTask<bool>(args.Outcome.Exception is { } ex
                     ? !ResilienceClassifier.IsCallerCancellation(ex, args.Context.CancellationToken)
-                    : args.Outcome.Result is IResultBase result && ResilienceClassifier.IsRetryable(result))
-            })
+                    : args.Outcome.Result is IResultBase result && ResilienceClassifier.IsRetryable(result))))
             .Build();
 
         return Merge(pipeline);
@@ -48,17 +46,15 @@ public readonly partial struct ResiliencePolicy<T>
         TimeSpan effectiveDelay = delay ?? TimeSpan.FromSeconds(1);
 
         ResiliencePipeline<Result<T>> pipeline = new ResiliencePipelineBuilder<Result<T>>()
-            .AddRetry(new RetryStrategyOptions<Result<T>>
-            {
-                MaxRetryAttempts = maxAttempts,
-                Delay = effectiveDelay,
-                BackoffType = exponentialBackoff ? DelayBackoffType.Exponential : DelayBackoffType.Constant,
-                UseJitter = useJitter,
-                MaxDelay = maxDelay,
-                ShouldHandle = static args => new ValueTask<bool>(args.Outcome.Exception is { } ex
+            .AddRetry(RetryStrategyFactory.Create<RetryStrategyOptions<Result<T>>, Result<T>>(
+                maxAttempts,
+                effectiveDelay,
+                exponentialBackoff,
+                useJitter,
+                maxDelay,
+                static args => new ValueTask<bool>(args.Outcome.Exception is { } ex
                     ? !ResilienceClassifier.IsCallerCancellation(ex, args.Context.CancellationToken)
-                    : ResilienceClassifier.IsRetryable(args.Outcome.Result))
-            })
+                    : ResilienceClassifier.IsRetryable(args.Outcome.Result))))
             .Build();
 
         return Merge(pipeline);
