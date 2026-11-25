@@ -17,7 +17,7 @@ public readonly partial record struct Result
             return true;
         }
 
-        errors = _errors;
+        errors = Errors;
         return false;
     }
 }

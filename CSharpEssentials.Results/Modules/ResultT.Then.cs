@@ -14,7 +14,7 @@ public readonly partial record struct Result<TValue>
     public Result<T> Then<T>(Func<TValue, Result<T>> onSuccess)
     {
         if (IsFailure)
-            return _errors;
+            return InitializedErrors;
         return onSuccess(Value);
     }
 
@@ -40,7 +40,7 @@ public readonly partial record struct Result<TValue>
     public Result<T> Then<T>(Func<TValue, T> onSuccess)
     {
         if (IsFailure)
-            return _errors;
+            return InitializedErrors;
         return onSuccess(Value);
     }
 
@@ -55,7 +55,7 @@ public readonly partial record struct Result<TValue>
     public async Task<Result<T>> ThenAsync<T>(Func<TValue, Task<Result<T>>> onSuccess, CancellationToken cancellationToken = default)
     {
         if (IsFailure)
-            return _errors;
+            return InitializedErrors;
         return await onSuccess(Value).WithCancellation(cancellationToken).ConfigureAwait(false);
     }
 
@@ -85,7 +85,7 @@ public readonly partial record struct Result<TValue>
     public async Task<Result<T>> ThenAsync<T>(Func<TValue, Task<T>> onSuccess, CancellationToken cancellationToken = default)
     {
         if (IsFailure)
-            return _errors;
+            return InitializedErrors;
         T? result = await onSuccess(Value).WithCancellation(cancellationToken).ConfigureAwait(false);
         return result;
     }
@@ -97,7 +97,7 @@ public readonly partial record struct Result<TValue>
     public async ValueTask<Result<T>> ThenAsync<T>(Func<TValue, ValueTask<Result<T>>> onSuccess, CancellationToken cancellationToken = default)
     {
         if (IsFailure)
-            return _errors;
+            return InitializedErrors;
         return await onSuccess(Value).WithCancellation(cancellationToken).ConfigureAwait(false);
     }
 
@@ -118,7 +118,7 @@ public readonly partial record struct Result<TValue>
     public async ValueTask<Result<T>> ThenAsync<T>(Func<TValue, ValueTask<T>> onSuccess, CancellationToken cancellationToken = default)
     {
         if (IsFailure)
-            return _errors;
+            return InitializedErrors;
         T result = await onSuccess(Value).WithCancellation(cancellationToken).ConfigureAwait(false);
         return result;
     }

@@ -13,7 +13,7 @@ public readonly partial record struct Result<TValue>
     public Result<TOut> Map<TOut>(Func<TValue, TOut> map)
     {
         if (IsFailure)
-            return _errors;
+            return InitializedErrors;
         return map(Value);
     }
 
@@ -26,7 +26,7 @@ public readonly partial record struct Result<TValue>
     public Result<TOut> Map<TOut>(Func<TValue, Result<TOut>> map)
     {
         if (IsFailure)
-            return _errors;
+            return InitializedErrors;
         return map(Value);
     }
 
@@ -41,7 +41,7 @@ public readonly partial record struct Result<TValue>
     public Task<Result<TOut>> MapAsync<TOut>(Func<TValue, Task<TOut>> map, CancellationToken cancellationToken = default)
     {
         if (IsFailure)
-            return Result<TOut>.Failure(_errors).AsTask();
+            return Result<TOut>.Failure(InitializedErrors).AsTask();
         return MapCoreAsync(Value, map, cancellationToken);
     }
 
@@ -62,7 +62,7 @@ public readonly partial record struct Result<TValue>
     public ValueTask<Result<TOut>> MapAsync<TOut>(Func<TValue, ValueTask<TOut>> map, CancellationToken cancellationToken = default)
     {
         if (IsFailure)
-            return Result<TOut>.Failure(_errors).AsValueTask();
+            return Result<TOut>.Failure(InitializedErrors).AsValueTask();
         return MapCoreAsync(Value, map, cancellationToken);
     }
 

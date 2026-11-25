@@ -17,9 +17,10 @@ public readonly partial record struct Result<TValue>
     {
         if (IsSuccess)
             return this;
-        var mappedErrors = new Error[_errors.Length];
-        for (int i = 0; i < _errors.Length; i++)
-            mappedErrors[i] = errorMapper(_errors[i]);
+        Error[] errors = InitializedErrors;
+        var mappedErrors = new Error[errors.Length];
+        for (int i = 0; i < errors.Length; i++)
+            mappedErrors[i] = errorMapper(errors[i]);
         return mappedErrors;
     }
 
@@ -34,7 +35,7 @@ public readonly partial record struct Result<TValue>
     {
         if (IsSuccess)
             return this.AsTask();
-        return MapEachErrorAsync(_errors, errorMapper, cancellationToken);
+        return MapEachErrorAsync(InitializedErrors, errorMapper, cancellationToken);
     }
 
     /// <summary>
@@ -47,7 +48,7 @@ public readonly partial record struct Result<TValue>
     {
         if (IsSuccess)
             return this.AsValueTask();
-        return MapEachErrorAsync(_errors, errorMapper, cancellationToken);
+        return MapEachErrorAsync(InitializedErrors, errorMapper, cancellationToken);
     }
 
     /// <summary>
@@ -61,7 +62,7 @@ public readonly partial record struct Result<TValue>
     {
         if (IsSuccess)
             return this.AsTask();
-        return MapErrorsAsync(_errors, errorMapper, cancellationToken);
+        return MapErrorsAsync(InitializedErrors, errorMapper, cancellationToken);
     }
 
     /// <summary>
@@ -74,7 +75,7 @@ public readonly partial record struct Result<TValue>
     {
         if (IsSuccess)
             return this.AsValueTask();
-        return MapErrorsAsync(_errors, errorMapper, cancellationToken);
+        return MapErrorsAsync(InitializedErrors, errorMapper, cancellationToken);
     }
 
     private static async Task<Result<TValue>> MapEachErrorAsync(Error[] errors, Func<Error, Task<Error>> errorMapper, CancellationToken cancellationToken)

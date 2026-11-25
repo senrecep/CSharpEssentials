@@ -20,7 +20,7 @@ internal readonly record struct AndRuleAdapter<TContext, TResult>(
 ) : IAndRule<TContext, TResult>
 {
     public Result<TResult> Evaluate(TContext context, CancellationToken cancellationToken = default) =>
-        Rules.Length > 0 ? default(Result<TResult>) : RuleErrors.EmptyRuleArrayError;
+        RuleEngine.Evaluate(this, context, cancellationToken);
 
     internal static AndRuleAdapter<TContext, TResult> From(
         IRuleBase<TContext, TResult>[] rules

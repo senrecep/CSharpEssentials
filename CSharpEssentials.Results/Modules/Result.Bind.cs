@@ -14,7 +14,7 @@ public readonly partial record struct Result
     public Result<TOut> Bind<TOut>(Func<Result<TOut>> func)
     {
         if (IsFailure)
-            return _errors;
+            return InitializedErrors;
         return func();
     }
 
@@ -40,7 +40,7 @@ public readonly partial record struct Result
     public Task<Result<TOut>> BindAsync<TOut>(Func<Task<Result<TOut>>> func)
     {
         if (IsFailure)
-            return Result<TOut>.Failure(_errors).AsTask();
+            return Result<TOut>.Failure(InitializedErrors).AsTask();
         return func();
     }
 
@@ -66,7 +66,7 @@ public readonly partial record struct Result
     public ValueTask<Result<TOut>> BindAsync<TOut>(Func<ValueTask<Result<TOut>>> valueTask)
     {
         if (IsFailure)
-            return Result<TOut>.Failure(_errors).AsValueTask();
+            return Result<TOut>.Failure(InitializedErrors).AsValueTask();
         return valueTask();
     }
 

@@ -766,13 +766,14 @@ public class ResultTAsyncReceiverOverloadTests
     }
 
     [Fact]
-    public void EnsureNotNull_ErrorFactory_FailsForDefaultResult()
+    public void EnsureNotNull_ErrorFactory_FailsForNullSuccess()
     {
         Func<string, Error> factory = _ => Replacement;
         Result<string> present = "x";
         Result<string> failed = First;
 
-        default(Result<string>).EnsureNotNull(factory).FirstError.Code.Should().Be("REPLACED");
+        NullSuccessResult.Of<string>().EnsureNotNull(factory).FirstError.Code.Should().Be("REPLACED");
+        default(Result<string>).EnsureNotNull(factory).FirstError.Code.Should().Be("Result.Default");
         present.EnsureNotNull(factory).Value.Should().Be("x");
         failed.EnsureNotNull(factory).FirstError.Code.Should().Be("E1");
     }

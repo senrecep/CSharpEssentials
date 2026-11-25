@@ -5,6 +5,15 @@ namespace CSharpEssentials.ResultPattern;
 
 internal static class ResultLogic
 {
+    internal static readonly Error DefaultError = Error.Unexpected(
+        code: "Result.Default",
+        description: "The result was default-initialized and holds neither a value nor an error.");
+
+    internal static readonly Error[] DefaultErrors = [DefaultError];
+
+    internal static Error[] InitializedErrors(Error[]? errors) =>
+        errors ?? throw TypedResultLogic.DefaultInitialized();
+
     internal static Error[] ValidateErrorsArray(Error[] errors)
     {
 #if NET6_0_OR_GREATER

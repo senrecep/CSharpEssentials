@@ -110,9 +110,12 @@ public static partial class RuleEngine
     {
         try
         {
-            Result<TResult> result = await EvaluateHead(rule, context, cancellationToken).ConfigureAwait(false);
-            if (result.IsFailure)
-                return result;
+            if (HasGate(rule))
+            {
+                Result<TResult> result = await EvaluateHead(rule, context, cancellationToken).ConfigureAwait(false);
+                if (result.IsFailure)
+                    return result;
+            }
 
             if (rules.Length == 0)
                 return RuleErrors.EmptyRuleArrayError;
@@ -149,9 +152,15 @@ public static partial class RuleEngine
     {
         try
         {
-            Result<TResult> result = await EvaluateHead(rule, context, cancellationToken).ConfigureAwait(false);
-            if (result.IsFailure)
-                return result;
+            if (HasGate(rule))
+            {
+                Result<TResult> result = await EvaluateHead(rule, context, cancellationToken).ConfigureAwait(false);
+                if (result.IsFailure)
+                    return result;
+            }
+
+            if (rules.Length == 0)
+                return RuleErrors.EmptyRuleArrayError;
 
             Error[][] failures = RentFailures(rules.Length);
             int count = 0;

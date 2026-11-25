@@ -15,6 +15,30 @@ title: "Migrating from 8.x to 9.0"
 - `CSharpEssentials.Resilience`: every `RetryIfFailed` overload (with and without `shouldRetry`, for `Result` and `Result<T>`) take two more optional parameters, `useJitter` and `maxDelay`, before `cancellationToken`. A call that passes the token by name compiles unchanged; one that passes it positionally after `exponentialBackoff` must name it. An assembly compiled against 8.x must be recompiled (`MissingMethodException` otherwise).
 - `CSharpEssentials.Json`: `EnhancedJsonSerializerOptions.StrictOptions` requires every constructor parameter that is a non-nullable value type and has no default (`JsonTypeInfoModifiers.RequireValueTypeConstructorParameters`). A payload that omits such a property now throws `JsonException` instead of binding `0`, the first enum member or `default`. Give the parameter a default value or make it nullable to keep it optional. A property without a setter (get-only, assigned in the constructor) stays optional.
 - `CSharpEssentials.Time`: `DateTimeProvider.TimeZone` returns the `LocalTimeZone` of the wrapped `TimeProvider` instead of always `TimeZoneInfo.Local`. With `TimeProvider.System` nothing changes. Over `FakeTimeProvider` it is UTC unless the test calls `SetLocalTimeZone`, and `GetAge(dateTimeProvider)` follows it.
+- `CSharpEssentials.Results`: `default(Result)` and `default(Result<T>)` are no longer successes. They report a failure with one `Error.Unexpected` coded `Result.Default`, and `Match`, `Map`, `Bind`, `Then` and `MapError` throw `InvalidOperationException` on them. See [Default results fail closed](#default-results-fail-closed-csharpessentialsresults-csharpessentialsrules).
+- `CSharpEssentials.Rules`: a custom `IOrRule<TContext, TResult>` with an empty `Rules` array returns `EMPTY_RULE_ARRAY` like the generic And rule, instead of a wrapped `RuleEngine.Evaluate.OrRule` error. Calling `Evaluate` directly on a generic rule built by `.And()` or `.Or()` runs the whole rule instead of returning `default`.
+
+## Default results fail closed (`CSharpEssentials.Results`, `CSharpEssentials.Rules`)
+
+In 8.x `IsSuccess` was `_errors is null`, so an uninitialized `Result` or `Result<T>` (a field never assigned, an array slot, `default`) read as a success. For a value-type `T` its `Value` was `0`, and `EnsureNotNull` could not catch it. 9.0 stores success as an empty error array, so `default` is a third state that behaves like this:
+
+| Member on `default(Result)` / `default(Result<T>)` | 8.x | 9.0 |
+|---|---|---|
+| `IsSuccess` / `IsFailure` | `true` / `false` | `false` / `true` |
+| `Errors`, `ErrorsOrEmptyArray`, `FirstError`, `LastError` | the success placeholders (`Error.NoErrors`, `Error.NoFirstError`, `Error.NoLastError`) and `[]` | one `Error.Unexpected("Result.Default", ...)` |
+| `Value` | `default(T)` | `default(T)` |
+| `Match`, `Map`, `Bind`, `Then`, `MapError` | ran the success path | throw `InvalidOperationException` |
+| `TryGet`, `ToString`, `Equals`, JSON | success | failure with `Result.Default` |
+| `default(Result) == Result.Success()` | `true` | `false` |
+| `ToProblemDetails()`, `ToProblemResult()` | threw (success) | 500 |
+
+The struct size and the allocation-free success and failure paths do not change. `Result.Success()`, `(Result)true` and every `Result<T>` built from a value are successes as before.
+
+What to change:
+
+- Replace `return default;` or `default(Result<T>)` used as "success" with `Result.Success()` or a value. For a `Result<T>` with no meaningful value, return a real value or move to `Result`.
+- Tests that pinned `default(Result<string>).ToString()` as `"Success: null"` now get the `Result.Default` failure text. A success with a `null` value is still possible through JSON (`{"IsSuccess":true,"Value":null}`) and prints `"Success: null"`.
+- The Rules And and Or adapters used `default(Result<TResult>)` as their own success gate. They no longer have a gate: `RuleEngine` evaluates the children directly, and a direct `Evaluate` call on them returns the combined result.
 
 ## Exceptions become `Unexpected` (`CSharpEssentials.Errors`)
 

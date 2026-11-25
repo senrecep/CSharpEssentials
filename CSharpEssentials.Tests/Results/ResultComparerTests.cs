@@ -369,7 +369,7 @@ public class ResultComparerTests
     public void ResultComparerT_GetHashCode_Should_NotThrow_When_SuccessValueIsNull()
     {
         var comparer = new ResultComparer<string>();
-        IResult<string> result = default(Result<string>);
+        IResult<string> result = NullSuccessResult.Of<string>();
 
         Action act = () => comparer.GetHashCode(result);
 

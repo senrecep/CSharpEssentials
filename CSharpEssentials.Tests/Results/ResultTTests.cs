@@ -218,7 +218,7 @@ public class ResultTTests
     [Fact]
     public void GetHashCode_Should_NotThrow_When_SuccessValueIsNull()
     {
-        Result<string> result = default;
+        Result<string> result = NullSuccessResult.Of<string>();
 
         Action act = () => result.GetHashCode();
 

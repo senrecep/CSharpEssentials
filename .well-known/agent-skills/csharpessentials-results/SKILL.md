@@ -218,5 +218,6 @@ Result<OrderDto> order = await LoadOrderAsync(id, ct)                    // Task
 ## Rules
 
 - Check `.IsSuccess` before reading `.Value`; it is `default` on a failure.
+- Never use `default(Result)` or `default(Result<T>)` as a success. It is a failure with the `Result.Default` error, and `Match`, `Map`, `Bind`, `Then` and `MapError` throw `InvalidOperationException` on it. Use `Result.Success()` or a value.
 - `onError` in `Match` receives `Error[]`; `MatchFirst` passes a single `Error`.
 - Prefer implicit conversions (`return value;`, `return Error.NotFound(...);`); use `Result.Success(value)`/`Result.Failure<T>(error)` only where the target type cannot be inferred. Keep `Result.Success()` for non-generic success.

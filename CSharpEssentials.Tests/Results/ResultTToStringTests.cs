@@ -33,12 +33,16 @@ public class ResultTToStringTests
         Result<string>.Success(string.Empty).ToString().Should().Be("Success: ");
 
     [Fact]
-    public void Default_ReferenceType_ShouldPrintNull() =>
-        default(Result<string>).ToString().Should().Be("Success: null");
+    public void Default_ReferenceType_ShouldPrintDefaultFailure() =>
+        default(Result<string>).ToString().Should().StartWith("Failure: 1 error, first error: ").And.Contain("Result.Default");
 
     [Fact]
-    public void Default_NullableValueType_ShouldPrintNull() =>
-        default(Result<int?>).ToString().Should().Be("Success: null");
+    public void Default_NullableValueType_ShouldPrintDefaultFailure() =>
+        default(Result<int?>).ToString().Should().StartWith("Failure: 1 error, first error: ").And.Contain("Result.Default");
+
+    [Fact]
+    public void Success_DeserializedNull_ShouldPrintNull() =>
+        NullSuccessResult.Of<string>().ToString().Should().Be("Success: null");
 
     [Fact]
     public void Success_Double_ShouldUseInvariantCulture()
