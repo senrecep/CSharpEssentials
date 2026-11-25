@@ -6,12 +6,12 @@
 
 [![Build](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml/badge.svg)](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml)
 
-[![Tests](https://img.shields.io/badge/tests-6970%20passing-brightgreen)](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml)
+[![Tests](https://img.shields.io/badge/tests-7002%20passing-brightgreen)](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml)
 [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials)
 [![Downloads](https://img.shields.io/nuget/dt/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/senrecep/CSharpEssentials/blob/main/LICENCE)
 [![.NET](https://img.shields.io/badge/.NET-8%20%7C%209%20%7C%2010%20%7C%2011%20%7C%20ns2.0%20%7C%20ns2.1-512BD4)](https://dotnet.microsoft.com)
-[![Packages](https://img.shields.io/badge/packages-31-blue)](https://www.nuget.org/profiles/recepsen)
+[![Packages](https://img.shields.io/badge/packages-32-blue)](https://www.nuget.org/profiles/recepsen)
 
 CSharpEssentials is a modular .NET NuGet ecosystem that bridges object-oriented and functional programming in C#.
 
@@ -30,6 +30,7 @@ CSharpEssentials is a modular .NET NuGet ecosystem that bridges object-oriented 
 | `CSharpEssentials.Rules` | Composable rule engine with `.And()/.Or()/.Linear()/.Next()` | [Docs](examples/Examples.Rules/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Rules.svg)](https://www.nuget.org/packages/CSharpEssentials.Rules) |
 | `CSharpEssentials.Mediator` | CQRS pipeline behaviors for the Mediator source generator: validation, logging, exception handling, caching, locking, transactions, idempotency | [Docs](CSharpEssentials.Mediator/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Mediator.svg)](https://www.nuget.org/packages/CSharpEssentials.Mediator) |
 | `CSharpEssentials.Mediator.Testing` | Contract scenarios for `IResourceLock` implementations, for any test framework, and `RecordingResourceLock`, a recording fake | [Docs](CSharpEssentials.Mediator.Testing/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Mediator.Testing.svg)](https://www.nuget.org/packages/CSharpEssentials.Mediator.Testing) |
+| `CSharpEssentials.Results.Testing` | Assertion helpers for `Result`, `Result<T>`, typed results, `Maybe<T>` and problem details responses, for any test framework | [Docs](CSharpEssentials.Results.Testing/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Results.Testing.svg)](https://www.nuget.org/packages/CSharpEssentials.Results.Testing) |
 | `CSharpEssentials.Entity` | `EntityBase<TId>`, soft deletion, domain events | [Docs](examples/Examples.Entity/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Entity.svg)](https://www.nuget.org/packages/CSharpEssentials.Entity) |
 | `CSharpEssentials.EntityFrameworkCore` | EF Core interceptors (audit, events, slow queries), offset and keyset pagination, enum storage | [Docs](examples/Examples.EntityFrameworkCore/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.EntityFrameworkCore.svg)](https://www.nuget.org/packages/CSharpEssentials.EntityFrameworkCore) |
 | `CSharpEssentials.EntityFrameworkCore.HealthChecks` | Readiness health check that fails while a `DbContext` has pending migrations | [Docs](CSharpEssentials.EntityFrameworkCore.HealthChecks/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.EntityFrameworkCore.HealthChecks.svg)](https://www.nuget.org/packages/CSharpEssentials.EntityFrameworkCore.HealthChecks) |
@@ -53,7 +54,7 @@ CSharpEssentials is a modular .NET NuGet ecosystem that bridges object-oriented 
 
 ## Documentation
 
-The [API reference](docs/API_REFERENCE.md) covers 29 of the 31 packages with method tables, code examples and cross-cutting patterns. `CSharpEssentials.Idempotency.Testing` and `CSharpEssentials.Mediator.Testing` are documented in their own Readmes.
+The [API reference](docs/API_REFERENCE.md) covers 29 of the 32 packages with method tables, code examples and cross-cutting patterns. `CSharpEssentials.Idempotency.Testing`, `CSharpEssentials.Mediator.Testing` and `CSharpEssentials.Results.Testing` are documented in their own Readmes.
 
 ## Installation
 

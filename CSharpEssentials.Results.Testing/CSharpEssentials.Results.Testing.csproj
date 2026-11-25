@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net11.0;net10.0;net9.0;netstandard2.1</TargetFrameworks>
+    <PackageId>CSharpEssentials.Results.Testing</PackageId>
+    <Title>CSharp Essentials Results Testing</Title>
+    <Product>CSharp Essentials Results Testing</Product>
+    <Description>Assertion helpers for Result, Result&lt;T&gt;, the typed Result&lt;T, E1..E3&gt;, Maybe&lt;T&gt; and problem details
+      HTTP responses. They throw ResultAssertionException with every error in the message, so they work from any test framework.</Description>
+    <PackageTags>Result,Maybe,ProblemDetails,Testing,Assertions,CSharpEssentials</PackageTags>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageReadmeFile>Readme.MD</PackageReadmeFile>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <DebugType>portable</DebugType>
+    <IsTestProject>false</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\icon.png" Pack="true" PackagePath="\" />
+    <None Include="Readme.MD" Pack="true" PackagePath="\" />
+    <None Include="..\LICENCE" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CSharpEssentials.Results"
+      Condition="'$(UseProjectReferences)' != 'true'" />
+    <PackageReference Include="CSharpEssentials.Maybe"
+      Condition="'$(UseProjectReferences)' != 'true'" />
+
+    <ProjectReference Include="..\CSharpEssentials.Results\CSharpEssentials.Results.csproj"
+      Condition="'$(UseProjectReferences)' == 'true'" />
+    <ProjectReference Include="..\CSharpEssentials.Maybe\CSharpEssentials.Maybe.csproj"
+      Condition="'$(UseProjectReferences)' == 'true'" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.1'">
+    <PackageReference Include="System.Text.Json" />
+  </ItemGroup>
+
+</Project>

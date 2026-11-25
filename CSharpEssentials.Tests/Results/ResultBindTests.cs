@@ -1,5 +1,6 @@
 using CSharpEssentials.Errors;
 using CSharpEssentials.ResultPattern;
+using CSharpEssentials.ResultPattern.Testing;
 using FluentAssertions;
 
 namespace CSharpEssentials.Tests.Results;
@@ -18,8 +19,7 @@ public class ResultBindTests
 
         Result<int> bound = result.Bind(() => 42.ToResult());
 
-        bound.IsSuccess.Should().BeTrue();
-        bound.Value.Should().Be(42);
+        bound.ShouldBeSuccess().Should().Be(42);
     }
 
     [Fact]
@@ -34,7 +34,7 @@ public class ResultBindTests
             return 42.ToResult();
         });
 
-        bound.IsFailure.Should().BeTrue();
+        bound.ShouldHaveError("TEST");
         called.Should().BeFalse();
     }
 
@@ -45,7 +45,7 @@ public class ResultBindTests
 
         Result bound = result.Bind(() => Result.Success());
 
-        bound.IsSuccess.Should().BeTrue();
+        bound.ShouldBeSuccess();
     }
 
     [Fact]
@@ -60,7 +60,7 @@ public class ResultBindTests
             return Result.Success();
         });
 
-        bound.IsFailure.Should().BeTrue();
+        bound.ShouldHaveError("TEST");
         called.Should().BeFalse();
     }
 
@@ -71,8 +71,7 @@ public class ResultBindTests
 
         Result<int> bound = await result.BindAsync(() => Task.FromResult(42.ToResult()));
 
-        bound.IsSuccess.Should().BeTrue();
-        bound.Value.Should().Be(42);
+        bound.ShouldBeSuccess().Should().Be(42);
     }
 
     [Fact]
@@ -87,7 +86,7 @@ public class ResultBindTests
             return Task.FromResult(42.ToResult());
         });
 
-        bound.IsFailure.Should().BeTrue();
+        bound.ShouldHaveError("TEST");
         called.Should().BeFalse();
     }
 
@@ -98,7 +97,7 @@ public class ResultBindTests
 
         Result bound = await result.BindAsync(() => Task.FromResult(Result.Success()));
 
-        bound.IsSuccess.Should().BeTrue();
+        bound.ShouldBeSuccess();
     }
 
     [Fact]
@@ -113,7 +112,7 @@ public class ResultBindTests
             return Task.FromResult(Result.Success());
         });
 
-        bound.IsFailure.Should().BeTrue();
+        bound.ShouldHaveError("TEST");
         called.Should().BeFalse();
     }
 
@@ -124,8 +123,7 @@ public class ResultBindTests
 
         Result<int> bound = await result.BindAsync(() => ValueTask.FromResult(42.ToResult()));
 
-        bound.IsSuccess.Should().BeTrue();
-        bound.Value.Should().Be(42);
+        bound.ShouldBeSuccess().Should().Be(42);
     }
 
     [Fact]
@@ -140,7 +138,7 @@ public class ResultBindTests
             return ValueTask.FromResult(42.ToResult());
         });
 
-        bound.IsFailure.Should().BeTrue();
+        bound.ShouldHaveError("TEST");
         called.Should().BeFalse();
     }
 
@@ -151,7 +149,7 @@ public class ResultBindTests
 
         Result bound = await result.BindAsync(() => ValueTask.FromResult(Result.Success()));
 
-        bound.IsSuccess.Should().BeTrue();
+        bound.ShouldBeSuccess();
     }
 
     [Fact]
@@ -166,7 +164,7 @@ public class ResultBindTests
             return ValueTask.FromResult(Result.Success());
         });
 
-        bound.IsFailure.Should().BeTrue();
+        bound.ShouldHaveError("TEST");
         called.Should().BeFalse();
     }
 
@@ -183,7 +181,7 @@ public class ResultBindTests
 
         Result bound = await task.BindAsync(() => Result.Success());
 
-        bound.IsSuccess.Should().BeTrue();
+        bound.ShouldBeSuccess();
     }
 
     [Fact]
@@ -200,7 +198,7 @@ public class ResultBindTests
             return Result.Success();
         });
 
-        bound.IsFailure.Should().BeTrue();
+        bound.ShouldHaveError("TEST");
         called.Should().BeFalse();
     }
 
@@ -213,7 +211,7 @@ public class ResultBindTests
 
         Result bound = await task.BindAsync(() => Task.FromResult(Result.Success()));
 
-        bound.IsSuccess.Should().BeTrue();
+        bound.ShouldBeSuccess();
     }
 
     [Fact]
@@ -230,7 +228,7 @@ public class ResultBindTests
             return Task.FromResult(Result.Success());
         });
 
-        bound.IsFailure.Should().BeTrue();
+        bound.ShouldHaveError("TEST");
         called.Should().BeFalse();
     }
 
@@ -243,8 +241,7 @@ public class ResultBindTests
 
         Result<int> bound = await valueTask.BindAsync(() => 42.ToResult());
 
-        bound.IsSuccess.Should().BeTrue();
-        bound.Value.Should().Be(42);
+        bound.ShouldBeSuccess().Should().Be(42);
     }
 
     [Fact]
@@ -261,7 +258,7 @@ public class ResultBindTests
             return 42.ToResult();
         });
 
-        bound.IsFailure.Should().BeTrue();
+        bound.ShouldHaveError("TEST");
         called.Should().BeFalse();
     }
 
@@ -274,7 +271,7 @@ public class ResultBindTests
 
         Result bound = await valueTask.BindAsync(() => Result.Success());
 
-        bound.IsSuccess.Should().BeTrue();
+        bound.ShouldBeSuccess();
     }
 
     [Fact]
@@ -291,7 +288,7 @@ public class ResultBindTests
             return Result.Success();
         });
 
-        bound.IsFailure.Should().BeTrue();
+        bound.ShouldHaveError("TEST");
         called.Should().BeFalse();
     }
 
@@ -304,8 +301,7 @@ public class ResultBindTests
 
         Result<int> bound = await valueTask.BindAsync(() => ValueTask.FromResult(42.ToResult()));
 
-        bound.IsSuccess.Should().BeTrue();
-        bound.Value.Should().Be(42);
+        bound.ShouldBeSuccess().Should().Be(42);
     }
 
     [Fact]
@@ -322,7 +318,7 @@ public class ResultBindTests
             return ValueTask.FromResult(42.ToResult());
         });
 
-        bound.IsFailure.Should().BeTrue();
+        bound.ShouldHaveError("TEST");
         called.Should().BeFalse();
     }
 
@@ -335,7 +331,7 @@ public class ResultBindTests
 
         Result bound = await valueTask.BindAsync(() => ValueTask.FromResult(Result.Success()));
 
-        bound.IsSuccess.Should().BeTrue();
+        bound.ShouldBeSuccess();
     }
 
     [Fact]
@@ -352,7 +348,7 @@ public class ResultBindTests
             return ValueTask.FromResult(Result.Success());
         });
 
-        bound.IsFailure.Should().BeTrue();
+        bound.ShouldHaveError("TEST");
         called.Should().BeFalse();
     }
 
@@ -367,8 +363,7 @@ public class ResultBindTests
 
         Result<string> bound = result.Bind(v => v.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult());
 
-        bound.IsSuccess.Should().BeTrue();
-        bound.Value.Should().Be("10");
+        bound.ShouldBeSuccess().Should().Be("10");
     }
 
     [Fact]
@@ -383,7 +378,7 @@ public class ResultBindTests
             return v.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult();
         });
 
-        bound.IsFailure.Should().BeTrue();
+        bound.ShouldHaveError("TEST");
         called.Should().BeFalse();
     }
 
@@ -394,7 +389,7 @@ public class ResultBindTests
 
         Result bound = result.Bind(v => v > 5 ? Result.Success() : Result.Failure(TestError));
 
-        bound.IsSuccess.Should().BeTrue();
+        bound.ShouldBeSuccess();
     }
 
     [Fact]
@@ -409,7 +404,7 @@ public class ResultBindTests
             return Result.Success();
         });
 
-        bound.IsFailure.Should().BeTrue();
+        bound.ShouldHaveError("TEST");
         called.Should().BeFalse();
     }
 
@@ -420,8 +415,7 @@ public class ResultBindTests
 
         Result<string> bound = await result.BindAsync(v => Task.FromResult(v.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult()));
 
-        bound.IsSuccess.Should().BeTrue();
-        bound.Value.Should().Be("10");
+        bound.ShouldBeSuccess().Should().Be("10");
     }
 
     [Fact]
@@ -436,7 +430,7 @@ public class ResultBindTests
             return Task.FromResult(v.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult());
         });
 
-        bound.IsFailure.Should().BeTrue();
+        bound.ShouldHaveError("TEST");
         called.Should().BeFalse();
     }
 
@@ -447,7 +441,7 @@ public class ResultBindTests
 
         Result bound = await result.BindAsync(v => Task.FromResult(v > 5 ? Result.Success() : Result.Failure(TestError)));
 
-        bound.IsSuccess.Should().BeTrue();
+        bound.ShouldBeSuccess();
     }
 
     [Fact]
@@ -462,7 +456,7 @@ public class ResultBindTests
             return Task.FromResult(Result.Success());
         });
 
-        bound.IsFailure.Should().BeTrue();
+        bound.ShouldHaveError("TEST");
         called.Should().BeFalse();
     }
 
@@ -473,8 +467,7 @@ public class ResultBindTests
 
         Result<string> bound = await result.BindAsync(v => ValueTask.FromResult(v.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult()));
 
-        bound.IsSuccess.Should().BeTrue();
-        bound.Value.Should().Be("10");
+        bound.ShouldBeSuccess().Should().Be("10");
     }
 
     [Fact]
@@ -489,7 +482,7 @@ public class ResultBindTests
             return ValueTask.FromResult(v.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult());
         });
 
-        bound.IsFailure.Should().BeTrue();
+        bound.ShouldHaveError("TEST");
         called.Should().BeFalse();
     }
 
@@ -500,7 +493,7 @@ public class ResultBindTests
 
         Result bound = await result.BindAsync(v => ValueTask.FromResult(v > 5 ? Result.Success() : Result.Failure(TestError)));
 
-        bound.IsSuccess.Should().BeTrue();
+        bound.ShouldBeSuccess();
     }
 
     [Fact]
@@ -515,7 +508,7 @@ public class ResultBindTests
             return ValueTask.FromResult(Result.Success());
         });
 
-        bound.IsFailure.Should().BeTrue();
+        bound.ShouldHaveError("TEST");
         called.Should().BeFalse();
     }
 
@@ -532,8 +525,7 @@ public class ResultBindTests
 
         Result<string> bound = await task.BindAsync((int v) => v.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult());
 
-        bound.IsSuccess.Should().BeTrue();
-        bound.Value.Should().Be("10");
+        bound.ShouldBeSuccess().Should().Be("10");
     }
 
     [Fact]
@@ -550,7 +542,7 @@ public class ResultBindTests
             return v.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult();
         });
 
-        bound.IsFailure.Should().BeTrue();
+        bound.ShouldHaveError("TEST");
         called.Should().BeFalse();
     }
 
@@ -563,7 +555,7 @@ public class ResultBindTests
 
         Result bound = await task.BindAsync((int v) => v > 5 ? Result.Success() : Result.Failure(TestError));
 
-        bound.IsSuccess.Should().BeTrue();
+        bound.ShouldBeSuccess();
     }
 
     [Fact]
@@ -580,7 +572,7 @@ public class ResultBindTests
             return Result.Success();
         });
 
-        bound.IsFailure.Should().BeTrue();
+        bound.ShouldHaveError("TEST");
         called.Should().BeFalse();
     }
 
@@ -593,8 +585,7 @@ public class ResultBindTests
 
         Result<string> bound = await task.BindAsync((int v) => Task.FromResult(v.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult()));
 
-        bound.IsSuccess.Should().BeTrue();
-        bound.Value.Should().Be("10");
+        bound.ShouldBeSuccess().Should().Be("10");
     }
 
     [Fact]
@@ -611,7 +602,7 @@ public class ResultBindTests
             return Task.FromResult(v.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult());
         });
 
-        bound.IsFailure.Should().BeTrue();
+        bound.ShouldHaveError("TEST");
         called.Should().BeFalse();
     }
 
@@ -624,7 +615,7 @@ public class ResultBindTests
 
         Result bound = await task.BindAsync((int v) => Task.FromResult(v > 5 ? Result.Success() : Result.Failure(TestError)));
 
-        bound.IsSuccess.Should().BeTrue();
+        bound.ShouldBeSuccess();
     }
 
     [Fact]
@@ -641,7 +632,7 @@ public class ResultBindTests
             return Task.FromResult(Result.Success());
         });
 
-        bound.IsFailure.Should().BeTrue();
+        bound.ShouldHaveError("TEST");
         called.Should().BeFalse();
     }
 
@@ -654,8 +645,7 @@ public class ResultBindTests
 
         Result<string> bound = await valueTask.BindAsync((int v) => v.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult());
 
-        bound.IsSuccess.Should().BeTrue();
-        bound.Value.Should().Be("10");
+        bound.ShouldBeSuccess().Should().Be("10");
     }
 
     [Fact]
@@ -672,7 +662,7 @@ public class ResultBindTests
             return v.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult();
         });
 
-        bound.IsFailure.Should().BeTrue();
+        bound.ShouldHaveError("TEST");
         called.Should().BeFalse();
     }
 
@@ -685,7 +675,7 @@ public class ResultBindTests
 
         Result bound = await valueTask.BindAsync((int v) => v > 5 ? Result.Success() : Result.Failure(TestError));
 
-        bound.IsSuccess.Should().BeTrue();
+        bound.ShouldBeSuccess();
     }
 
     [Fact]
@@ -702,7 +692,7 @@ public class ResultBindTests
             return Result.Success();
         });
 
-        bound.IsFailure.Should().BeTrue();
+        bound.ShouldHaveError("TEST");
         called.Should().BeFalse();
     }
 
@@ -715,8 +705,7 @@ public class ResultBindTests
 
         Result<string> bound = await valueTask.BindAsync((int v) => ValueTask.FromResult(v.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult()));
 
-        bound.IsSuccess.Should().BeTrue();
-        bound.Value.Should().Be("10");
+        bound.ShouldBeSuccess().Should().Be("10");
     }
 
     [Fact]
@@ -733,7 +722,7 @@ public class ResultBindTests
             return ValueTask.FromResult(v.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult());
         });
 
-        bound.IsFailure.Should().BeTrue();
+        bound.ShouldHaveError("TEST");
         called.Should().BeFalse();
     }
 
@@ -746,7 +735,7 @@ public class ResultBindTests
 
         Result bound = await valueTask.BindAsync((int v) => ValueTask.FromResult(v > 5 ? Result.Success() : Result.Failure(TestError)));
 
-        bound.IsSuccess.Should().BeTrue();
+        bound.ShouldBeSuccess();
     }
 
     [Fact]
@@ -763,7 +752,7 @@ public class ResultBindTests
             return ValueTask.FromResult(Result.Success());
         });
 
-        bound.IsFailure.Should().BeTrue();
+        bound.ShouldHaveError("TEST");
         called.Should().BeFalse();
     }
 

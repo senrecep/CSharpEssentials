@@ -105,6 +105,7 @@
         <PackageVersion Include="CSharpEssentials.Mediator.Testing" Version="[$(Version)]" />
         <PackageVersion Include="CSharpEssentials.Resilience" Version="[$(Version)]" />
         <PackageVersion Include="CSharpEssentials.Results" Version="[$(Version)]" />
+        <PackageVersion Include="CSharpEssentials.Results.Testing" Version="[$(Version)]" />
         <PackageVersion Include="CSharpEssentials.Rules" Version="[$(Version)]" />
         <PackageVersion Include="CSharpEssentials.These" Version="[$(Version)]" />
         <PackageVersion Include="CSharpEssentials.Time" Version="[$(Version)]" />

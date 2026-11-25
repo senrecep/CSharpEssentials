@@ -51,6 +51,7 @@
   <ItemGroup>
     <InternalsVisibleTo Include="CSharpEssentials.AspNetCore" />
     <InternalsVisibleTo Include="CSharpEssentials.Mediator" />
+    <InternalsVisibleTo Include="CSharpEssentials.Results.Testing" />
     <InternalsVisibleTo Include="CSharpEssentials.Tests" />
     <InternalsVisibleTo Include="CSharpEssentials.Results.Typed.Tests" />
     <InternalsVisibleTo Include="CSharpEssentials.Results.Typed.NetStandard.Tests" />

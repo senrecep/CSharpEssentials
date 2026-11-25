@@ -1,4 +1,5 @@
 using CSharpEssentials.Maybe;
+using CSharpEssentials.ResultPattern.Testing;
 using FluentAssertions;
 
 namespace CSharpEssentials.Tests.Maybe;
@@ -16,8 +17,7 @@ public class MaybeTapTests
         Maybe<int> result = maybe.Tap(x => captured = x);
 
         captured.Should().Be(42);
-        result.HasValue.Should().BeTrue();
-        result.Value.Should().Be(42);
+        result.ShouldHaveValue().Should().Be(42);
     }
 
     [Fact]
@@ -29,7 +29,7 @@ public class MaybeTapTests
         Maybe<int> result = maybe.Tap(_ => executed = true);
 
         executed.Should().BeFalse();
-        result.HasNoValue.Should().BeTrue();
+        result.ShouldBeNone();
     }
 
     #endregion
@@ -45,8 +45,7 @@ public class MaybeTapTests
         Maybe<int> result = maybe.Tap(() => executed = true);
 
         executed.Should().BeTrue();
-        result.HasValue.Should().BeTrue();
-        result.Value.Should().Be(42);
+        result.ShouldHaveValue().Should().Be(42);
     }
 
     [Fact]
@@ -58,7 +57,7 @@ public class MaybeTapTests
         Maybe<int> result = maybe.Tap(() => executed = true);
 
         executed.Should().BeFalse();
-        result.HasNoValue.Should().BeTrue();
+        result.ShouldBeNone();
     }
 
     #endregion
@@ -78,8 +77,7 @@ public class MaybeTapTests
         });
 
         captured.Should().Be(42);
-        result.HasValue.Should().BeTrue();
-        result.Value.Should().Be(42);
+        result.ShouldHaveValue().Should().Be(42);
     }
 
     [Fact]
@@ -95,7 +93,7 @@ public class MaybeTapTests
         });
 
         executed.Should().BeFalse();
-        result.HasNoValue.Should().BeTrue();
+        result.ShouldBeNone();
     }
 
     #endregion
@@ -115,8 +113,7 @@ public class MaybeTapTests
         });
 
         executed.Should().BeTrue();
-        result.HasValue.Should().BeTrue();
-        result.Value.Should().Be(42);
+        result.ShouldHaveValue().Should().Be(42);
     }
 
     [Fact]
@@ -132,7 +129,7 @@ public class MaybeTapTests
         });
 
         executed.Should().BeFalse();
-        result.HasNoValue.Should().BeTrue();
+        result.ShouldBeNone();
     }
 
     #endregion
@@ -148,8 +145,7 @@ public class MaybeTapTests
         Maybe<int> result = await maybeTask.TapAsync(x => captured = x);
 
         captured.Should().Be(42);
-        result.HasValue.Should().BeTrue();
-        result.Value.Should().Be(42);
+        result.ShouldHaveValue().Should().Be(42);
     }
 
     [Fact]
@@ -161,7 +157,7 @@ public class MaybeTapTests
         Maybe<int> result = await maybeTask.TapAsync(_ => executed = true);
 
         executed.Should().BeFalse();
-        result.HasNoValue.Should().BeTrue();
+        result.ShouldBeNone();
     }
 
     #endregion
@@ -177,8 +173,7 @@ public class MaybeTapTests
         Maybe<int> result = await maybeTask.TapAsync(() => executed = true);
 
         executed.Should().BeTrue();
-        result.HasValue.Should().BeTrue();
-        result.Value.Should().Be(42);
+        result.ShouldHaveValue().Should().Be(42);
     }
 
     [Fact]
@@ -190,7 +185,7 @@ public class MaybeTapTests
         Maybe<int> result = await maybeTask.TapAsync(() => executed = true);
 
         executed.Should().BeFalse();
-        result.HasNoValue.Should().BeTrue();
+        result.ShouldBeNone();
     }
 
     #endregion
@@ -210,8 +205,7 @@ public class MaybeTapTests
         });
 
         captured.Should().Be(42);
-        result.HasValue.Should().BeTrue();
-        result.Value.Should().Be(42);
+        result.ShouldHaveValue().Should().Be(42);
     }
 
     [Fact]
@@ -227,7 +221,7 @@ public class MaybeTapTests
         });
 
         executed.Should().BeFalse();
-        result.HasNoValue.Should().BeTrue();
+        result.ShouldBeNone();
     }
 
     #endregion
@@ -247,8 +241,7 @@ public class MaybeTapTests
         });
 
         executed.Should().BeTrue();
-        result.HasValue.Should().BeTrue();
-        result.Value.Should().Be(42);
+        result.ShouldHaveValue().Should().Be(42);
     }
 
     [Fact]
@@ -264,7 +257,7 @@ public class MaybeTapTests
         });
 
         executed.Should().BeFalse();
-        result.HasNoValue.Should().BeTrue();
+        result.ShouldBeNone();
     }
 
     #endregion
@@ -280,8 +273,7 @@ public class MaybeTapTests
         Maybe<int> result = await maybeTask.TapAsync(x => captured = x);
 
         captured.Should().Be(42);
-        result.HasValue.Should().BeTrue();
-        result.Value.Should().Be(42);
+        result.ShouldHaveValue().Should().Be(42);
     }
 
     [Fact]
@@ -293,7 +285,7 @@ public class MaybeTapTests
         Maybe<int> result = await maybeTask.TapAsync(_ => executed = true);
 
         executed.Should().BeFalse();
-        result.HasNoValue.Should().BeTrue();
+        result.ShouldBeNone();
     }
 
     #endregion
@@ -309,8 +301,7 @@ public class MaybeTapTests
         Maybe<int> result = await maybeTask.TapAsync(() => executed = true);
 
         executed.Should().BeTrue();
-        result.HasValue.Should().BeTrue();
-        result.Value.Should().Be(42);
+        result.ShouldHaveValue().Should().Be(42);
     }
 
     [Fact]
@@ -322,7 +313,7 @@ public class MaybeTapTests
         Maybe<int> result = await maybeTask.TapAsync(() => executed = true);
 
         executed.Should().BeFalse();
-        result.HasNoValue.Should().BeTrue();
+        result.ShouldBeNone();
     }
 
     #endregion
@@ -342,8 +333,7 @@ public class MaybeTapTests
         });
 
         captured.Should().Be(42);
-        result.HasValue.Should().BeTrue();
-        result.Value.Should().Be(42);
+        result.ShouldHaveValue().Should().Be(42);
     }
 
     [Fact]
@@ -359,7 +349,7 @@ public class MaybeTapTests
         });
 
         executed.Should().BeFalse();
-        result.HasNoValue.Should().BeTrue();
+        result.ShouldBeNone();
     }
 
     #endregion
@@ -379,8 +369,7 @@ public class MaybeTapTests
         });
 
         executed.Should().BeTrue();
-        result.HasValue.Should().BeTrue();
-        result.Value.Should().Be(42);
+        result.ShouldHaveValue().Should().Be(42);
     }
 
     [Fact]
@@ -396,7 +385,7 @@ public class MaybeTapTests
         });
 
         executed.Should().BeFalse();
-        result.HasNoValue.Should().BeTrue();
+        result.ShouldBeNone();
     }
 
     #endregion

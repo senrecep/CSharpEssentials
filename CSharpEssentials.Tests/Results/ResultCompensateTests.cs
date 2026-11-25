@@ -1,5 +1,6 @@
 using CSharpEssentials.Errors;
 using CSharpEssentials.ResultPattern;
+using CSharpEssentials.ResultPattern.Testing;
 using FluentAssertions;
 
 namespace CSharpEssentials.Tests.Results;
@@ -18,7 +19,7 @@ public class ResultCompensateTests
 
         Result compensated = result.Compensate((Error[] errors) => Result.Failure(AnotherError));
 
-        compensated.IsSuccess.Should().BeTrue();
+        compensated.ShouldBeSuccess();
     }
 
     [Fact]
@@ -28,7 +29,7 @@ public class ResultCompensateTests
 
         Result compensated = result.Compensate((Error[] errors) => Result.Success());
 
-        compensated.IsSuccess.Should().BeTrue();
+        compensated.ShouldBeSuccess();
     }
 
     [Fact]
@@ -38,7 +39,7 @@ public class ResultCompensateTests
 
         Result compensated = result.CompensateFirst(error => Result.Failure(AnotherError));
 
-        compensated.IsSuccess.Should().BeTrue();
+        compensated.ShouldBeSuccess();
     }
 
     [Fact]
@@ -48,7 +49,7 @@ public class ResultCompensateTests
 
         Result compensated = result.CompensateFirst(error => Result.Success());
 
-        compensated.IsSuccess.Should().BeTrue();
+        compensated.ShouldBeSuccess();
     }
 
     #endregion
@@ -62,8 +63,7 @@ public class ResultCompensateTests
 
         Result<int> compensated = result.Compensate((Error[] errors) => Result<int>.Failure(AnotherError));
 
-        compensated.IsSuccess.Should().BeTrue();
-        compensated.Value.Should().Be(42);
+        compensated.ShouldBeSuccess().Should().Be(42);
     }
 
     [Fact]
@@ -73,8 +73,7 @@ public class ResultCompensateTests
 
         Result<int> compensated = result.Compensate((Error[] errors) => 99.ToResult());
 
-        compensated.IsSuccess.Should().BeTrue();
-        compensated.Value.Should().Be(99);
+        compensated.ShouldBeSuccess().Should().Be(99);
     }
 
     [Fact]
@@ -84,8 +83,7 @@ public class ResultCompensateTests
 
         Result<int> compensated = result.CompensateFirst(error => Result<int>.Failure(AnotherError));
 
-        compensated.IsSuccess.Should().BeTrue();
-        compensated.Value.Should().Be(42);
+        compensated.ShouldBeSuccess().Should().Be(42);
     }
 
     [Fact]
@@ -95,8 +93,7 @@ public class ResultCompensateTests
 
         Result<int> compensated = result.CompensateFirst(error => 99.ToResult());
 
-        compensated.IsSuccess.Should().BeTrue();
-        compensated.Value.Should().Be(99);
+        compensated.ShouldBeSuccess().Should().Be(99);
     }
 
     #endregion
@@ -110,7 +107,7 @@ public class ResultCompensateTests
 
         Result compensated = await result.CompensateAsync((Error[] errors) => Task.FromResult(Result.Failure(AnotherError)));
 
-        compensated.IsSuccess.Should().BeTrue();
+        compensated.ShouldBeSuccess();
     }
 
     [Fact]
@@ -120,7 +117,7 @@ public class ResultCompensateTests
 
         Result compensated = await result.CompensateAsync((Error[] errors) => Task.FromResult(Result.Success()));
 
-        compensated.IsSuccess.Should().BeTrue();
+        compensated.ShouldBeSuccess();
     }
 
     [Fact]
@@ -130,7 +127,7 @@ public class ResultCompensateTests
 
         Result compensated = await result.CompensateFirstAsync(error => Task.FromResult(Result.Failure(AnotherError)));
 
-        compensated.IsSuccess.Should().BeTrue();
+        compensated.ShouldBeSuccess();
     }
 
     [Fact]
@@ -140,7 +137,7 @@ public class ResultCompensateTests
 
         Result compensated = await result.CompensateFirstAsync(error => Task.FromResult(Result.Success()));
 
-        compensated.IsSuccess.Should().BeTrue();
+        compensated.ShouldBeSuccess();
     }
 
     #endregion
@@ -154,8 +151,7 @@ public class ResultCompensateTests
 
         Result<int> compensated = await result.CompensateAsync((Error[] errors) => Task.FromResult(Result<int>.Failure(AnotherError)));
 
-        compensated.IsSuccess.Should().BeTrue();
-        compensated.Value.Should().Be(42);
+        compensated.ShouldBeSuccess().Should().Be(42);
     }
 
     [Fact]
@@ -165,8 +161,7 @@ public class ResultCompensateTests
 
         Result<int> compensated = await result.CompensateAsync((Error[] errors) => Task.FromResult(99.ToResult()));
 
-        compensated.IsSuccess.Should().BeTrue();
-        compensated.Value.Should().Be(99);
+        compensated.ShouldBeSuccess().Should().Be(99);
     }
 
     [Fact]
@@ -176,8 +171,7 @@ public class ResultCompensateTests
 
         Result<int> compensated = await result.CompensateFirstAsync(error => Task.FromResult(Result<int>.Failure(AnotherError)));
 
-        compensated.IsSuccess.Should().BeTrue();
-        compensated.Value.Should().Be(42);
+        compensated.ShouldBeSuccess().Should().Be(42);
     }
 
     [Fact]
@@ -187,8 +181,7 @@ public class ResultCompensateTests
 
         Result<int> compensated = await result.CompensateFirstAsync(error => Task.FromResult(99.ToResult()));
 
-        compensated.IsSuccess.Should().BeTrue();
-        compensated.Value.Should().Be(99);
+        compensated.ShouldBeSuccess().Should().Be(99);
     }
 
     #endregion
@@ -204,7 +197,7 @@ public class ResultCompensateTests
 
         Result compensated = await task.CompensateAsync((Error[] errors) => Task.FromResult(Result.Success()));
 
-        compensated.IsSuccess.Should().BeTrue();
+        compensated.ShouldBeSuccess();
     }
 
     [Fact]
@@ -216,7 +209,7 @@ public class ResultCompensateTests
 
         Result compensated = await task.CompensateFirstAsync(error => Task.FromResult(Result.Success()));
 
-        compensated.IsSuccess.Should().BeTrue();
+        compensated.ShouldBeSuccess();
     }
 
     [Fact]
@@ -228,7 +221,7 @@ public class ResultCompensateTests
 
         Result compensated = await valueTask.CompensateAsync((Error[] errors) => Task.FromResult(Result.Success()));
 
-        compensated.IsSuccess.Should().BeTrue();
+        compensated.ShouldBeSuccess();
     }
 
     [Fact]
@@ -240,7 +233,7 @@ public class ResultCompensateTests
 
         Result compensated = await valueTask.CompensateFirstAsync(error => Task.FromResult(Result.Success()));
 
-        compensated.IsSuccess.Should().BeTrue();
+        compensated.ShouldBeSuccess();
     }
 
     [Fact]
@@ -252,8 +245,7 @@ public class ResultCompensateTests
 
         Result<int> compensated = await task.CompensateAsync((Error[] errors) => Task.FromResult(99.ToResult()));
 
-        compensated.IsSuccess.Should().BeTrue();
-        compensated.Value.Should().Be(99);
+        compensated.ShouldBeSuccess().Should().Be(99);
     }
 
     [Fact]
@@ -265,8 +257,7 @@ public class ResultCompensateTests
 
         Result<int> compensated = await task.CompensateFirstAsync(error => Task.FromResult(99.ToResult()));
 
-        compensated.IsSuccess.Should().BeTrue();
-        compensated.Value.Should().Be(99);
+        compensated.ShouldBeSuccess().Should().Be(99);
     }
 
     [Fact]
@@ -278,8 +269,7 @@ public class ResultCompensateTests
 
         Result<int> compensated = await valueTask.CompensateAsync((Error[] errors) => Task.FromResult(99.ToResult()));
 
-        compensated.IsSuccess.Should().BeTrue();
-        compensated.Value.Should().Be(99);
+        compensated.ShouldBeSuccess().Should().Be(99);
     }
 
     [Fact]
@@ -291,8 +281,7 @@ public class ResultCompensateTests
 
         Result<int> compensated = await valueTask.CompensateFirstAsync(error => Task.FromResult(99.ToResult()));
 
-        compensated.IsSuccess.Should().BeTrue();
-        compensated.Value.Should().Be(99);
+        compensated.ShouldBeSuccess().Should().Be(99);
     }
 
     #endregion

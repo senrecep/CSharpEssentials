@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using CSharpEssentials.AspNetCore;
+using CSharpEssentials.ResultPattern.Testing;
 using CSharpEssentials.Validation;
 using CSharpEssentials.Validation.Extensions;
 using CSharpEssentials.Validation.Validators;
@@ -58,11 +60,9 @@ public class ValidationEndpointFilterTests
         using HttpClient client = app.GetTestClient();
 
         using HttpResponseMessage response = await client.PostAsJsonAsync(new Uri("/items", UriKind.Relative), new CreateItem("", 0));
-        string body = await response.Content.ReadAsStringAsync();
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        response.Content.Headers.ContentType!.MediaType.Should().Be("application/problem+json");
-        body.Should().Contain("Name").And.Contain("Quantity").And.NotContain("pen");
+        JsonElement problem = await response.ShouldBeValidationProblemAsync("Name.NotEmpty", "Quantity.GreaterThan");
+        problem.GetRawText().Should().NotContain("pen");
     }
 
     [Fact]
