@@ -9,3 +9,6 @@ global using static CSharpFunctionalExtensions.AsyncResultExtensionsLeftOperand;
 global using static CSharpFunctionalExtensions.MaybeExtensions;
 global using static CSharpFunctionalExtensions.ResultExtensions;
 global using static ErrorOr.ErrorOrExtensions;
+global using Typed = CSharpEssentials.ResultPattern.Result<int, CSharpEssentials.Errors.NotFoundError, CSharpEssentials.Errors.ConflictError, CSharpEssentials.Errors.ValidationError>;
+global using TypedAny = CSharpEssentials.Any.Any<int, CSharpEssentials.Errors.NotFoundError, CSharpEssentials.Errors.ConflictError, CSharpEssentials.Errors.ValidationError>;
+global using TypedOneOf = OneOf.OneOf<int, CSharpEssentials.Errors.NotFoundError, CSharpEssentials.Errors.ConflictError, CSharpEssentials.Errors.ValidationError>;

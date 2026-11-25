@@ -12,11 +12,15 @@
     <PackageReference Include="CSharpFunctionalExtensions" />
     <PackageReference Include="ErrorOr" />
     <PackageReference Include="FluentResults" />
+    <PackageReference Include="OneOf" />
+    <PackageReference Include="OneOf.Serialization.SystemTextJson" />
+    <PackageReference Include="Dunet" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\CSharpEssentials.Results\CSharpEssentials.Results.csproj" />
     <ProjectReference Include="..\..\CSharpEssentials.Maybe\CSharpEssentials.Maybe.csproj" />
+    <ProjectReference Include="..\..\CSharpEssentials.Any\CSharpEssentials.Any.csproj" />
   </ItemGroup>
 
 </Project>

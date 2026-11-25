@@ -10,6 +10,10 @@ internal static class Parity
 
     public static string Of(Result r) => r.IsSuccess ? "ok" : Fail(r.Errors.Length, r.Errors[0].Description);
 
+    /// <summary>A typed result holds one error.</summary>
+    public static string Of(Result<int, FailureError> r) =>
+        r.Match(static v => Ok(v), static error => Fail(1, error.Description));
+
     /// <summary>CFE keeps one string; Combine joins messages with ", ".</summary>
     public static string Of(Cfe.Result<int> r) => r.IsSuccess ? Ok(r.Value) : CfeFail(r.Error);
 

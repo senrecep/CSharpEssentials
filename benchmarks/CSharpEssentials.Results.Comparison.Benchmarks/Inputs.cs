@@ -13,8 +13,11 @@ internal static class Inputs
     public const string CfeError = Message;
     public static readonly Eo.Error ErrorOrError = Eo.Error.Failure("Order.Invalid", Message);
     public static readonly Fr.Error FluentError = new(Message);
+    public static readonly FailureError TypedError = new("Order.Invalid", Message);
 
     public static Result<int> Cse(bool succeed) => succeed ? Value : CseError;
+
+    public static Result<int, FailureError> Typed(bool succeed) => succeed ? Value : TypedError;
 
     public static Cfe.Result<int> CfeOf(bool succeed) => succeed ? Value : Cfe.Result.Failure<int>(CfeError);
 

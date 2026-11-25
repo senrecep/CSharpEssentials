@@ -10,12 +10,12 @@
 #                                              (net8.0 runs CSE's netstandard2.1 build)
 #   ./run-benchmarks.sh --project rules        # sync/async trees, prebuilt vs rebuilt Linear, short-circuit vs hand-written; NRules / RulesEngine reference columns
 #                                              (net8.0 runs CSE's netstandard2.1 build)
-#   ./run-benchmarks.sh --project results    # Results async matrix benchmarks
+#   ./run-benchmarks.sh --project results    # Results async matrix benchmarks; typed Result<T, E1..E3> Bind/Match by arity and BindAsync matrix
 #   ./run-benchmarks.sh --project idempotency  # Idempotency middleware and fingerprint benchmarks
 #   ./run-benchmarks.sh --project endpoints    # Endpoint mapping startup and request throughput vs Carter / FastEndpoints; OperationNaming and empty-prefix MapGroup cost at N=500
-#   ./run-benchmarks.sh --project results-comparison  # Result/Maybe operations, Error create/equality/exception/ToString/JSON, Sequence/CombineAll, Try/TryAsync, Maybe collection helpers vs CSharpFunctionalExtensions / ErrorOr / FluentResults
+#   ./run-benchmarks.sh --project results-comparison  # Result/Maybe operations, Error create/equality/exception/ToString/JSON, Sequence/CombineAll, Try/TryAsync, Maybe collection helpers vs CSharpFunctionalExtensions / ErrorOr / FluentResults; typed Result<T, E1..E3> create/match/bind chain/async bind/JSON vs Result<T>, Any, OneOf, Dunet and the native C# 15 union (net11.0)
 #   ./run-benchmarks.sh --project di           # Service registration, decoration and resolve vs Scrutor; TryAdd at N=50/500/2000 and transient decorator resolve
-#   ./run-benchmarks.sh --project mediator     # Send, publish, startup and behavior cost: MediatR vs Mediator (+ CSE behaviors); validator fan-out, idempotency, lock, caching and logging behaviors vs hand-written MediatR/Mediator behaviors and AsyncKeyedLock
+#   ./run-benchmarks.sh --project mediator     # Send, publish, startup and behavior cost: MediatR vs Mediator (+ CSE behaviors); validator fan-out, idempotency, lock, caching and logging behaviors vs hand-written MediatR/Mediator behaviors and AsyncKeyedLock; the behaviors' IResultBase test on struct responses
 #                                              (net8.0 runs CSE's netstandard2.1 builds: no CSE package in this suite has a net8 target)
 #   ./run-benchmarks.sh --project enums        # ToString, parse, IsDefined, GetValues, flags, description, boxed formatting and reflection-built names/values vs Enums.NET / NetEscapades.EnumGenerators / BCL
 #                                              (net8.0 runs CSE's netstandard2.1 build: the package has no net8 target)
@@ -25,7 +25,7 @@
 #                                              (net8.0 runs CSE's netstandard2.1 builds and System.Text.Json 9.0.x from NuGet)
 #   ./run-benchmarks.sh --project http         # Http GET/POST/404/build/query vs Refit / Flurl.Http / RestSharp / BCL; Resilience policy overhead, Merge nesting, RetryIfFailed, Result boxing vs Polly.Core / Microsoft.Extensions.Http.Resilience
 #                                              (net8.0 runs CSE's netstandard2.1 builds; every CSE and Polly row runs Polly.Core 8.9.0)
-#   ./run-benchmarks.sh --project aspnetcore   # ResultEndpointFilter, enum binding, ConditionalGet, problem+json, validation filter vs BCL / Hellang.Middleware.ProblemDetails / Marvin.Cache.Headers / SharpGrip; idempotent replay vs IdempotentAPI; executor/stores/keys; request logging vs HttpLogging / Serilog.AspNetCore
+#   ./run-benchmarks.sh --project aspnetcore   # ResultEndpointFilter, enum binding, ConditionalGet, problem+json, validation filter vs BCL / Hellang.Middleware.ProblemDetails / Marvin.Cache.Headers / SharpGrip; idempotent replay vs IdempotentAPI; executor/stores/keys; request logging vs HttpLogging / Serilog.AspNetCore; typed ToHttpResult vs ToProblemResult
 #                                              (net8.0 runs the netstandard2.1 builds of CSE.Idempotency, Results, Errors and Validation)
 #   ./run-benchmarks.sh --project efcore       # SaveChanges with audit/domain-event interceptors, keyset and offset paging, enum converters, MigrateDataAsync, context lifetime, DB error translation, DomainEvents reads vs EF Core / MR.EntityFrameworkCore.KeysetPagination / X.PagedList.EF / EntityFrameworkCore.Exceptions.Sqlite
 #                                              (net8.0 has CSE and hand-written rows only, net9.0 adds X.PagedList.EF, net10.0/net11.0 add MR and EF.Exceptions; net11.0 runs CSE's net10.0 build on EF Core 10)
@@ -83,7 +83,7 @@ case "$SUITE" in
         PROJECT="$SCRIPT_DIR/CSharpEssentials.Results.Benchmarks/CSharpEssentials.Results.Benchmarks.csproj"
         RESULTS_DIR="$SCRIPT_DIR/results/results-pattern"
         ALL_FRAMEWORKS=("net8.0" "net9.0" "net10.0" "net11.0")
-        QUICK_PATTERNS=("*MapBenchmarks*" "*BindBenchmarks*" "*TapBenchmarks*" "*MatchBenchmarks*" "*EnsureBenchmarks*" "*ThenBenchmarks*" "*TraverseBenchmarks*" "*RenamedMemberBenchmarks*")
+        QUICK_PATTERNS=("*MapBenchmarks*" "*BindBenchmarks*" "*TapBenchmarks*" "*MatchBenchmarks*" "*EnsureBenchmarks*" "*ThenBenchmarks*" "*TraverseBenchmarks*" "*RenamedMemberBenchmarks*" "*.TypedBindBenchmarks.*" "*.TypedMatchBenchmarks.*" "*.TypedAsyncBenchmarks.*")
         ;;
     idempotency)
         PROJECT="$SCRIPT_DIR/CSharpEssentials.Idempotency.Benchmarks/CSharpEssentials.Idempotency.Benchmarks.csproj"
@@ -103,7 +103,7 @@ case "$SUITE" in
         PROJECT="$SCRIPT_DIR/CSharpEssentials.Results.Comparison.Benchmarks/CSharpEssentials.Results.Comparison.Benchmarks.csproj"
         RESULTS_DIR="$SCRIPT_DIR/results/results-comparison"
         ALL_FRAMEWORKS=("net8.0" "net9.0" "net10.0" "net11.0")
-        QUICK_PATTERNS=("*CreateComparison*" "*MapComparison*" "*BindComparison*" "*EnsureComparison*" "*MatchComparison*" "*TapComparison*" "*AsyncPipelineComparison*" "*ErrorAggregationComparison*" "*MaybeComparison*" "*.ErrorFactoryComparison.*" "*.ErrorEqualityComparison.*" "*.ErrorExceptionComparison.*" "*.ErrorMetadataToStringComparison.*" "*.ErrorToStringComparison.*" "*.ErrorJsonComparison.*" "*.SequenceComparison.*" "*.TryComparison.*" "*.TryAsyncComparison.*" "*.MaybeCollectionComparison.*")
+        QUICK_PATTERNS=("*CreateComparison*" "*MapComparison*" "*BindComparison*" "*EnsureComparison*" "*MatchComparison*" "*TapComparison*" "*AsyncPipelineComparison*" "*ErrorAggregationComparison*" "*MaybeComparison*" "*.ErrorFactoryComparison.*" "*.ErrorEqualityComparison.*" "*.ErrorExceptionComparison.*" "*.ErrorMetadataToStringComparison.*" "*.ErrorToStringComparison.*" "*.ErrorJsonComparison.*" "*.SequenceComparison.*" "*.TryComparison.*" "*.TryAsyncComparison.*" "*.MaybeCollectionComparison.*" "*.TypedCreateComparison.*" "*.TypedMatchComparison.*" "*.TypedBindChainComparison.*" "*.TypedAsyncBindComparison.*" "*.TypedJsonComparison.*")
         ;;
     di)
         PROJECT="$SCRIPT_DIR/CSharpEssentials.DependencyInjection.Benchmarks/CSharpEssentials.DependencyInjection.Benchmarks.csproj"
@@ -115,7 +115,7 @@ case "$SUITE" in
         PROJECT="$SCRIPT_DIR/CSharpEssentials.Mediator.Benchmarks/CSharpEssentials.Mediator.Benchmarks.csproj"
         RESULTS_DIR="$SCRIPT_DIR/results/mediator"
         ALL_FRAMEWORKS=("net8.0" "net9.0" "net10.0" "net11.0")
-        QUICK_PATTERNS=("*.SendBenchmarks.*" "*.PublishBenchmarks.*" "*.StartupBenchmarks.*" "*.ColdStartupBenchmarks.*" "*.BehaviorBenchmarks.*" "*.ValidationFanOutBenchmarks.*" "*.ValidationScopeBenchmarks.*" "*.IdempotencyBehaviorBenchmarks.*" "*.LockBehaviorBenchmarks.*" "*.LockContentionBenchmarks.*" "*.CachingBehaviorBenchmarks.*" "*.LoggingBehaviorBenchmarks.*")
+        QUICK_PATTERNS=("*.SendBenchmarks.*" "*.PublishBenchmarks.*" "*.StartupBenchmarks.*" "*.ColdStartupBenchmarks.*" "*.BehaviorBenchmarks.*" "*.ValidationFanOutBenchmarks.*" "*.ValidationScopeBenchmarks.*" "*.IdempotencyBehaviorBenchmarks.*" "*.LockBehaviorBenchmarks.*" "*.LockContentionBenchmarks.*" "*.CachingBehaviorBenchmarks.*" "*.LoggingBehaviorBenchmarks.*" "*.ResultBaseCheckBenchmarks.*")
         ;;
     enums)
         PROJECT="$SCRIPT_DIR/CSharpEssentials.Enums.Comparison.Benchmarks/CSharpEssentials.Enums.Comparison.Benchmarks.csproj"
@@ -145,7 +145,7 @@ case "$SUITE" in
         PROJECT="$SCRIPT_DIR/CSharpEssentials.AspNetCore.Comparison.Benchmarks/CSharpEssentials.AspNetCore.Comparison.Benchmarks.csproj"
         RESULTS_DIR="$SCRIPT_DIR/results/aspnetcore"
         ALL_FRAMEWORKS=("net8.0" "net9.0" "net10.0" "net11.0")
-        QUICK_PATTERNS=("*.ResultFilterComparison.*" "*.EnumBindingComparison.*" "*.ConditionalGetComparison.*" "*.ProblemDetailsComparison.*" "*.ValidationFilterComparison.*" "*.IdempotentReplayComparison.*" "*.IdempotencyExecutorBenchmarks.*" "*.IdempotencyStoreBenchmarks.*" "*.IdempotencyStoreContentionBenchmarks.*" "*.IdempotencyKeyBenchmarks.*" "*.RequestLoggingComparison.*" "*.RequestLoggingMetadataComparison.*")
+        QUICK_PATTERNS=("*.ResultFilterComparison.*" "*.EnumBindingComparison.*" "*.ConditionalGetComparison.*" "*.ProblemDetailsComparison.*" "*.ValidationFilterComparison.*" "*.IdempotentReplayComparison.*" "*.IdempotencyExecutorBenchmarks.*" "*.IdempotencyStoreBenchmarks.*" "*.IdempotencyStoreContentionBenchmarks.*" "*.IdempotencyKeyBenchmarks.*" "*.RequestLoggingComparison.*" "*.RequestLoggingMetadataComparison.*" "*.TypedProblemDetailsComparison.*")
         ;;
     efcore)
         PROJECT="$SCRIPT_DIR/CSharpEssentials.EntityFrameworkCore.Comparison.Benchmarks/CSharpEssentials.EntityFrameworkCore.Comparison.Benchmarks.csproj"

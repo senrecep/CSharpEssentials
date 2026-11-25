@@ -6,7 +6,8 @@ namespace CSharpEssentials.Results.Comparison.Benchmarks;
 
 /// <summary>
 /// Match a success or failure built in setup to an int (-1 on failure) and to a string (the first error's message on
-/// failure). FluentResults has no Match; its column uses the README's documented processing idiom
+/// failure). The typed rows match a <c>Result&lt;int, FailureError&gt;</c>, which holds one error, so the string handler reads
+/// its description directly. FluentResults has no Match; its column uses the README's documented processing idiom
 /// (<c>IsSuccess</c>/<c>Value</c>, <c>Errors[0].Message</c>), which does no work beyond the library's own properties.
 /// </summary>
 [MemoryDiagnoser]
@@ -18,6 +19,7 @@ public class MatchComparison
     private const string ToText = "ToString";
 
     private Result<int> _cse;
+    private Result<int, FailureError> _typed;
     private Cfe.Result<int> _cfe;
     private Eo.ErrorOr<int> _errorOr;
     private Fr.Result<int> _fluent = null!;
@@ -29,16 +31,19 @@ public class MatchComparison
     public void Setup()
     {
         _cse = Inputs.Cse(Succeed);
+        _typed = Inputs.Typed(Succeed);
         _cfe = Inputs.CfeOf(Succeed);
         _errorOr = Inputs.ErrorOr(Succeed);
         _fluent = Inputs.Fluent(Succeed);
         Parity.Same(nameof(MatchComparison) + "." + ToInt,
             (nameof(CSharpEssentials_ToInt), Parity.Of(CSharpEssentials_ToInt())),
+            (nameof(CSharpEssentials_Typed_ToInt), Parity.Of(CSharpEssentials_Typed_ToInt())),
             (nameof(CSharpFunctionalExtensions_ToInt), Parity.Of(CSharpFunctionalExtensions_ToInt())),
             (nameof(ErrorOr_ToInt), Parity.Of(ErrorOr_ToInt())),
             (nameof(FluentResults_ToInt), Parity.Of(FluentResults_ToInt())));
         Parity.Same(nameof(MatchComparison) + "." + ToText,
             (nameof(CSharpEssentials_ToString), Parity.Of(CSharpEssentials_ToString())),
+            (nameof(CSharpEssentials_Typed_ToString), Parity.Of(CSharpEssentials_Typed_ToString())),
             (nameof(CSharpFunctionalExtensions_ToString), Parity.Of(CSharpFunctionalExtensions_ToString())),
             (nameof(ErrorOr_ToString), Parity.Of(ErrorOr_ToString())),
             (nameof(FluentResults_ToString), Parity.Of(FluentResults_ToString())));
@@ -47,6 +52,10 @@ public class MatchComparison
     // https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.Results/Readme.MD#matching
     [Benchmark(Baseline = true), BenchmarkCategory(ToInt)]
     public int CSharpEssentials_ToInt() => _cse.Match(static v => v, static _ => -1);
+
+    // https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.Results/Readme.MD#matching-1
+    [Benchmark, BenchmarkCategory(ToInt)]
+    public int CSharpEssentials_Typed_ToInt() => _typed.Match(static v => v, static _ => -1);
 
     // https://github.com/vkhorikov/CSharpFunctionalExtensions/blob/v3.7.0/CSharpFunctionalExtensions/Result/Methods/Extensions/Match.cs
     [Benchmark, BenchmarkCategory(ToInt)]
@@ -64,6 +73,11 @@ public class MatchComparison
     [Benchmark(Baseline = true), BenchmarkCategory(ToText)]
     public string CSharpEssentials_ToString() =>
         _cse.Match(static v => v.ToString(CultureInfo.InvariantCulture), static errors => errors[0].Description);
+
+    // https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.Results/Readme.MD#matching-1
+    [Benchmark, BenchmarkCategory(ToText)]
+    public string CSharpEssentials_Typed_ToString() =>
+        _typed.Match(static v => v.ToString(CultureInfo.InvariantCulture), static error => error.Description);
 
     // https://github.com/vkhorikov/CSharpFunctionalExtensions/blob/v3.7.0/CSharpFunctionalExtensions/Result/Methods/Extensions/Match.cs
     [Benchmark, BenchmarkCategory(ToText)]
