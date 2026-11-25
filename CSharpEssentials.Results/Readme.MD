@@ -433,7 +433,7 @@ Result<UserDto, UserErrors.Locked, NotFoundError> reordered = Get(id);
 
 ### Combinators
 
-The typed results have synchronous `Bind`, `BindWiden`, `Map`, `Ensure`, `FailIf`, `MapError`, `Recover` and `Compensate`. Each passes an error through in its slot without calling the delegate.
+The typed results have `Bind`, `BindWiden`, `Map`, `Ensure`, `FailIf`, `MapError`, `Recover` and `Compensate`, and the async forms in [Async combinators](#async-combinators). Each passes an error through in its slot without calling the delegate.
 
 | Member | Error set of the returned result |
 |---|---|
@@ -462,7 +462,32 @@ Overload resolution picks the overload from the argument types, so a few calls n
 - `MapError`, `Recover` and `Compensate` have one overload per slot. Give the lambda's parameter type to choose the slot, `Recover((NotFoundError e) => ...)`; an untyped `e => ...` fits several slots and fails with CS0121.
 - `Ensure` with an error of the exact type of a slot keeps the error set. An error whose static type is a derived type, such as `new UserErrors.Locked(id)` on a `ConflictError` slot, binds `Ensure<F>` and adds a slot, because an identity conversion beats the conversion to the base kind. Cast it to the slot type to keep the set.
 
-None of these overloads uses `OverloadResolutionPriority`, so they compile the same way on C# 12, 13 and 14. All of them throw `InvalidOperationException` on `default`, and `Map`, `MapError` and `Recover` throw `ArgumentNullException` when the delegate returns `null`.
+None of these synchronous overloads uses `OverloadResolutionPriority`, so they compile the same way on C# 12, 13 and 14. All of them throw `InvalidOperationException` on `default`, and `Map`, `MapError` and `Recover` throw `ArgumentNullException` when the delegate returns `null`.
+
+### Async combinators
+
+`Bind`, `BindWiden`, `Map`, `Ensure`, `FailIf`, `MapError` and `Compensate` have `*Async` forms with the same cells as `Result<T>`: an instance member that awaits a `Task` or `ValueTask` handler, and extensions on `Task<Result<T, E..>>` and `ValueTask<Result<T, E..>>` sources. `Recover` stays synchronous, as it is on `Result<T>`.
+
+| Family | Instance handler | `Task` source handler | `ValueTask` source handler |
+|---|---|---|---|
+| `BindAsync`, `BindWidenAsync` | `Task`, `ValueTask` | sync, `Task` | sync, `ValueTask` |
+| `MapAsync` | `Task`, `ValueTask` (.NET 9+) | sync, `Task` | sync, `ValueTask` |
+| `EnsureAsync`, `FailIfAsync` | `Task`, `ValueTask` (.NET 9+) | sync, `Task` | sync, `Task`, `ValueTask` (.NET 9+) |
+| `MapErrorAsync` | `Task`, `ValueTask` | sync, `Task` | sync, `ValueTask` |
+| `CompensateAsync` | `Task`, `ValueTask` (.NET 9+) | `Task` | `Task`, `ValueTask` (.NET 9+) |
+
+```csharp
+Task<Result<OrderDto, NotFoundError>> FindAsync(Guid id, CancellationToken ct) => ...;
+Task<Result<OrderDto, ConflictError>> LockAsync(OrderDto order) => ...;
+
+Result<OrderDto, NotFoundError, ConflictError> locked = await FindAsync(id, ct)
+    .BindWidenAsync(LockAsync, ct)
+    .MapAsync(o => o with { Locked = true }, ct);
+```
+
+Every extension and every instance member except `BindAsync` and `BindWidenAsync` takes a `CancellationToken`. It is observed while a pending source or handler task is awaited; a task that has already completed is used as it is. `MapAsync` and `MapErrorAsync` also check it before they call the handler, as on `Result<T>`. Library awaits use `ConfigureAwait(false)`.
+
+An untyped `async` lambda fits both the `Task` and the `ValueTask` handler; `[OverloadResolutionPriority(1)]` on the `Task` member picks it on C# 13 and later. On the extensions, the same-slot `EnsureAsync`/`FailIfAsync` have a higher priority than the slot-adding ones, because both are generic methods there and the tie-break that makes the synchronous `Ensure(predicate, Ei)` win does not apply. One difference follows: on a `Task` or `ValueTask` source an error of a derived type, such as `new UserErrors.Locked(id)` on a `ConflictError` slot, keeps the base slot, while the synchronous `Ensure` and the instance `EnsureAsync` add a slot. On C# 12 an untyped `async` lambda on an instance, and an error of a slot type on a source, report CS0121: type the handler, or give the type arguments as in `source.EnsureAsync<int, NotFoundError>(v => v > 0, error)`.
 
 ### `default`
 

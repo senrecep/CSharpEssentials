@@ -42,6 +42,20 @@ These are in `TypedDelegateShapes`. In each case the lambda parameter or return 
 - `Result<T>.MapErrorAsync(async e => ...)` on a `Result<T>` or `Result` instance, because the lambda fits both the `Task` and the `ValueTask` handler, and also `Error` and `Error[]` when the body compiles for both, for example `return e;`.
 - `Result<T>.BindAsync(async v => ...)` returning `Result<T>`: the `Result<TOut>` handler and the `Result` handler both fit, because `Result<T>` converts to `Result`.
 
+## Typed results
+
+`TypedResultShapes` holds what a C# 12 caller can do with `Result<T, E1..E3>`: return a value or an error through the implicit conversions, `Match`, `Switch` and `TryGetValue(out NotFoundError? error)`. A `switch` over the cases needs C# 15. These async shapes bind on both targets:
+
+- A sync or an async lambda on a `Task` or `ValueTask` source for `BindAsync`, `BindWidenAsync`, `MapAsync` and `MapErrorAsync`. `MapErrorAsync` needs the lambda parameter type on every language version, because it picks the slot.
+- `EnsureAsync` and `FailIfAsync` on a source with an error of a new type, which adds a slot.
+
+The instance `BindAsync`, `BindWidenAsync` and `MapErrorAsync` have their `ValueTask` twins on every target, so under C# 12 these report CS0121 on net8.0 as well:
+
+| Call | Why | Fix |
+|---|---|---|
+| `BindAsync`, `BindWidenAsync`, `MapErrorAsync` on an instance with an untyped async lambda | The `Task` and the `ValueTask` handler both fit (`MapAsync`, `EnsureAsync`, `FailIfAsync` and `CompensateAsync` too on net9.0) | Type the handler |
+| `EnsureAsync` and `FailIfAsync` on a `Task` or `ValueTask` source with an error of a slot type, even with a sync lambda | The same-slot and the slot-adding extensions are both generic and both fit | Give the type arguments: `source.EnsureAsync<int, NotFoundError>(v => v > 0, error)` |
+
 ## Maybe shapes
 
 `MaybeSourceShapes` holds the untyped async lambda shapes that bind under C# 12 on every target: `ExecuteAsync`, `ExecuteNoValueAsync` and `OrAsync` on `Task<Maybe<T>>` and `ValueTask<Maybe<T>>` sources.

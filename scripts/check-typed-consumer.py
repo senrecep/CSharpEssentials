@@ -31,6 +31,7 @@ CASES = {
     "TypedDuplicateSlot": {"CS0457"},
     "TypedForeignError": {"CS0029"},
     "TypedReturningStatement": {"CS0161"},
+    "TypedAsyncChain": set(),
 }
 
 FRAMEWORKS = ("net11.0", "net10.0")
