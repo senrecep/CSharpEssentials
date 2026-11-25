@@ -65,6 +65,25 @@ public sealed class ResultTE1E2E3MapErrorAsyncTests
     }
 
     [Fact]
+    public async Task MapErrorNotFoundErrorAsync_InstanceTaskHandler_Should_FinishTheRunningHandler_When_TheTokenIsCanceledWhileItRuns()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.NotFound;
+        using CancellationTokenSource cancellation = new();
+        TaskCompletionSource<ValidationError> running = new();
+        int calls = 0;
+        Func<NotFoundError, Task<ValidationError>> handler = _ => { calls++; return running.Task; };
+
+        Task<Result<int, ValidationError, ConflictError, RateLimited>> call = source.MapErrorAsync(handler, cancellation.Token);
+        await cancellation.CancelAsync();
+        running.SetResult(TypedFixture.Invalid);
+        Result<int, ValidationError, ConflictError, RateLimited> result = await call;
+
+        calls.Should().Be(1);
+        Result<int, ValidationError, ConflictError, RateLimited> expected = TypedFixture.Invalid;
+        result.Should().Be(expected);
+    }
+
+    [Fact]
     public async Task MapErrorNotFoundErrorAsync_InstanceValueTaskHandler_Should_MapTheError_When_TheResultHoldsNotFoundError()
     {
         Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.NotFound;
@@ -119,6 +138,25 @@ public sealed class ResultTE1E2E3MapErrorAsyncTests
 
         await act.Should().ThrowAsync<OperationCanceledException>();
         calls.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task MapErrorNotFoundErrorAsync_InstanceValueTaskHandler_Should_FinishTheRunningHandler_When_TheTokenIsCanceledWhileItRuns()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.NotFound;
+        using CancellationTokenSource cancellation = new();
+        TaskCompletionSource<ValidationError> running = new();
+        int calls = 0;
+        Func<NotFoundError, ValueTask<ValidationError>> handler = _ => { calls++; return new ValueTask<ValidationError>(running.Task); };
+
+        ValueTask<Result<int, ValidationError, ConflictError, RateLimited>> call = source.MapErrorAsync(handler, cancellation.Token);
+        await cancellation.CancelAsync();
+        running.SetResult(TypedFixture.Invalid);
+        Result<int, ValidationError, ConflictError, RateLimited> result = await call;
+
+        calls.Should().Be(1);
+        Result<int, ValidationError, ConflictError, RateLimited> expected = TypedFixture.Invalid;
+        result.Should().Be(expected);
     }
 
     [Fact]
@@ -251,6 +289,25 @@ public sealed class ResultTE1E2E3MapErrorAsyncTests
     }
 
     [Fact]
+    public async Task MapErrorNotFoundErrorAsync_TaskSourceTaskHandler_Should_FinishTheRunningHandler_When_TheTokenIsCanceledWhileItRuns()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.NotFound;
+        using CancellationTokenSource cancellation = new();
+        TaskCompletionSource<ValidationError> running = new();
+        int calls = 0;
+        Func<NotFoundError, Task<ValidationError>> handler = _ => { calls++; return running.Task; };
+
+        Task<Result<int, ValidationError, ConflictError, RateLimited>> call = Task.FromResult(source).MapErrorAsync(handler, cancellation.Token);
+        await cancellation.CancelAsync();
+        running.SetResult(TypedFixture.Invalid);
+        Result<int, ValidationError, ConflictError, RateLimited> result = await call;
+
+        calls.Should().Be(1);
+        Result<int, ValidationError, ConflictError, RateLimited> expected = TypedFixture.Invalid;
+        result.Should().Be(expected);
+    }
+
+    [Fact]
     public async Task MapErrorNotFoundErrorAsync_ValueTaskSourceSyncHandler_Should_MapTheError_When_TheResultHoldsNotFoundError()
     {
         Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.NotFound;
@@ -380,6 +437,25 @@ public sealed class ResultTE1E2E3MapErrorAsyncTests
     }
 
     [Fact]
+    public async Task MapErrorNotFoundErrorAsync_ValueTaskSourceValueTaskHandler_Should_FinishTheRunningHandler_When_TheTokenIsCanceledWhileItRuns()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.NotFound;
+        using CancellationTokenSource cancellation = new();
+        TaskCompletionSource<ValidationError> running = new();
+        int calls = 0;
+        Func<NotFoundError, ValueTask<ValidationError>> handler = _ => { calls++; return new ValueTask<ValidationError>(running.Task); };
+
+        ValueTask<Result<int, ValidationError, ConflictError, RateLimited>> call = new ValueTask<Result<int, NotFoundError, ConflictError, RateLimited>>(source).MapErrorAsync(handler, cancellation.Token);
+        await cancellation.CancelAsync();
+        running.SetResult(TypedFixture.Invalid);
+        Result<int, ValidationError, ConflictError, RateLimited> result = await call;
+
+        calls.Should().Be(1);
+        Result<int, ValidationError, ConflictError, RateLimited> expected = TypedFixture.Invalid;
+        result.Should().Be(expected);
+    }
+
+    [Fact]
     public async Task MapErrorConflictErrorAsync_InstanceTaskHandler_Should_MapTheError_When_TheResultHoldsConflictError()
     {
         Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Conflict;
@@ -437,6 +513,25 @@ public sealed class ResultTE1E2E3MapErrorAsyncTests
     }
 
     [Fact]
+    public async Task MapErrorConflictErrorAsync_InstanceTaskHandler_Should_FinishTheRunningHandler_When_TheTokenIsCanceledWhileItRuns()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Conflict;
+        using CancellationTokenSource cancellation = new();
+        TaskCompletionSource<ValidationError> running = new();
+        int calls = 0;
+        Func<ConflictError, Task<ValidationError>> handler = _ => { calls++; return running.Task; };
+
+        Task<Result<int, NotFoundError, ValidationError, RateLimited>> call = source.MapErrorAsync(handler, cancellation.Token);
+        await cancellation.CancelAsync();
+        running.SetResult(TypedFixture.Invalid);
+        Result<int, NotFoundError, ValidationError, RateLimited> result = await call;
+
+        calls.Should().Be(1);
+        Result<int, NotFoundError, ValidationError, RateLimited> expected = TypedFixture.Invalid;
+        result.Should().Be(expected);
+    }
+
+    [Fact]
     public async Task MapErrorConflictErrorAsync_InstanceValueTaskHandler_Should_MapTheError_When_TheResultHoldsConflictError()
     {
         Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Conflict;
@@ -491,6 +586,25 @@ public sealed class ResultTE1E2E3MapErrorAsyncTests
 
         await act.Should().ThrowAsync<OperationCanceledException>();
         calls.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task MapErrorConflictErrorAsync_InstanceValueTaskHandler_Should_FinishTheRunningHandler_When_TheTokenIsCanceledWhileItRuns()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Conflict;
+        using CancellationTokenSource cancellation = new();
+        TaskCompletionSource<ValidationError> running = new();
+        int calls = 0;
+        Func<ConflictError, ValueTask<ValidationError>> handler = _ => { calls++; return new ValueTask<ValidationError>(running.Task); };
+
+        ValueTask<Result<int, NotFoundError, ValidationError, RateLimited>> call = source.MapErrorAsync(handler, cancellation.Token);
+        await cancellation.CancelAsync();
+        running.SetResult(TypedFixture.Invalid);
+        Result<int, NotFoundError, ValidationError, RateLimited> result = await call;
+
+        calls.Should().Be(1);
+        Result<int, NotFoundError, ValidationError, RateLimited> expected = TypedFixture.Invalid;
+        result.Should().Be(expected);
     }
 
     [Fact]
@@ -623,6 +737,25 @@ public sealed class ResultTE1E2E3MapErrorAsyncTests
     }
 
     [Fact]
+    public async Task MapErrorConflictErrorAsync_TaskSourceTaskHandler_Should_FinishTheRunningHandler_When_TheTokenIsCanceledWhileItRuns()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Conflict;
+        using CancellationTokenSource cancellation = new();
+        TaskCompletionSource<ValidationError> running = new();
+        int calls = 0;
+        Func<ConflictError, Task<ValidationError>> handler = _ => { calls++; return running.Task; };
+
+        Task<Result<int, NotFoundError, ValidationError, RateLimited>> call = Task.FromResult(source).MapErrorAsync(handler, cancellation.Token);
+        await cancellation.CancelAsync();
+        running.SetResult(TypedFixture.Invalid);
+        Result<int, NotFoundError, ValidationError, RateLimited> result = await call;
+
+        calls.Should().Be(1);
+        Result<int, NotFoundError, ValidationError, RateLimited> expected = TypedFixture.Invalid;
+        result.Should().Be(expected);
+    }
+
+    [Fact]
     public async Task MapErrorConflictErrorAsync_ValueTaskSourceSyncHandler_Should_MapTheError_When_TheResultHoldsConflictError()
     {
         Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Conflict;
@@ -752,6 +885,25 @@ public sealed class ResultTE1E2E3MapErrorAsyncTests
     }
 
     [Fact]
+    public async Task MapErrorConflictErrorAsync_ValueTaskSourceValueTaskHandler_Should_FinishTheRunningHandler_When_TheTokenIsCanceledWhileItRuns()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Conflict;
+        using CancellationTokenSource cancellation = new();
+        TaskCompletionSource<ValidationError> running = new();
+        int calls = 0;
+        Func<ConflictError, ValueTask<ValidationError>> handler = _ => { calls++; return new ValueTask<ValidationError>(running.Task); };
+
+        ValueTask<Result<int, NotFoundError, ValidationError, RateLimited>> call = new ValueTask<Result<int, NotFoundError, ConflictError, RateLimited>>(source).MapErrorAsync(handler, cancellation.Token);
+        await cancellation.CancelAsync();
+        running.SetResult(TypedFixture.Invalid);
+        Result<int, NotFoundError, ValidationError, RateLimited> result = await call;
+
+        calls.Should().Be(1);
+        Result<int, NotFoundError, ValidationError, RateLimited> expected = TypedFixture.Invalid;
+        result.Should().Be(expected);
+    }
+
+    [Fact]
     public async Task MapErrorRateLimitedAsync_InstanceTaskHandler_Should_MapTheError_When_TheResultHoldsRateLimited()
     {
         Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Limited;
@@ -809,6 +961,25 @@ public sealed class ResultTE1E2E3MapErrorAsyncTests
     }
 
     [Fact]
+    public async Task MapErrorRateLimitedAsync_InstanceTaskHandler_Should_FinishTheRunningHandler_When_TheTokenIsCanceledWhileItRuns()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Limited;
+        using CancellationTokenSource cancellation = new();
+        TaskCompletionSource<ValidationError> running = new();
+        int calls = 0;
+        Func<RateLimited, Task<ValidationError>> handler = _ => { calls++; return running.Task; };
+
+        Task<Result<int, NotFoundError, ConflictError, ValidationError>> call = source.MapErrorAsync(handler, cancellation.Token);
+        await cancellation.CancelAsync();
+        running.SetResult(TypedFixture.Invalid);
+        Result<int, NotFoundError, ConflictError, ValidationError> result = await call;
+
+        calls.Should().Be(1);
+        Result<int, NotFoundError, ConflictError, ValidationError> expected = TypedFixture.Invalid;
+        result.Should().Be(expected);
+    }
+
+    [Fact]
     public async Task MapErrorRateLimitedAsync_InstanceValueTaskHandler_Should_MapTheError_When_TheResultHoldsRateLimited()
     {
         Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Limited;
@@ -863,6 +1034,25 @@ public sealed class ResultTE1E2E3MapErrorAsyncTests
 
         await act.Should().ThrowAsync<OperationCanceledException>();
         calls.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task MapErrorRateLimitedAsync_InstanceValueTaskHandler_Should_FinishTheRunningHandler_When_TheTokenIsCanceledWhileItRuns()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Limited;
+        using CancellationTokenSource cancellation = new();
+        TaskCompletionSource<ValidationError> running = new();
+        int calls = 0;
+        Func<RateLimited, ValueTask<ValidationError>> handler = _ => { calls++; return new ValueTask<ValidationError>(running.Task); };
+
+        ValueTask<Result<int, NotFoundError, ConflictError, ValidationError>> call = source.MapErrorAsync(handler, cancellation.Token);
+        await cancellation.CancelAsync();
+        running.SetResult(TypedFixture.Invalid);
+        Result<int, NotFoundError, ConflictError, ValidationError> result = await call;
+
+        calls.Should().Be(1);
+        Result<int, NotFoundError, ConflictError, ValidationError> expected = TypedFixture.Invalid;
+        result.Should().Be(expected);
     }
 
     [Fact]
@@ -995,6 +1185,25 @@ public sealed class ResultTE1E2E3MapErrorAsyncTests
     }
 
     [Fact]
+    public async Task MapErrorRateLimitedAsync_TaskSourceTaskHandler_Should_FinishTheRunningHandler_When_TheTokenIsCanceledWhileItRuns()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Limited;
+        using CancellationTokenSource cancellation = new();
+        TaskCompletionSource<ValidationError> running = new();
+        int calls = 0;
+        Func<RateLimited, Task<ValidationError>> handler = _ => { calls++; return running.Task; };
+
+        Task<Result<int, NotFoundError, ConflictError, ValidationError>> call = Task.FromResult(source).MapErrorAsync(handler, cancellation.Token);
+        await cancellation.CancelAsync();
+        running.SetResult(TypedFixture.Invalid);
+        Result<int, NotFoundError, ConflictError, ValidationError> result = await call;
+
+        calls.Should().Be(1);
+        Result<int, NotFoundError, ConflictError, ValidationError> expected = TypedFixture.Invalid;
+        result.Should().Be(expected);
+    }
+
+    [Fact]
     public async Task MapErrorRateLimitedAsync_ValueTaskSourceSyncHandler_Should_MapTheError_When_TheResultHoldsRateLimited()
     {
         Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Limited;
@@ -1121,5 +1330,24 @@ public sealed class ResultTE1E2E3MapErrorAsyncTests
 
         await act.Should().ThrowAsync<OperationCanceledException>();
         calls.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task MapErrorRateLimitedAsync_ValueTaskSourceValueTaskHandler_Should_FinishTheRunningHandler_When_TheTokenIsCanceledWhileItRuns()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Limited;
+        using CancellationTokenSource cancellation = new();
+        TaskCompletionSource<ValidationError> running = new();
+        int calls = 0;
+        Func<RateLimited, ValueTask<ValidationError>> handler = _ => { calls++; return new ValueTask<ValidationError>(running.Task); };
+
+        ValueTask<Result<int, NotFoundError, ConflictError, ValidationError>> call = new ValueTask<Result<int, NotFoundError, ConflictError, RateLimited>>(source).MapErrorAsync(handler, cancellation.Token);
+        await cancellation.CancelAsync();
+        running.SetResult(TypedFixture.Invalid);
+        Result<int, NotFoundError, ConflictError, ValidationError> result = await call;
+
+        calls.Should().Be(1);
+        Result<int, NotFoundError, ConflictError, ValidationError> expected = TypedFixture.Invalid;
+        result.Should().Be(expected);
     }
 }

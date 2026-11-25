@@ -361,6 +361,8 @@ PRIORITY = "[OverloadResolutionPriority(1)]"
 SAME_SLOT_LIFT = 2
 CT_PARAM = "CancellationToken cancellationToken = default"
 AWAIT_TOKEN = ".WithCancellation(cancellationToken).ConfigureAwait(false)"
+# Result<TValue>.MapErrorAsync checks the token before the mapper and then awaits it without the token, so a running mapper finishes.
+UNABANDONED = {"MapError"}
 SLOT_NAMES = '[SuppressMessage("Naming", "CA1715:Identifiers should have correct prefix", Justification = "E1..E3 name the error slots, matching the Result<T, E1, E2> shape.")]'
 
 
@@ -391,19 +393,22 @@ def checked(op: Op, receiver: str, body: list[str]) -> list[str]:
     return [f"if ({receiver}Tag == {op.checked_tag})", "    cancellationToken.ThrowIfCancellationRequested();", "", *body]
 
 
-def token_doc(op: Op, awaited: str) -> str:
+def token_doc(op: Op, awaited: str | None) -> str:
     check = f'Checked before <paramref name="{op.param}"/> is called. ' if op.checked_tag else ""
+    if op.family in UNABANDONED:
+        observed = f"Observed while awaiting {awaited}; a" if awaited else "A"
+        return f'{check}{observed} running <paramref name="{op.param}"/> is not abandoned.'
     return f"{check}Observed while awaiting {awaited}."
 
 
 def instance_cell(op: Op, delegate: str, priority: bool) -> list[str]:
     token = op.family not in NO_INSTANCE_TOKEN
-    awaiter = AWAIT_TOKEN if token else ".ConfigureAwait(false)"
+    awaiter = AWAIT_TOKEN if token and op.family not in UNABANDONED else ".ConfigureAwait(false)"
     params = op.parameters(f"{delegate}<{op.ret}>") + (f", {CT_PARAM}" if token else "")
     body = op.body(lambda a: f"await {op.param}({a}){awaiter}", "")
     return method(
         async_doc(op.doc, f"<paramref name=\"{op.param}\"/> returns a {'task' if delegate == 'Task' else 'value task'}, which is awaited.",
-                  token_doc(op, f'<paramref name="{op.param}"/>') if token else None),
+                  token_doc(op, None if op.family in UNABANDONED else f'<paramref name="{op.param}"/>') if token else None),
         f"public async {delegate}<{op.out}> {op.name}Async{op.type_args()}({params})",
         op.generics,
         checked(op, "", body) if token else body,
@@ -423,7 +428,7 @@ def extension_cell(op: Op, n: int, receiver: str, delegate: str, priority: bool,
         observed = 'Observed while awaiting <paramref name="task"/>.'
     else:
         sentence = f"Awaits <paramref name=\"task\"/>, then awaits the {'task' if delegate == 'Task' else 'value task'} that <paramref name=\"{op.param}\"/> returns."
-        observed = token_doc(op, f'<paramref name="task"/> and <paramref name="{op.param}"/>')
+        observed = token_doc(op, '<paramref name="task"/>' if op.family in UNABANDONED else f'<paramref name="task"/> and <paramref name="{op.param}"/>')
         if map_inline:
             tail = checked(op, "result.", op.body(lambda a: f"await {op.param}({a}){AWAIT_TOKEN}", "result."))
         elif op.family in NO_INSTANCE_TOKEN:
@@ -765,6 +770,16 @@ def async_tests(op: AsyncOp, kind: str, delegate: str, token: bool) -> list[list
             "await cancellation.CancelAsync();", "int calls = 0;", pending_handler(op, delegate), "",
             f"Func<Task> act = async () => await source.{op.name}Async(handler{op.extras}, cancellation.Token);", "",
             "await act.Should().ThrowAsync<OperationCanceledException>();", "calls.Should().Be(1);",
+        ]))
+    if op.family in UNABANDONED and delegate != "sync":
+        returned = delegate if kind == "this" else kind
+        tests.append(fact(f"{cell}_Should_FinishTheRunningHandler_When_TheTokenIsCanceledWhileItRuns", [
+            f"{op.src} source = {first.source};", "using CancellationTokenSource cancellation = new();",
+            f"TaskCompletionSource<{op.ret}> running = new();", "int calls = 0;",
+            f"Func<{op.arg}, {delegate}<{op.ret}>> handler = _ => {{ calls++; return {'running.Task' if delegate == 'Task' else f'new ValueTask<{op.ret}>(running.Task)'}; }};", "",
+            f"{returned}<{op.out}> call = {receiver(op, kind)}.{op.name}Async(handler{op.extras}, cancellation.Token);",
+            "await cancellation.CancelAsync();", f"running.SetResult({first.body});", f"{op.out} result = await call;", "",
+            "calls.Should().Be(1);", f"{op.out} expected = {first.expected};", "result.Should().Be(expected);",
         ]))
     return tests
 

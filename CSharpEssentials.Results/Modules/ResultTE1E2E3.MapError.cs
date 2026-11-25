@@ -65,7 +65,7 @@ public readonly partial struct Result<T, E1, E2, E3>
     /// <paramref name="map"/> returns a task, which is awaited.</summary>
     /// <typeparam name="TError">The error type that replaces <typeparamref name="E1"/>.</typeparam>
     /// <param name="map">Called with the error of type <typeparamref name="E1"/>. Give its parameter type to choose the slot.</param>
-    /// <param name="cancellationToken">Checked before <paramref name="map"/> is called. Observed while awaiting <paramref name="map"/>.</param>
+    /// <param name="cancellationToken">Checked before <paramref name="map"/> is called. A running <paramref name="map"/> is not abandoned.</param>
     /// <returns>A result whose slot holds the mapped error, or the same case.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="map"/> returns <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException">The result is <see langword="default"/>.</exception>
@@ -79,7 +79,7 @@ public readonly partial struct Result<T, E1, E2, E3>
         return Tag switch
         {
             TypedResultLogic.SuccessTag => new(Tag, RawValue, null),
-            2 => new(Tag, default!, TypedResultLogic.NotNull(await map((E1)RawError!).WithCancellation(cancellationToken).ConfigureAwait(false), nameof(map))),
+            2 => new(Tag, default!, TypedResultLogic.NotNull(await map((E1)RawError!).ConfigureAwait(false), nameof(map))),
             3 or 4 => new(Tag, default!, RawError),
             _ => throw TypedResultLogic.DefaultInitialized(),
         };
@@ -89,7 +89,7 @@ public readonly partial struct Result<T, E1, E2, E3>
     /// <paramref name="map"/> returns a value task, which is awaited.</summary>
     /// <typeparam name="TError">The error type that replaces <typeparamref name="E1"/>.</typeparam>
     /// <param name="map">Called with the error of type <typeparamref name="E1"/>. Give its parameter type to choose the slot.</param>
-    /// <param name="cancellationToken">Checked before <paramref name="map"/> is called. Observed while awaiting <paramref name="map"/>.</param>
+    /// <param name="cancellationToken">Checked before <paramref name="map"/> is called. A running <paramref name="map"/> is not abandoned.</param>
     /// <returns>A result whose slot holds the mapped error, or the same case.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="map"/> returns <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException">The result is <see langword="default"/>.</exception>
@@ -102,7 +102,7 @@ public readonly partial struct Result<T, E1, E2, E3>
         return Tag switch
         {
             TypedResultLogic.SuccessTag => new(Tag, RawValue, null),
-            2 => new(Tag, default!, TypedResultLogic.NotNull(await map((E1)RawError!).WithCancellation(cancellationToken).ConfigureAwait(false), nameof(map))),
+            2 => new(Tag, default!, TypedResultLogic.NotNull(await map((E1)RawError!).ConfigureAwait(false), nameof(map))),
             3 or 4 => new(Tag, default!, RawError),
             _ => throw TypedResultLogic.DefaultInitialized(),
         };
@@ -112,7 +112,7 @@ public readonly partial struct Result<T, E1, E2, E3>
     /// <paramref name="map"/> returns a task, which is awaited.</summary>
     /// <typeparam name="TError">The error type that replaces <typeparamref name="E2"/>.</typeparam>
     /// <param name="map">Called with the error of type <typeparamref name="E2"/>. Give its parameter type to choose the slot.</param>
-    /// <param name="cancellationToken">Checked before <paramref name="map"/> is called. Observed while awaiting <paramref name="map"/>.</param>
+    /// <param name="cancellationToken">Checked before <paramref name="map"/> is called. A running <paramref name="map"/> is not abandoned.</param>
     /// <returns>A result whose slot holds the mapped error, or the same case.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="map"/> returns <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException">The result is <see langword="default"/>.</exception>
@@ -126,7 +126,7 @@ public readonly partial struct Result<T, E1, E2, E3>
         return Tag switch
         {
             TypedResultLogic.SuccessTag => new(Tag, RawValue, null),
-            3 => new(Tag, default!, TypedResultLogic.NotNull(await map((E2)RawError!).WithCancellation(cancellationToken).ConfigureAwait(false), nameof(map))),
+            3 => new(Tag, default!, TypedResultLogic.NotNull(await map((E2)RawError!).ConfigureAwait(false), nameof(map))),
             2 or 4 => new(Tag, default!, RawError),
             _ => throw TypedResultLogic.DefaultInitialized(),
         };
@@ -136,7 +136,7 @@ public readonly partial struct Result<T, E1, E2, E3>
     /// <paramref name="map"/> returns a value task, which is awaited.</summary>
     /// <typeparam name="TError">The error type that replaces <typeparamref name="E2"/>.</typeparam>
     /// <param name="map">Called with the error of type <typeparamref name="E2"/>. Give its parameter type to choose the slot.</param>
-    /// <param name="cancellationToken">Checked before <paramref name="map"/> is called. Observed while awaiting <paramref name="map"/>.</param>
+    /// <param name="cancellationToken">Checked before <paramref name="map"/> is called. A running <paramref name="map"/> is not abandoned.</param>
     /// <returns>A result whose slot holds the mapped error, or the same case.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="map"/> returns <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException">The result is <see langword="default"/>.</exception>
@@ -149,7 +149,7 @@ public readonly partial struct Result<T, E1, E2, E3>
         return Tag switch
         {
             TypedResultLogic.SuccessTag => new(Tag, RawValue, null),
-            3 => new(Tag, default!, TypedResultLogic.NotNull(await map((E2)RawError!).WithCancellation(cancellationToken).ConfigureAwait(false), nameof(map))),
+            3 => new(Tag, default!, TypedResultLogic.NotNull(await map((E2)RawError!).ConfigureAwait(false), nameof(map))),
             2 or 4 => new(Tag, default!, RawError),
             _ => throw TypedResultLogic.DefaultInitialized(),
         };
@@ -159,7 +159,7 @@ public readonly partial struct Result<T, E1, E2, E3>
     /// <paramref name="map"/> returns a task, which is awaited.</summary>
     /// <typeparam name="TError">The error type that replaces <typeparamref name="E3"/>.</typeparam>
     /// <param name="map">Called with the error of type <typeparamref name="E3"/>. Give its parameter type to choose the slot.</param>
-    /// <param name="cancellationToken">Checked before <paramref name="map"/> is called. Observed while awaiting <paramref name="map"/>.</param>
+    /// <param name="cancellationToken">Checked before <paramref name="map"/> is called. A running <paramref name="map"/> is not abandoned.</param>
     /// <returns>A result whose slot holds the mapped error, or the same case.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="map"/> returns <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException">The result is <see langword="default"/>.</exception>
@@ -173,7 +173,7 @@ public readonly partial struct Result<T, E1, E2, E3>
         return Tag switch
         {
             TypedResultLogic.SuccessTag => new(Tag, RawValue, null),
-            4 => new(Tag, default!, TypedResultLogic.NotNull(await map((E3)RawError!).WithCancellation(cancellationToken).ConfigureAwait(false), nameof(map))),
+            4 => new(Tag, default!, TypedResultLogic.NotNull(await map((E3)RawError!).ConfigureAwait(false), nameof(map))),
             2 or 3 => new(Tag, default!, RawError),
             _ => throw TypedResultLogic.DefaultInitialized(),
         };
@@ -183,7 +183,7 @@ public readonly partial struct Result<T, E1, E2, E3>
     /// <paramref name="map"/> returns a value task, which is awaited.</summary>
     /// <typeparam name="TError">The error type that replaces <typeparamref name="E3"/>.</typeparam>
     /// <param name="map">Called with the error of type <typeparamref name="E3"/>. Give its parameter type to choose the slot.</param>
-    /// <param name="cancellationToken">Checked before <paramref name="map"/> is called. Observed while awaiting <paramref name="map"/>.</param>
+    /// <param name="cancellationToken">Checked before <paramref name="map"/> is called. A running <paramref name="map"/> is not abandoned.</param>
     /// <returns>A result whose slot holds the mapped error, or the same case.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="map"/> returns <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException">The result is <see langword="default"/>.</exception>
@@ -196,7 +196,7 @@ public readonly partial struct Result<T, E1, E2, E3>
         return Tag switch
         {
             TypedResultLogic.SuccessTag => new(Tag, RawValue, null),
-            4 => new(Tag, default!, TypedResultLogic.NotNull(await map((E3)RawError!).WithCancellation(cancellationToken).ConfigureAwait(false), nameof(map))),
+            4 => new(Tag, default!, TypedResultLogic.NotNull(await map((E3)RawError!).ConfigureAwait(false), nameof(map))),
             2 or 3 => new(Tag, default!, RawError),
             _ => throw TypedResultLogic.DefaultInitialized(),
         };
@@ -239,7 +239,7 @@ public static partial class ResultExtensions
     /// <typeparam name="TError">The error type that replaces <typeparamref name="E1"/>.</typeparam>
     /// <param name="task">The pending result.</param>
     /// <param name="map">Called with the error of type <typeparamref name="E1"/>. Give its parameter type to choose the slot.</param>
-    /// <param name="cancellationToken">Checked before <paramref name="map"/> is called. Observed while awaiting <paramref name="task"/> and <paramref name="map"/>.</param>
+    /// <param name="cancellationToken">Checked before <paramref name="map"/> is called. Observed while awaiting <paramref name="task"/>; a running <paramref name="map"/> is not abandoned.</param>
     /// <returns>A result whose slot holds the mapped error, or the same case.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="map"/> returns <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException">The result is <see langword="default"/>.</exception>
@@ -289,7 +289,7 @@ public static partial class ResultExtensions
     /// <typeparam name="TError">The error type that replaces <typeparamref name="E1"/>.</typeparam>
     /// <param name="task">The pending result.</param>
     /// <param name="map">Called with the error of type <typeparamref name="E1"/>. Give its parameter type to choose the slot.</param>
-    /// <param name="cancellationToken">Checked before <paramref name="map"/> is called. Observed while awaiting <paramref name="task"/> and <paramref name="map"/>.</param>
+    /// <param name="cancellationToken">Checked before <paramref name="map"/> is called. Observed while awaiting <paramref name="task"/>; a running <paramref name="map"/> is not abandoned.</param>
     /// <returns>A result whose slot holds the mapped error, or the same case.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="map"/> returns <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException">The result is <see langword="default"/>.</exception>
@@ -339,7 +339,7 @@ public static partial class ResultExtensions
     /// <typeparam name="TError">The error type that replaces <typeparamref name="E2"/>.</typeparam>
     /// <param name="task">The pending result.</param>
     /// <param name="map">Called with the error of type <typeparamref name="E2"/>. Give its parameter type to choose the slot.</param>
-    /// <param name="cancellationToken">Checked before <paramref name="map"/> is called. Observed while awaiting <paramref name="task"/> and <paramref name="map"/>.</param>
+    /// <param name="cancellationToken">Checked before <paramref name="map"/> is called. Observed while awaiting <paramref name="task"/>; a running <paramref name="map"/> is not abandoned.</param>
     /// <returns>A result whose slot holds the mapped error, or the same case.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="map"/> returns <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException">The result is <see langword="default"/>.</exception>
@@ -389,7 +389,7 @@ public static partial class ResultExtensions
     /// <typeparam name="TError">The error type that replaces <typeparamref name="E2"/>.</typeparam>
     /// <param name="task">The pending result.</param>
     /// <param name="map">Called with the error of type <typeparamref name="E2"/>. Give its parameter type to choose the slot.</param>
-    /// <param name="cancellationToken">Checked before <paramref name="map"/> is called. Observed while awaiting <paramref name="task"/> and <paramref name="map"/>.</param>
+    /// <param name="cancellationToken">Checked before <paramref name="map"/> is called. Observed while awaiting <paramref name="task"/>; a running <paramref name="map"/> is not abandoned.</param>
     /// <returns>A result whose slot holds the mapped error, or the same case.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="map"/> returns <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException">The result is <see langword="default"/>.</exception>
@@ -439,7 +439,7 @@ public static partial class ResultExtensions
     /// <typeparam name="TError">The error type that replaces <typeparamref name="E3"/>.</typeparam>
     /// <param name="task">The pending result.</param>
     /// <param name="map">Called with the error of type <typeparamref name="E3"/>. Give its parameter type to choose the slot.</param>
-    /// <param name="cancellationToken">Checked before <paramref name="map"/> is called. Observed while awaiting <paramref name="task"/> and <paramref name="map"/>.</param>
+    /// <param name="cancellationToken">Checked before <paramref name="map"/> is called. Observed while awaiting <paramref name="task"/>; a running <paramref name="map"/> is not abandoned.</param>
     /// <returns>A result whose slot holds the mapped error, or the same case.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="map"/> returns <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException">The result is <see langword="default"/>.</exception>
@@ -489,7 +489,7 @@ public static partial class ResultExtensions
     /// <typeparam name="TError">The error type that replaces <typeparamref name="E3"/>.</typeparam>
     /// <param name="task">The pending result.</param>
     /// <param name="map">Called with the error of type <typeparamref name="E3"/>. Give its parameter type to choose the slot.</param>
-    /// <param name="cancellationToken">Checked before <paramref name="map"/> is called. Observed while awaiting <paramref name="task"/> and <paramref name="map"/>.</param>
+    /// <param name="cancellationToken">Checked before <paramref name="map"/> is called. Observed while awaiting <paramref name="task"/>; a running <paramref name="map"/> is not abandoned.</param>
     /// <returns>A result whose slot holds the mapped error, or the same case.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="map"/> returns <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException">The result is <see langword="default"/>.</exception>
