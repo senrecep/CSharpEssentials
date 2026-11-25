@@ -5,7 +5,7 @@ namespace CSharpEssentials.EntityFrameworkCore.Outbox;
 /// <summary>
 /// The provider-neutral <see cref="IOutboxMessageClaimer"/>: it reads the ids of the oldest due rows, then claims them
 /// with one conditional <c>UPDATE</c> (<c>ExecuteUpdate</c>) that repeats the due condition, so a row another
-/// processor claimed in between is skipped, and reads back the rows that carry its token. Concurrent processors
+/// processor claimed in between is skipped, and reads back, by primary key, the candidates that carry its token. Concurrent processors
 /// never claim the same row, but they may compete for the same candidates and claim fewer rows than the batch size;
 /// use <see cref="SqlOutboxMessageClaimer"/> with a provider dialect for many processors on a busy table.
 /// </summary>
@@ -49,7 +49,7 @@ public sealed class ConditionalUpdateOutboxMessageClaimer : IOutboxMessageClaime
 
         return await messages
             .AsNoTracking()
-            .Where(m => m.ClaimToken == token)
+            .Where(m => candidates.Contains(m.Id) && m.ClaimToken == token)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
     }

@@ -17,6 +17,14 @@ namespace CSharpEssentials.EntityFrameworkCore.Locking;
 /// connection drops, the database ends the session and releases the lock while the handle is still held. Each acquire
 /// uses one pooled connection for as long as the lock is held. The lock is not reentrant.
 /// </para>
+/// <para>
+/// When an acquire fails or is cancelled after its statement was sent, the release statement runs once and its own
+/// error is ignored, because the lock may have been taken. When the release of a held lock throws, the connection is
+/// still closed and the error is thrown from <c>DisposeAsync</c>. A session lock lives as long as the database session,
+/// and a pooled connection keeps its session until the pool reuses or drops it, so a lock whose release failed can stay
+/// held for the pool's idle lifetime. Give the lock context a connection string with pooling off, or one whose
+/// provider resets the session when a connection returns to the pool, when that matters.
+/// </para>
 /// </summary>
 /// <typeparam name="TContext">A relational context whose connection reaches the lock database.</typeparam>
 public sealed class RelationalResourceLock<TContext> : IResourceLock
@@ -88,6 +96,7 @@ public sealed class RelationalResourceLock<TContext> : IResourceLock
         }
         catch
         {
+            await session.ReleaseQuietlyAsync(_dialect.ReleaseSql, key).ConfigureAwait(false);
             await session.CloseAsync().ConfigureAwait(false);
             throw;
         }
@@ -115,11 +124,13 @@ public sealed class RelationalResourceLock<TContext> : IResourceLock
     private sealed class Session(AsyncServiceScope scope)
     {
         private TContext? _context;
+        private bool _acquireSent;
 
         public async Task<bool> TryAcquireAsync(string sql, string key, CancellationToken cancellationToken)
         {
             _context = scope.ServiceProvider.GetRequiredService<TContext>();
             await _context.Database.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
+            _acquireSent = true;
             List<int> result = await _context.Database
                 .SqlQueryRaw<int>(sql, key)
                 .ToListAsync(cancellationToken)
@@ -129,6 +140,26 @@ public sealed class RelationalResourceLock<TContext> : IResourceLock
 
         public Task<int> ReleaseAsync(string sql, string key) =>
             _context!.Database.ExecuteSqlRawAsync(sql, [key], CancellationToken.None);
+
+        /// <summary>
+        /// Runs the release once after an acquire that failed or was cancelled once its statement was sent, since the
+        /// lock may have been taken; a pooled connection would otherwise keep it. Its own error is not thrown, so the
+        /// original one is.
+        /// </summary>
+        public async Task ReleaseQuietlyAsync(string sql, string key)
+        {
+            if (!_acquireSent)
+                return;
+
+            try
+            {
+                await ReleaseAsync(sql, key).ConfigureAwait(false);
+            }
+            catch (Exception exception) when (exception is not OutOfMemoryException)
+            {
+                _acquireSent = false;
+            }
+        }
 
         public async Task CloseAsync()
         {

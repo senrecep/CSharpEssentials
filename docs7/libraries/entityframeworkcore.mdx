@@ -743,6 +743,7 @@ services.AddOutboxProcessor<AppDbContext>(options =>
 - A claim sets `ClaimToken`, adds one to `Attempts` and moves `NextAttemptAt` to the end of the lease (`LeaseDuration`, 5 minutes). If a processor stops mid-batch, its rows are claimed again once the lease ends. Completion, retry and dead-letter updates check the claim token, so a processor whose lease ended cannot overwrite a newer claim.
 - A handler that throws, or a type name that is not registered, records `Error` (exception type and message, at most `MaxErrorLength` characters) and schedules a retry. The delay is `RetryDelay` or `OutboxRetryBackoff.Compute`: `RetryBaseDelay` (5 s) doubled per attempt, capped at `RetryMaxDelay` (10 min), with jitter in the upper half when `UseJitter` is on (the default).
 - On attempt `MaxAttempts` (10) a failure sets `DeadLetteredAt` instead, and the row is never claimed again. A row whose lease ended after its last attempt is dead-lettered without calling the handler. Dead-lettered rows keep `Error`; query them to inspect or replay (clear `DeadLetteredAt`, reset `Attempts`).
+- The lease is checked before each message. When it has ended mid-batch (a slow handler, a long batch), the messages not yet handled are released: they become due at once, their claim does not count as an attempt, and the next claim delivers them. Keep `LeaseDuration` longer than a batch takes so this stays rare.
 - Handlers are resolved in a scope per message. A database error or cancellation is thrown from `ProcessBatchAsync`; a handler error never is.
 
 The default claimer, `ConditionalUpdateOutboxMessageClaimer`, works on any relational provider. It reads the ids of the oldest due rows, then claims them with one conditional `UPDATE` that repeats the due condition, so two processors never claim the same row. With many processors on a busy table they compete for the same candidates. Then switch to a provider statement that skips locked rows:
@@ -770,6 +771,14 @@ UPDATE claimed SET [ClaimToken] = {0}, [NextAttemptAt] = {1}, [Attempts] = [Atte
 ```
 
 `OutboxClaimDialect.Sqlite` is the PostgreSQL form without `FOR UPDATE SKIP LOCKED`. For another database, pass your own statement to `new SqlOutboxMessageClaimer(sql)`. It gets the `FromSqlRaw` placeholders `{0}` claim token, `{1}` lease end, `{2}` now and `{3}` batch size, and must return every column of the claimed rows. The SQLite statement and the default claimer run against SQLite in the test suite. The PostgreSQL and SQL Server statements are checked as text only, and no provider package is referenced.
+
+The processor never deletes rows. Processed rows stay in the table until you remove them with `PurgeProcessedOutboxMessagesAsync`, which deletes in one statement the rows processed before a UTC cutoff and returns the count. Pending and dead-lettered rows are kept. Run it from a job:
+
+```csharp
+await using AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
+AppDbContext context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+await context.PurgeProcessedOutboxMessagesAsync(DateTime.UtcNow.AddDays(-7), stoppingToken);
+```
 
 ### Idempotency records
 

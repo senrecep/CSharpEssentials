@@ -289,6 +289,83 @@ public sealed class OutboxProcessorTests : IDisposable
 
         act.Should().Throw<ArgumentOutOfRangeException>().WithMessage("*BatchSize*");
     }
+
+    [Fact]
+    public void AddOutboxProcessor_Should_Throw_When_PollingIntervalIsZero()
+    {
+        ServiceCollection services = new();
+
+        Action act = () => services.AddOutboxProcessor<PlainOutboxDbContext>(options => options.PollingInterval = TimeSpan.Zero);
+
+        act.Should().Throw<ArgumentOutOfRangeException>().WithMessage("*PollingInterval*");
+    }
+
+    [Fact]
+    public async Task ConditionalUpdateClaimer_Should_ReadBackOnlyCandidates_When_AnotherRowCarriesTheToken()
+    {
+        CreateProcessor();
+        Guid token = Guid.NewGuid();
+        OutboxMessage stale = await SeedAsync(new LegacyEvent("stale"));
+        OutboxMessage due = await SeedAsync(new LegacyEvent("due"));
+        DateTime now = _clock.GetUtcNow().UtcDateTime;
+        await using PlainOutboxDbContext context = NewContext();
+        await context.OutboxMessages.Where(m => m.Id == stale.Id)
+            .ExecuteUpdateAsync(s => s.SetProperty(m => m.ProcessedAt, now).SetProperty(m => m.ClaimToken, token));
+
+        IReadOnlyList<OutboxMessage> claimed = await ConditionalUpdateOutboxMessageClaimer.Instance.ClaimAsync(
+            context, new OutboxClaimRequest(token, 10, now, now.AddMinutes(1)), default);
+
+        claimed.Select(m => m.Id).Should().Equal(due.Id);
+    }
+
+    [Fact]
+    public async Task ProcessBatchAsync_Should_ReleaseUnhandledMessages_When_LeaseEndsMidBatch()
+    {
+        IOutboxProcessor processor = CreateProcessor(options =>
+        {
+            options.LeaseDuration = TimeSpan.FromMinutes(1);
+            options.MaxAttempts = 1;
+        });
+        DateTime t0 = _clock.GetUtcNow().UtcDateTime;
+        OutboxMessage first = await SeedAsync(new LegacyEvent("first"), t0.AddSeconds(-2));
+        OutboxMessage second = await SeedAsync(new LegacyEvent("second"), t0.AddSeconds(-1));
+        _handler.OnHandle = _ =>
+        {
+            _clock.Advance(TimeSpan.FromMinutes(1));
+            return Task.CompletedTask;
+        };
+
+        int claimed = await processor.ProcessBatchAsync();
+
+        claimed.Should().Be(2);
+        _handler.Handled.Select(h => h.Message.Id).Should().Equal(first.Id);
+        (await ReadAsync(first.Id)).ProcessedAt.Should().NotBeNull();
+        OutboxMessage released = await ReadAsync(second.Id);
+        released.Attempts.Should().Be(0);
+        released.ClaimToken.Should().BeNull();
+        released.NextAttemptAt.Should().Be(_clock.GetUtcNow().UtcDateTime);
+        released.DeadLetteredAt.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task PurgeProcessedOutboxMessagesAsync_Should_DeleteOnlyRowsProcessedBeforeTheCutoff()
+    {
+        CreateProcessor();
+        DateTime now = _clock.GetUtcNow().UtcDateTime;
+        OutboxMessage old = await SeedAsync(new LegacyEvent("old"));
+        OutboxMessage recent = await SeedAsync(new LegacyEvent("recent"));
+        OutboxMessage pending = await SeedAsync(new LegacyEvent("pending"));
+        OutboxMessage dead = await SeedAsync(new LegacyEvent("dead"));
+        await using PlainOutboxDbContext context = NewContext();
+        await context.OutboxMessages.Where(m => m.Id == old.Id).ExecuteUpdateAsync(s => s.SetProperty(m => m.ProcessedAt, now.AddDays(-8)));
+        await context.OutboxMessages.Where(m => m.Id == recent.Id).ExecuteUpdateAsync(s => s.SetProperty(m => m.ProcessedAt, now.AddDays(-1)));
+        await context.OutboxMessages.Where(m => m.Id == dead.Id).ExecuteUpdateAsync(s => s.SetProperty(m => m.DeadLetteredAt, now.AddDays(-30)));
+
+        int deleted = await context.PurgeProcessedOutboxMessagesAsync(now.AddDays(-7));
+
+        deleted.Should().Be(1);
+        (await context.OutboxMessages.Select(m => m.Id).ToListAsync()).Should().BeEquivalentTo([recent.Id, pending.Id, dead.Id]);
+    }
 }
 
 public sealed class OutboxClaimSqlTests

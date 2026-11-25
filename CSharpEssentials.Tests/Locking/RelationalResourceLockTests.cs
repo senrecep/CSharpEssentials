@@ -3,7 +3,10 @@ using CSharpEssentials.Locking;
 using CSharpEssentials.Locking.Testing;
 using CSharpEssentials.Mediator;
 using FluentAssertions;
+using System.Data.Common;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CSharpEssentials.Tests.Locking;
@@ -68,6 +71,62 @@ public sealed class RelationalResourceLockTests
         Action act = () => _ = new RelationalResourceLock<LockDbContext>(scopes, new RelationalResourceLockOptions());
 
         act.Should().Throw<ArgumentException>();
+    }
+}
+
+public sealed class RelationalResourceLockCancellationTests : IDisposable
+{
+    private readonly string _path = Path.Combine(Path.GetTempPath(), $"cse-lock-{Guid.NewGuid():N}.db");
+    private readonly CancelAfterAcquireInterceptor _interceptor = new();
+    private readonly ServiceProvider _provider;
+
+    public RelationalResourceLockCancellationTests()
+    {
+        ServiceCollection services = new();
+        services.AddDbContext<LockDbContext>(options => options
+            .UseSqlite($"Data Source={_path};Pooling=False")
+            .AddInterceptors(_interceptor));
+        services.AddRelationalResourceLock<LockDbContext>(RelationalResourceLockSqliteContractTests.SqliteTableDialect);
+        _provider = services.BuildServiceProvider();
+        using IServiceScope scope = _provider.CreateScope();
+        scope.ServiceProvider.GetRequiredService<LockDbContext>().Database.EnsureCreated();
+    }
+
+    public void Dispose()
+    {
+        _provider.Dispose();
+        SqliteConnection.ClearAllPools();
+        File.Delete(_path);
+    }
+
+    private sealed class CancelAfterAcquireInterceptor : DbCommandInterceptor
+    {
+        public bool Armed { get; set; }
+
+        public override async ValueTask<DbDataReader> ReaderExecutedAsync(
+            DbCommand command, CommandExecutedEventData eventData, DbDataReader result, CancellationToken cancellationToken = default)
+        {
+            if (!Armed)
+                return result;
+
+            Armed = false;
+            await result.DisposeAsync();
+            throw new OperationCanceledException();
+        }
+    }
+
+    [Fact]
+    public async Task TryAcquireAsync_Should_ReleaseTheLock_When_CancelledAfterTheAcquireStatementRan()
+    {
+        IResourceLock resourceLock = _provider.GetRequiredService<IResourceLock>();
+        _interceptor.Armed = true;
+        Func<Task> cancelled = async () => await resourceLock.TryAcquireAsync("order:1");
+        await cancelled.Should().ThrowAsync<OperationCanceledException>();
+
+        CSharpEssentials.Maybe.Maybe<IAsyncDisposable> next = await resourceLock.TryAcquireAsync("order:1");
+
+        next.HasValue.Should().BeTrue();
+        await next.Value.DisposeAsync();
     }
 }
 

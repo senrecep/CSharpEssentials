@@ -5,9 +5,9 @@
     <PackageId>CSharpEssentials.Mediator.Testing</PackageId>
     <Title>CSharp Essentials Mediator Testing</Title>
     <Product>CSharp Essentials Mediator Testing</Product>
-    <Description>xUnit contract tests for IResourceLock implementations of CSharpEssentials.Mediator, and
+    <Description>Contract scenarios for IResourceLock implementations of CSharpEssentials.Mediator that run from any test framework, and
       RecordingResourceLock, a public in-process fake that records every acquire and release for LockBehavior tests.</Description>
-    <PackageTags>Mediator,Locking,Testing,xUnit,ContractTests,CSharpEssentials</PackageTags>
+    <PackageTags>Mediator,Locking,Testing,ContractTests,CSharpEssentials</PackageTags>
     <PackageIcon>icon.png</PackageIcon>
     <PackageReadmeFile>Readme.MD</PackageReadmeFile>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
@@ -20,10 +20,6 @@
     <None Include="..\icon.png" Pack="true" PackagePath="\" />
     <None Include="Readme.MD" Pack="true" PackagePath="\" />
     <None Include="..\LICENCE" Pack="true" PackagePath="\" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="xunit" />
   </ItemGroup>
 
   <ItemGroup>

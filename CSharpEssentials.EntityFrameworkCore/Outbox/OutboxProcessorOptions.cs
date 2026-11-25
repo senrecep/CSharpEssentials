@@ -36,7 +36,7 @@ public sealed class OutboxProcessorOptions
     /// <summary>The longest error text stored in <see cref="OutboxMessage.Error"/>. Default: 2000.</summary>
     public int MaxErrorLength { get; set; } = 2000;
 
-    /// <summary>How long the hosted service waits after a batch that was not full. Default: 5 seconds.</summary>
+    /// <summary>How long the hosted service waits after a batch that was not full. Must be positive. Default: 5 seconds.</summary>
     public TimeSpan PollingInterval { get; set; } = TimeSpan.FromSeconds(5);
 
     /// <summary>
@@ -53,7 +53,7 @@ public sealed class OutboxProcessorOptions
         Require(RetryBaseDelay >= TimeSpan.Zero, nameof(RetryBaseDelay), "must not be negative");
         Require(RetryMaxDelay >= RetryBaseDelay, nameof(RetryMaxDelay), $"must not be less than {nameof(RetryBaseDelay)}");
         Require(MaxErrorLength >= 1, nameof(MaxErrorLength), "must be at least 1");
-        Require(PollingInterval >= TimeSpan.Zero, nameof(PollingInterval), "must not be negative");
+        Require(PollingInterval > TimeSpan.Zero, nameof(PollingInterval), "must be positive");
         if (Claimer is null)
             throw new InvalidOperationException($"{nameof(OutboxProcessorOptions)}.{nameof(Claimer)} must not be null.");
     }

@@ -6,7 +6,7 @@
 
 [![Build](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml/badge.svg)](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml)
 
-[![Tests](https://img.shields.io/badge/tests-6964%20passing-brightgreen)](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml)
+[![Tests](https://img.shields.io/badge/tests-6970%20passing-brightgreen)](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml)
 [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials)
 [![Downloads](https://img.shields.io/nuget/dt/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/senrecep/CSharpEssentials/blob/main/LICENCE)
@@ -29,7 +29,7 @@ CSharpEssentials is a modular .NET NuGet ecosystem that bridges object-oriented 
 | `CSharpEssentials.Enums` | `[StringEnum]` source generator, AOT-safe enum to string and back | [Docs](CSharpEssentials.Enums/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Enums.svg)](https://www.nuget.org/packages/CSharpEssentials.Enums) |
 | `CSharpEssentials.Rules` | Composable rule engine with `.And()/.Or()/.Linear()/.Next()` | [Docs](examples/Examples.Rules/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Rules.svg)](https://www.nuget.org/packages/CSharpEssentials.Rules) |
 | `CSharpEssentials.Mediator` | CQRS pipeline behaviors for the Mediator source generator: validation, logging, exception handling, caching, locking, transactions, idempotency | [Docs](CSharpEssentials.Mediator/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Mediator.svg)](https://www.nuget.org/packages/CSharpEssentials.Mediator) |
-| `CSharpEssentials.Mediator.Testing` | xUnit contract tests for `IResourceLock` implementations and `RecordingResourceLock`, a recording fake | [Docs](CSharpEssentials.Mediator.Testing/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Mediator.Testing.svg)](https://www.nuget.org/packages/CSharpEssentials.Mediator.Testing) |
+| `CSharpEssentials.Mediator.Testing` | Contract scenarios for `IResourceLock` implementations, for any test framework, and `RecordingResourceLock`, a recording fake | [Docs](CSharpEssentials.Mediator.Testing/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Mediator.Testing.svg)](https://www.nuget.org/packages/CSharpEssentials.Mediator.Testing) |
 | `CSharpEssentials.Entity` | `EntityBase<TId>`, soft deletion, domain events | [Docs](examples/Examples.Entity/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Entity.svg)](https://www.nuget.org/packages/CSharpEssentials.Entity) |
 | `CSharpEssentials.EntityFrameworkCore` | EF Core interceptors (audit, events, slow queries), offset and keyset pagination, enum storage | [Docs](examples/Examples.EntityFrameworkCore/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.EntityFrameworkCore.svg)](https://www.nuget.org/packages/CSharpEssentials.EntityFrameworkCore) |
 | `CSharpEssentials.EntityFrameworkCore.HealthChecks` | Readiness health check that fails while a `DbContext` has pending migrations | [Docs](CSharpEssentials.EntityFrameworkCore.HealthChecks/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.EntityFrameworkCore.HealthChecks.svg)](https://www.nuget.org/packages/CSharpEssentials.EntityFrameworkCore.HealthChecks) |

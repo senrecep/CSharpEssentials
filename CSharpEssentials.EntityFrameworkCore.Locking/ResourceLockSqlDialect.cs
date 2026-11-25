@@ -11,7 +11,7 @@ public sealed class ResourceLockSqlDialect
 {
     /// <summary>Creates a dialect.</summary>
     /// <param name="tryAcquireSql">Takes the lock for <c>{0}</c> without waiting; returns <c>Value</c> = 1 when taken.</param>
-    /// <param name="releaseSql">Releases the lock for <c>{0}</c> held by the connection.</param>
+    /// <param name="releaseSql">Releases the lock for <c>{0}</c> held by the connection; a no-op when the connection holds none.</param>
     /// <exception cref="ArgumentException">A statement is empty.</exception>
     public ResourceLockSqlDialect(string tryAcquireSql, string releaseSql)
     {
@@ -41,6 +41,9 @@ public sealed class ResourceLockSqlDialect
     /// <summary>Takes the lock for <c>{0}</c> without waiting and returns <c>Value</c> = 1 when taken.</summary>
     public string TryAcquireSql { get; }
 
-    /// <summary>Releases the lock for <c>{0}</c>.</summary>
+    /// <summary>
+    /// Releases the lock for <c>{0}</c>. It must release only a lock held by the same connection and do nothing (or
+    /// throw) when that connection holds none, because it also runs after an acquire whose result was not read.
+    /// </summary>
     public string ReleaseSql { get; }
 }

@@ -1337,13 +1337,14 @@ Namespace `CSharpEssentials.EntityFrameworkCore.Outbox`.
 
 | Member | What it does |
 |--------|-------------|
-| `IOutboxProcessor.ProcessBatchAsync(ct)` | Claims up to `BatchSize` due rows and dispatches them in `OccurredAt` order. Returns the number claimed. Handler errors are recorded, never thrown; database errors and cancellation are thrown |
+| `IOutboxProcessor.ProcessBatchAsync(ct)` | Claims up to `BatchSize` due rows and dispatches them in `OccurredAt` order. When the lease ends mid-batch, the unhandled rows are released (due at once, attempt not counted). Returns the number claimed. Handler errors are recorded, never thrown; database errors and cancellation are thrown |
 | `OutboxProcessor<TContext>` | The implementation. Each batch and each message run in a scope of their own. Completion, retry and dead-letter updates are conditional on the claim token |
 | `services.AddOutboxProcessor<TContext>(configure?)` | Registers the singleton `IOutboxProcessor` and `OutboxProcessorOptions`; throws `ArgumentOutOfRangeException` for an option out of range |
-| `OutboxProcessorOptions` | `BatchSize` (50), `MaxAttempts` (10), `LeaseDuration` (5 min), `RetryBaseDelay` (5 s), `RetryMaxDelay` (10 min), `UseJitter` (true), `RetryDelay` (`Func<int, TimeSpan>?`), `MaxErrorLength` (2000), `PollingInterval` (5 s, for the hosted service), `Claimer` (`ConditionalUpdateOutboxMessageClaimer`) |
+| `OutboxProcessorOptions` | `BatchSize` (50), `MaxAttempts` (10), `LeaseDuration` (5 min), `RetryBaseDelay` (5 s), `RetryMaxDelay` (10 min), `UseJitter` (true), `RetryDelay` (`Func<int, TimeSpan>?`), `MaxErrorLength` (2000), `PollingInterval` (5 s, for the hosted service; must be positive), `Claimer` (`ConditionalUpdateOutboxMessageClaimer`) |
 | `IOutboxMessageHandler.HandleAsync(OutboxMessage, IDomainEvent, ct)` | You implement it: deliver the event. Called at least once per message; throwing fails the attempt |
 | `IOutboxMessageClaimer.ClaimAsync(DbContext, OutboxClaimRequest, ct)` | Claims due rows: sets `ClaimToken`, `NextAttemptAt` = lease end, `Attempts + 1`. `OutboxClaimRequest(ClaimToken, BatchSize, Now, LeaseUntil)` |
-| `ConditionalUpdateOutboxMessageClaimer.Instance` | Provider-neutral claimer: candidate ids, then one conditional `ExecuteUpdate` |
+| `ConditionalUpdateOutboxMessageClaimer.Instance` | Provider-neutral claimer: candidate ids, then one conditional `ExecuteUpdate`, then a read-back of the candidates by primary key |
+| `context.PurgeProcessedOutboxMessagesAsync(processedBefore, ct)` | Deletes processed rows with `ProcessedAt` before the UTC cutoff in one `ExecuteDelete`; returns the count. Pending and dead-lettered rows are kept |
 | `SqlOutboxMessageClaimer(OutboxClaimDialect)` / `SqlOutboxMessageClaimer(string sql)` | Claims with one `FromSqlRaw` statement. Placeholders: `{0}` token, `{1}` lease end, `{2}` now, `{3}` batch size |
 | `OutboxClaimSql.Build(DbContext, OutboxClaimDialect)` | The statement for `PostgreSql` (`FOR UPDATE SKIP LOCKED`), `SqlServer` (`UPDLOCK, READPAST`) or `Sqlite` (`RETURNING *`), from the mapped names |
 | `OutboxRetryBackoff.Compute(attempt, baseDelay, maxDelay, useJitter)` | `baseDelay * 2^(attempt-1)` capped at `maxDelay`; with jitter, uniform in the upper half |
@@ -1713,7 +1714,7 @@ Singleton behavior between `LoggingBehavior` and `CachingBehavior`. It activates
 | `InProcessResourceLock` | Default: one `SemaphoreSlim` per key, removed when the last holder or waiter leaves. Serializes only within one process; register a distributed implementation for several instances |
 | `AddRelationalResourceLock<TContext>(dialect, configure?)` (`CSharpEssentials.EntityFrameworkCore.Locking`) | Registers `RelationalResourceLock<TContext>` as the singleton `IResourceLock`, replacing the in-process one. Each held lock owns a scope and an open connection of `TContext`; `AcquireAsync` polls every `PollInterval` (100 ms) |
 | `ResourceLockSqlDialect.PostgreSql` / `.SqlServer` / `new(tryAcquireSql, releaseSql)` | Session locks: `pg_try_advisory_lock(hashtextextended(key, 0))`, `sp_getapplock` with `@LockOwner = 'Session'`, or your SQL. Key placeholder `{0}`; try-acquire returns `Value` = 1 when taken |
-| `ResourceLockContractTests` (`CSharpEssentials.Mediator.Testing`, namespace `CSharpEssentials.Locking.Testing`) | xUnit contract tests: implement `CreateLock()`. See the package Readme |
+| `ResourceLockContract(lock, shortWait?, longWait?)` (`CSharpEssentials.Mediator.Testing`, namespace `CSharpEssentials.Locking.Testing`) | Contract scenarios with no test framework dependency: `ScenarioNames`, `RunAsync(name)` and one public method per scenario. A broken contract throws `ResourceLockContractException`. See the package Readme |
 | `RecordingResourceLock` (`CSharpEssentials.Mediator.Testing`) | In-process lock that records `Acquisitions`, `Releases` and `HeldKeys`; `FailWith` makes calls throw |
 | `ILockedRequest` | `LockKey` and optional `LockTimeout` (default `null`) |
 | `LockPlacement` | `OutsideTransaction` (lock held until the transaction has committed) or `InsideTransaction` (lock taken inside the transaction, for transaction-scoped locks such as `pg_advisory_xact_lock`) |

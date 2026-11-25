@@ -273,7 +273,7 @@ services.AddScoped<IResourceLock, PostgresAdvisoryLock>();
 
 When the lock needs a numeric key, derive it with a stable hash (FNV-1a 64 over the UTF-8 bytes, or a server-side hash such as PostgreSQL `hashtextextended(key, 0)`), never `string.GetHashCode()`, which differs between processes.
 
-`CSharpEssentials.EntityFrameworkCore.Locking` ships a database implementation that needs no provider package: `services.AddRelationalResourceLock<AppDbContext>(ResourceLockSqlDialect.PostgreSql)` (session advisory locks) or `ResourceLockSqlDialect.SqlServer` (`sp_getapplock`), or your own two statements. `CSharpEssentials.Mediator.Testing` has `ResourceLockContractTests`, xUnit contract tests to run against your own `IResourceLock`, and `RecordingResourceLock`, a fake that records every acquire and release.
+`CSharpEssentials.EntityFrameworkCore.Locking` ships a database implementation that needs no provider package: `services.AddRelationalResourceLock<AppDbContext>(ResourceLockSqlDialect.PostgreSql)` (session advisory locks) or `ResourceLockSqlDialect.SqlServer` (`sp_getapplock`), or your own two statements. `CSharpEssentials.Mediator.Testing` has `ResourceLockContract`, contract scenarios to run against your own `IResourceLock` from any test framework, and `RecordingResourceLock`, a fake that records every acquire and release.
 
 #### Placement
 

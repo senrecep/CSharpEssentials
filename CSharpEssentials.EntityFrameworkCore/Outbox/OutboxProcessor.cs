@@ -11,7 +11,9 @@ namespace CSharpEssentials.EntityFrameworkCore.Outbox;
 /// <see cref="IOutboxMessageSerializer"/> and passed to an <see cref="IOutboxMessageHandler"/> resolved from a scope of
 /// its own, so one handler's tracked changes never leak into the next. Completion, retry and dead-letter updates are
 /// conditional on the claim token, so a processor whose lease ended cannot overwrite the result of the processor that
-/// claimed the row after it. Register it with <see cref="OutboxServiceCollectionExtensions.AddOutboxProcessor{TContext}"/>.
+/// claimed the row after it. Before each message the lease is checked: once it has ended, the messages not yet handled
+/// are released (due at once, their claim attempt taken back) instead of being delivered while another processor may
+/// claim them. Register it with <see cref="OutboxServiceCollectionExtensions.AddOutboxProcessor{TContext}"/>.
 /// </summary>
 /// <typeparam name="TContext">The context that maps <see cref="OutboxMessage"/>.</typeparam>
 public sealed partial class OutboxProcessor<TContext> : IOutboxProcessor
@@ -56,11 +58,39 @@ public sealed partial class OutboxProcessor<TContext> : IOutboxProcessor
             OutboxClaimRequest request = new(Guid.NewGuid(), _options.BatchSize, now, now + _options.LeaseDuration);
             IReadOnlyList<OutboxMessage> claimed = await _options.Claimer.ClaimAsync(context, request, cancellationToken).ConfigureAwait(false);
 
-            foreach (OutboxMessage message in claimed.OrderBy(static m => m.OccurredAt).ThenBy(static m => m.Id))
-                await ProcessAsync(context, serializer, message, request.ClaimToken, cancellationToken).ConfigureAwait(false);
+            OutboxMessage[] ordered = [.. claimed.OrderBy(static m => m.OccurredAt).ThenBy(static m => m.Id)];
+            for (int i = 0; i < ordered.Length; i++)
+            {
+                if (UtcNow() >= request.LeaseUntil)
+                {
+                    LogLeaseEnded(ordered.Length - i);
+                    await ReleaseAsync(context, ordered[i..], request.ClaimToken, cancellationToken).ConfigureAwait(false);
+                    break;
+                }
+
+                await ProcessAsync(context, serializer, ordered[i], request.ClaimToken, cancellationToken).ConfigureAwait(false);
+            }
 
             return claimed.Count;
         }
+    }
+
+    /// <summary>
+    /// Gives back the rows of a batch whose lease ended before they were handled: they become due at once and the
+    /// attempt counted by the claim is taken back. Rows another processor claimed since then are left alone.
+    /// </summary>
+    private Task<int> ReleaseAsync(TContext context, OutboxMessage[] remaining, Guid token, CancellationToken cancellationToken)
+    {
+        Guid[] ids = [.. remaining.Select(static m => m.Id)];
+        DateTime now = UtcNow();
+        return context.Set<OutboxMessage>()
+            .Where(m => ids.Contains(m.Id) && m.ClaimToken == token)
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(m => m.ClaimToken, (Guid?)null)
+                    .SetProperty(m => m.NextAttemptAt, now)
+                    .SetProperty(m => m.Attempts, m => m.Attempts - 1),
+                cancellationToken);
     }
 
     private async Task ProcessAsync(
@@ -150,6 +180,9 @@ public sealed partial class OutboxProcessor<TContext> : IOutboxProcessor
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Outbox message {MessageId} ({MessageType}) failed on attempt {Attempt}")]
     private partial void LogAttemptFailed(Exception exception, Guid messageId, string messageType, int attempt);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "The outbox lease ended mid-batch; {Count} unhandled messages were released for the next claim")]
+    private partial void LogLeaseEnded(int count);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Outbox message {MessageId} ({MessageType}) was dead-lettered after {Attempts} attempts")]
     private partial void LogDeadLettered(Guid messageId, string messageType, int attempts);

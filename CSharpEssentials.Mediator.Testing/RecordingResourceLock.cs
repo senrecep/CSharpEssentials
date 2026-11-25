@@ -4,7 +4,7 @@ namespace CSharpEssentials.Locking.Testing;
 
 /// <summary>
 /// An in-process <see cref="IResourceLock"/> for tests that records every call. It locks for real (through
-/// <see cref="InProcessResourceLock"/>), so it passes <see cref="ResourceLockContractTests"/>, and lets a test check which
+/// <see cref="InProcessResourceLock"/>), so it passes <see cref="ResourceLockContract"/>, and lets a test check which
 /// keys <c>LockBehavior</c> took, with which timeout, and that every handle was released. Set
 /// <see cref="FailWith"/> to make the next acquires throw. Safe to use from several threads.
 /// </summary>

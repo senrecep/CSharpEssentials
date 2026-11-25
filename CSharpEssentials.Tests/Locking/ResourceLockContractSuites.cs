@@ -7,12 +7,23 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CSharpEssentials.Tests.Locking;
 
-public sealed class InProcessResourceLockContractTests : ResourceLockContractTests
+public abstract class ResourceLockContractSuite
+{
+    public static TheoryData<string> Scenarios => new(ResourceLockContract.ScenarioNames);
+
+    protected abstract IResourceLock CreateLock();
+
+    [Theory]
+    [MemberData(nameof(Scenarios))]
+    public Task Scenario(string name) => new ResourceLockContract(CreateLock()).RunAsync(name);
+}
+
+public sealed class InProcessResourceLockContractTests : ResourceLockContractSuite
 {
     protected override IResourceLock CreateLock() => new InProcessResourceLock();
 }
 
-public sealed class RecordingResourceLockContractTests : ResourceLockContractTests
+public sealed class RecordingResourceLockContractTests : ResourceLockContractSuite
 {
     protected override IResourceLock CreateLock() => new RecordingResourceLock();
 }
@@ -32,7 +43,7 @@ internal sealed class LockDbContext(DbContextOptions<LockDbContext> options) : D
         });
 }
 
-public sealed class RelationalResourceLockSqliteContractTests : ResourceLockContractTests, IDisposable
+public sealed class RelationalResourceLockSqliteContractTests : ResourceLockContractSuite, IDisposable
 {
     internal static readonly ResourceLockSqlDialect SqliteTableDialect = new(
         "INSERT INTO \"locks\" (\"Key\") VALUES ({0}) ON CONFLICT DO NOTHING RETURNING 1 AS \"Value\"",
