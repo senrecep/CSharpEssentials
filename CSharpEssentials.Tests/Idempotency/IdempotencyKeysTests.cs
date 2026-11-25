@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Json;
+using CSharpEssentials.Core;
 using CSharpEssentials.Idempotency;
 using FluentAssertions;
 
@@ -25,11 +26,11 @@ public sealed class IdempotencyKeysTests
     }
 
     [Fact]
-    public void CreateUuidV5_Should_Match_The_Rfc9562_Known_Answer()
+    public void NewGuidV5_Should_Match_The_Rfc9562_Known_Answer()
     {
         JsonElement vector = Root.GetProperty("rfc9562");
 
-        Guid uuid = IdempotencyKeys.CreateUuidV5(
+        Guid uuid = Guider.NewGuidV5(
             Guid.Parse(vector.GetProperty("namespace").GetString()!),
             vector.GetProperty("name").GetString()!);
 
@@ -50,7 +51,7 @@ public sealed class IdempotencyKeysTests
 
             IdempotencyKeys.For(operation, ids).Should().Be(vector.GetProperty("key").GetString(), name);
             IdempotencyKeys.ToUuidV5(operation, ids).ToString().Should().Be(vector.GetProperty("uuidV5").GetString(), name);
-            IdempotencyKeys.CreateUuidV5(IdempotencyKeys.UuidNamespace, vector.GetProperty("canonical").GetString()!)
+            Guider.NewGuidV5(IdempotencyKeys.UuidNamespace, vector.GetProperty("canonical").GetString()!)
                 .Should().Be(IdempotencyKeys.ToUuidV5(operation, ids), $"{name}: UUIDv5 hashes the canonical string");
         }
     }

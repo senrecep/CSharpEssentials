@@ -272,7 +272,8 @@ request.SetIdempotencyKey(key);
 
 The key then makes the side effect single end to end: the inbox drops the duplicate message, the command drops a second
 event for the same order, and the provider drops a repeated call. `ToUuidV5` gives the same key as a UUID for providers
-that insist on one.
+that insist on one. It hashes the canonical string with `Guider.NewGuidV5` from `CSharpEssentials.Core`, which also
+makes UUIDv5 ids in a namespace of your own.
 
 ### Calling an idempotent endpoint
 

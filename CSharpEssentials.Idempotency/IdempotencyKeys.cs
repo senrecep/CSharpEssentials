@@ -1,7 +1,7 @@
-using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
 using System.Text;
+using CSharpEssentials.Core;
 
 namespace CSharpEssentials.Idempotency;
 
@@ -54,7 +54,7 @@ public static class IdempotencyKeys
     /// </summary>
     /// <exception cref="ArgumentException">The same cases as <see cref="For"/>.</exception>
     public static Guid ToUuidV5(string operation, params string[] ids) =>
-        CreateUuidV5(UuidNamespace, Canonical(operation, ids));
+        Guider.NewGuidV5(UuidNamespace, Canonical(operation, ids));
 
     /// <summary>
     /// <see langword="true"/> when <paramref name="key"/> is 1 to <paramref name="maxLength"/> characters long and every
@@ -72,50 +72,6 @@ public static class IdempotencyKeys
         }
 
         return true;
-    }
-
-    /// <summary>RFC 9562 UUIDv5 (SHA-1, name-based) of the UTF-8 bytes of <paramref name="name"/> in <paramref name="namespaceId"/>.</summary>
-    [SuppressMessage("Security", "CA5350:Do Not Use Weak Cryptographic Algorithms",
-        Justification = "RFC 9562 defines UUIDv5 as SHA-1; the hash names a key and protects nothing.")]
-    [SuppressMessage("Security", "S4790:Use a stronger hashing algorithm",
-        Justification = "RFC 9562 defines UUIDv5 as SHA-1; the hash names a key and protects nothing.")]
-    internal static Guid CreateUuidV5(Guid namespaceId, string name)
-    {
-#if NET
-        const int StackLimit = 256;
-        int length = 16 + LengthPrefixed.StrictUtf8.GetByteCount(name);
-        byte[]? rented = length > StackLimit ? ArrayPool<byte>.Shared.Rent(length) : null;
-        Span<byte> input = rented is null ? stackalloc byte[StackLimit] : rented;
-        try
-        {
-            _ = namespaceId.TryWriteBytes(input, bigEndian: true, out _);
-            int written = LengthPrefixed.StrictUtf8.GetBytes(name, input[16..]);
-            Span<byte> hash = stackalloc byte[20];
-            _ = SHA1.HashData(input[..(16 + written)], hash);
-            hash[6] = (byte)((hash[6] & 0x0F) | 0x50);
-            hash[8] = (byte)((hash[8] & 0x3F) | 0x80);
-            return new Guid(hash[..16], bigEndian: true);
-        }
-        finally
-        {
-            if (rented is not null)
-                ArrayPool<byte>.Shared.Return(rented);
-        }
-#else
-        byte[] namespaceBytes = namespaceId.ToByteArray();
-        SwapGuidByteOrder(namespaceBytes);
-
-        using var sha1 = IncrementalHash.CreateHash(HashAlgorithmName.SHA1);
-        sha1.AppendData(namespaceBytes);
-        sha1.AppendData(LengthPrefixed.StrictUtf8.GetBytes(name));
-        byte[] uuid = sha1.GetHashAndReset();
-
-        Array.Resize(ref uuid, 16);
-        uuid[6] = (byte)((uuid[6] & 0x0F) | 0x50);
-        uuid[8] = (byte)((uuid[8] & 0x3F) | 0x80);
-        SwapGuidByteOrder(uuid);
-        return new Guid(uuid);
-#endif
     }
 
     private static string Canonical(string operation, string[] ids)
@@ -143,17 +99,4 @@ public static class IdempotencyKeys
         return HashedKeyPrefix + base64.TrimEnd('=').Replace('+', '-').Replace('/', '_');
     }
 
-#if !NET
-    /// <summary>
-    /// <see cref="Guid.ToByteArray()"/> and <c>new Guid(byte[])</c> store the first three fields little-endian; RFC 9562
-    /// orders all bytes big-endian. Swapping those fields converts in either direction.
-    /// </summary>
-    private static void SwapGuidByteOrder(byte[] bytes)
-    {
-        (bytes[0], bytes[3]) = (bytes[3], bytes[0]);
-        (bytes[1], bytes[2]) = (bytes[2], bytes[1]);
-        (bytes[4], bytes[5]) = (bytes[5], bytes[4]);
-        (bytes[6], bytes[7]) = (bytes[7], bytes[6]);
-    }
-#endif
 }

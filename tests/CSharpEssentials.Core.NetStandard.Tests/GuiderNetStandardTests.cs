@@ -36,6 +36,24 @@ public sealed class GuiderNetStandardTests
         UnixMs(b).Should().Be(timestamp.ToUnixTimeMilliseconds());
     }
 
+    [Theory]
+    [InlineData("www.example.com", "2ed6657d-e927-568b-95e1-2665a8aea6a2")]
+    public void NewGuidV5_ShouldMatchTheRfc9562Example(string name, string expected)
+    {
+        Guider.NewGuidV5(GuidNamespaces.Dns, name).Should().Be(new Guid(expected));
+        Guider.NewGuidV5(GuidNamespaces.Dns, System.Text.Encoding.UTF8.GetBytes(name)).Should().Be(new Guid(expected));
+    }
+
+    [Fact]
+    public void NewGuidV5_ShouldHashLongNamesLikeTheirBytes()
+    {
+        string name = new('x', 10_000);
+        Guid guid = Guider.NewGuidV5(GuidNamespaces.Url, name);
+
+        guid.Version.Should().Be(5);
+        guid.Should().Be(Guider.NewGuidV5(GuidNamespaces.Url, System.Text.Encoding.UTF8.GetBytes(name)));
+    }
+
     [Fact]
     public void NewGuid_ShouldReturnUniqueIds()
     {

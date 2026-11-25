@@ -167,6 +167,31 @@ public static class Guider
 #endif
 
     /// <summary>
+    /// Creates the RFC 9562 version 5 (name-based, SHA-1) GUID of the UTF-8 bytes of <paramref name="name"/> in
+    /// <paramref name="namespaceId"/>. The same namespace and name always give the same GUID, on every target and in every process.
+    /// </summary>
+    /// <remarks>
+    /// SHA-1 is what RFC 9562 defines for version 5; the GUID names something and is not a secret or a security token.
+    /// <see cref="GuidNamespaces"/> holds the namespaces the RFC defines; any GUID works as a namespace of your own.
+    /// </remarks>
+    /// <param name="namespaceId">The namespace, for example <see cref="GuidNamespaces.Url"/>.</param>
+    /// <param name="name">The name, encoded as UTF-8 without a byte order mark.</param>
+    /// <returns>A version 5 GUID.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="name"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="name"/> is not well-formed UTF-16 (it contains a lone surrogate).</exception>
+    public static Guid NewGuidV5(Guid namespaceId, string name) =>
+        GuidV5.Create(namespaceId, name ?? throw new ArgumentNullException(nameof(name)));
+
+    /// <summary>
+    /// Creates the RFC 9562 version 5 (name-based, SHA-1) GUID of the bytes of <paramref name="name"/> in <paramref name="namespaceId"/>,
+    /// for names that are not text or are already encoded.
+    /// </summary>
+    /// <param name="namespaceId">The namespace, for example <see cref="GuidNamespaces.Oid"/>.</param>
+    /// <param name="name">The name bytes, hashed as given.</param>
+    /// <returns>A version 5 GUID.</returns>
+    public static Guid NewGuidV5(Guid namespaceId, ReadOnlySpan<byte> name) => GuidV5.Create(namespaceId, name);
+
+    /// <summary>
     /// Creates a new RFC 9562 version 7 GUID that is strictly greater than every GUID this method returned before in the same process (per loaded copy of the assembly).
     /// The 12 bits after the version hold the time inside the millisecond and the first 6 bits of <c>rand_b</c> hold a counter,
     /// so IDs created in the same millisecond also sort in creation order.
