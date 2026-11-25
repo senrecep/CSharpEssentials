@@ -39,6 +39,7 @@ public class ProblemDetailsParityTests
         ["fields-all"] = o => o.ErrorFields = ProblemErrorFields.All,
         ["validation-list"] = o => o.ValidationErrorsFormat = ValidationErrorsFormat.List,
         ["validation-dictionary"] = o => o.ValidationErrorsFormat = ValidationErrorsFormat.Dictionary,
+        ["validation-byfield"] = o => o.ValidationErrorsFormat = ValidationErrorsFormat.ByField,
         ["type-rfc7231"] = o => o.TypeUriResolver = ProblemTypeUris.Rfc7231,
         ["type-null"] = o => o.TypeUriResolver = _ => null,
     };

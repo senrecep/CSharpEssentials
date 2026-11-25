@@ -13,7 +13,10 @@ public sealed class ValidateModelAttribute : ActionFilterAttribute
             return;
         Error[] errors = [.. context.ModelState
             .Where(arg => arg.Value != null)
-            .SelectMany(state => state.Value!.Errors.Select(x => Error.Validation($"validation.{state.Key}", x.ErrorMessage)))];
+            .SelectMany(state => state.Value!.Errors.Select(x => Error.Validation(
+                $"validation.{state.Key}",
+                x.ErrorMessage,
+                new ErrorMetadata(ErrorMetadata.FieldKey, state.Key))))];
         context.Result = errors.ToActionResult(context.HttpContext);
     }
 }

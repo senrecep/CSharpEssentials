@@ -81,6 +81,8 @@ public sealed class RuleChain<T, TProp>
     /// In <see cref="CascadeMode.Stop"/> mode subsequent calls on this chain become no-ops.
     /// In <see cref="CascadeMode.Continue"/> mode all validators keep running.
     /// Use this method when writing custom extension validators.
+    /// The error is recorded as given, so it carries no <see cref="ErrorMetadata.FieldKey"/> entry unless it already has one;
+    /// <see cref="AddError(string, string)"/> adds it.
     /// </summary>
     public RuleChain<T, TProp> AddError(Error error)
     {
@@ -94,6 +96,15 @@ public sealed class RuleChain<T, TProp>
         }
         return this;
     }
+
+    /// <summary>
+    /// Records an <see cref="ErrorType.Validation"/> error with <paramref name="errorCode"/> and
+    /// <paramref name="errorMessage"/>, and <see cref="PropertyName"/> under the <see cref="ErrorMetadata.FieldKey"/>
+    /// metadata key. Cascade rules are those of <see cref="AddError(Error)"/>.
+    /// Every built-in validator records its default error through this method.
+    /// </summary>
+    public RuleChain<T, TProp> AddError(string errorCode, string errorMessage) =>
+        HasFailed ? this : AddError(Error.Validation(errorCode, errorMessage, FieldMetadata.Create(PropertyName)));
 
     /// <summary>
     /// Appends <paramref name="error"/> directly to the parent context, bypassing the cascade-stop
@@ -123,7 +134,7 @@ public sealed class RuleChain<T, TProp>
         string errorMessage)
     {
         if (!HasFailed && !predicate(Value))
-            AddError(Error.Validation(errorCode, errorMessage));
+            AddError(errorCode, errorMessage);
         return this;
     }
 
@@ -135,9 +146,9 @@ public sealed class RuleChain<T, TProp>
         [CallerArgumentExpression(nameof(predicate))] string predicateExpr = "")
     {
         if (!HasFailed && !predicate(Value))
-            AddError(Error.Validation(
+            AddError(
                 $"{PropertyName}.Must",
-                $"'{PropertyName}' did not satisfy the condition: {predicateExpr}."));
+                $"'{PropertyName}' did not satisfy the condition: {predicateExpr}.");
         return this;
     }
 
@@ -152,7 +163,7 @@ public sealed class RuleChain<T, TProp>
         CancellationToken ct = default)
     {
         if (!HasFailed && !await predicate(Value, ct).ConfigureAwait(false))
-            AddError(Error.Validation(errorCode, errorMessage));
+            AddError(errorCode, errorMessage);
         return this;
     }
 }

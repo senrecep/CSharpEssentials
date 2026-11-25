@@ -49,7 +49,7 @@ app.UseEnhancedProblemDetails(); // UseExceptionHandler() + UseStatusCodePages()
 | `TypeUriResolver` | `ProblemTypeUris.Rfc9110` | `Rfc7231` |
 | `ExposeExceptionDetails` | `false` | N/A |
 
-`errors` holds only `ErrorType.Validation` errors as `{ code, description }` (`ValidationErrorsFormat.List`).
+`errors` holds only `ErrorType.Validation` errors as `{ code, description }` (`ValidationErrorsFormat.List`, the default). `Dictionary` groups descriptions by code; `ByField` groups them by the `field` metadata entry (`{ "Name": ["..."] }`, the `ValidationProblemDetails` shape), falling back to the code.
 
 ### Status codes
 

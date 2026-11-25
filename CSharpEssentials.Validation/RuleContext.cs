@@ -27,7 +27,7 @@ public sealed class RuleContext<T>
     internal bool HasErrors => _errors is not null && _errors.Count > 0;
     internal IReadOnlyList<Error> Errors => (IReadOnlyList<Error>?)_errors ?? [];
 
-    /// <summary>Called by <see cref="RuleChain{T,TProp}.AddError"/>: not intended for direct use.</summary>
+    /// <summary>Called by <see cref="RuleChain{T,TProp}.AddError(Error)"/>: not intended for direct use.</summary>
     internal void Append(Error error) => (_errors ??= []).Add(error);
 
     /// <summary>Appends all errors from a child context (used by ForEach and SetValidator).</summary>

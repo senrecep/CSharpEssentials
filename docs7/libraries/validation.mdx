@@ -75,6 +75,10 @@ Result<CreateUserCommand> asyncResult = await Validator.ValidateAsync(command, a
 }, cancellationToken);
 ```
 
+## Error codes and fields
+
+A failed rule records an `Error` of type `Validation` with the code `{path}.{Rule}` (`Name.NotEmpty`, `Address.City.NotEmpty`, `Lines[1].Sku.NotEmpty`) and the property path in its metadata under `field` (`ErrorMetadata.FieldKey`): `Name`, `Address.City`, `Lines[1].Sku`. Nested validators prefix the path. Read it with `error.Metadata?.GetField()`, or from a typed `ValidationError` built from the error with `Field`. The AspNetCore problem details group `errors` by it with `ValidationErrorsFormat.ByField`. Errors passed in as `Error` values (`NotEmpty(error)`, `AddError(error)`, `AddFailure`) are kept as given and carry no `field`.
+
 ## Built-in validators
 
 ### String
@@ -448,13 +452,15 @@ public static class EvenValidators
     public static RuleChain<T, int> Even<T>(this RuleChain<T, int> chain, string? message = null)
     {
         if (!chain.HasFailed && chain.Value % 2 != 0)
-            chain.AddError(Error.Validation($"{chain.PropertyName}.Even", message ?? $"'{chain.PropertyName}' must be even."));
+            chain.AddError($"{chain.PropertyName}.Even", message ?? $"'{chain.PropertyName}' must be even.");
         return chain;
     }
 }
 
 rules.For(() => model.Quantity).GreaterThan(0).Even();
 ```
+
+`AddError(code, message)` records an `ErrorType.Validation` error and stores the property path under the `field` metadata key (`ErrorMetadata.FieldKey`), the same as every built-in validator. `AddError(Error)` records the error as given, without a `field` entry, so an error you compare by equality stays equal.
 
 `RuleContext<T>` also accepts failures that belong to no single property, and a pre-evaluated value:
 

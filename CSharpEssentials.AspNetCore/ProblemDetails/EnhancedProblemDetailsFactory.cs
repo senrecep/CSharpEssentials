@@ -89,10 +89,16 @@ internal static class EnhancedProblemDetailsFactory
         if (validationErrors.Length == 0)
             return;
 
-        problemDetails.Extensions[ErrorsKey] = format == ValidationErrorsFormat.Dictionary
-            ? validationErrors
-                .GroupBy(e => e.Code, StringComparer.Ordinal)
-                .ToDictionary(g => g.Key, g => g.Select(e => e.Description).ToArray(), StringComparer.Ordinal)
-            : validationErrors.Select(e => new ProblemValidationError(e.Code, e.Description)).ToList();
+        problemDetails.Extensions[ErrorsKey] = format switch
+        {
+            ValidationErrorsFormat.Dictionary => GroupDescriptions(validationErrors, static e => e.Code),
+            ValidationErrorsFormat.ByField => GroupDescriptions(validationErrors, static e => e.Metadata?.GetField() ?? e.Code),
+            _ => validationErrors.Select(e => new ProblemValidationError(e.Code, e.Description)).ToList(),
+        };
     }
+
+    private static Dictionary<string, string[]> GroupDescriptions(Error[] errors, Func<Error, string> key) =>
+        errors
+            .GroupBy(key, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.Select(e => e.Description).ToArray(), StringComparer.Ordinal);
 }

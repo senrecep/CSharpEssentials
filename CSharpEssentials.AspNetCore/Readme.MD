@@ -53,7 +53,7 @@ app.UseEnhancedProblemDetails(); // UseExceptionHandler + UseStatusCodePages
 | `IncludeRequestId` / `IncludeUser` / `IncludeSpanIds` | `false` | |
 | `Instance` | `Path` | `MethodAndPath` or `None` |
 | `ErrorFields` | `Codes \| ValidationErrors` | `Messages`, `AllErrors`, `All`, `None` |
-| `ValidationErrorsFormat` | `List` | `Dictionary` groups descriptions by code |
+| `ValidationErrorsFormat` | `List` | `Dictionary` groups descriptions by code, `ByField` by the `field` metadata entry |
 | `TypeUriResolver` | `ProblemTypeUris.Rfc9110` | `ProblemTypeUris.Rfc7231` or a custom function |
 | `ExposeExceptionDetails` | `false` | Enable only in Development |
 
@@ -70,6 +70,17 @@ Error codes, titles and 4xx responses are unchanged. A `Detail` you set yourself
 With no W3C `Activity` (tracing disabled), `W3CTraceId` falls back to `HttpContext.TraceIdentifier`. `errors` lists only `ErrorType.Validation` errors; every code is in `errorCodes`.
 
 A `BadHttpRequestException` keeps its status code but never its message, which can name parameters, types or server limits. `detail` is a fixed text per status: `The request is invalid.` (400 and any other), `The request timed out.` (408), `The request body is too large.` (413), `The request content type is not supported.` (415) and `The request headers are too large.` (431).
+
+`ValidationErrorsFormat.ByField` writes `errors` in the shape of ASP.NET Core's `ValidationProblemDetails`, keyed by the property path:
+
+```json
+"errors": {
+  "Name": ["'Name' must not be empty.", "'Name' must be at least 3 characters. You entered 0 characters."],
+  "Email": ["'Email' must not be empty."]
+}
+```
+
+The key is the `field` metadata entry (`ErrorMetadata.FieldKey`) of each validation error. CSharpEssentials.Validation sets it on every error its built-in rules record, and the JSON body mapper, `ConfigureInvalidModelStateResponse()` and `ValidateModelAttribute` set it to the JSON path or model state key. An error with no `field` (a custom `Error` passed to a rule, `AddFailure`, an error you build yourself) is grouped by its code. Keys are written as given: validators give PascalCase paths (`Address.City`), the JSON body mapper gives camelCase JSON paths (`items[1].quantity`). The default stays `List`.
 
 A JSON request body failure becomes a 400 validation problem with one error per field. `AddEnhancedProblemDetails()` registers the mapper; Minimal APIs throw these failures only with `RouteHandlerOptions.ThrowOnBadRequest = true`.
 

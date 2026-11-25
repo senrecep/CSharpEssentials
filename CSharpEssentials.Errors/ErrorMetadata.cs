@@ -1,10 +1,17 @@
 using System.Globalization;
 using System.Text;
+using System.Text.Json;
 
 namespace CSharpEssentials.Errors;
 
 public sealed class ErrorMetadata : Dictionary<string, object?>
 {
+    /// <summary>
+    /// The key of the property path a validation error belongs to (for example <c>Address.City</c>).
+    /// CSharpEssentials.Validation sets it on every error a rule chain records.
+    /// </summary>
+    public const string FieldKey = "field";
+
     public ErrorMetadata() { }
     public ErrorMetadata(IDictionary<string, object?> dictionary) : base(dictionary) { }
     public ErrorMetadata(params IEnumerable<KeyValuePair<string, object?>> collection) : base(collection) { }
@@ -28,6 +35,20 @@ public sealed class ErrorMetadata : Dictionary<string, object?>
 
         return metadata;
     }
+
+    /// <summary>
+    /// Returns the <see cref="FieldKey"/> value, or <see langword="null"/> when it is missing or not a string.
+    /// A string read back from JSON (a <see cref="JsonElement"/>) is returned too.
+    /// </summary>
+    public string? GetField() =>
+        TryGetValue(FieldKey, out object? value)
+            ? value switch
+            {
+                string field => field,
+                JsonElement { ValueKind: JsonValueKind.String } element => element.GetString(),
+                _ => null,
+            }
+            : null;
 
     public ErrorMetadata AddMetadata(string key, object? value)
     {

@@ -17,9 +17,9 @@ public static class ComparableValidators
         where TProp : IComparable<TProp>
     {
         if (!chain.HasFailed && chain.Value is not null && chain.Value.CompareTo(threshold) <= 0)
-            chain.AddError(Error.Validation(
+            chain.AddError(
                 $"{chain.PropertyName}.GreaterThan",
-                message ?? $"'{chain.PropertyName}' must be greater than {threshold}."));
+                message ?? $"'{chain.PropertyName}' must be greater than {threshold}.");
         return chain;
     }
 
@@ -43,9 +43,9 @@ public static class ComparableValidators
         where TProp : IComparable<TProp>
     {
         if (!chain.HasFailed && chain.Value is not null && chain.Value.CompareTo(threshold) < 0)
-            chain.AddError(Error.Validation(
+            chain.AddError(
                 $"{chain.PropertyName}.GreaterThanOrEqualTo",
-                message ?? $"'{chain.PropertyName}' must be greater than or equal to {threshold}."));
+                message ?? $"'{chain.PropertyName}' must be greater than or equal to {threshold}.");
         return chain;
     }
 
@@ -69,9 +69,9 @@ public static class ComparableValidators
         where TProp : IComparable<TProp>
     {
         if (!chain.HasFailed && chain.Value is not null && chain.Value.CompareTo(threshold) >= 0)
-            chain.AddError(Error.Validation(
+            chain.AddError(
                 $"{chain.PropertyName}.LessThan",
-                message ?? $"'{chain.PropertyName}' must be less than {threshold}."));
+                message ?? $"'{chain.PropertyName}' must be less than {threshold}.");
         return chain;
     }
 
@@ -95,9 +95,9 @@ public static class ComparableValidators
         where TProp : IComparable<TProp>
     {
         if (!chain.HasFailed && chain.Value is not null && chain.Value.CompareTo(threshold) > 0)
-            chain.AddError(Error.Validation(
+            chain.AddError(
                 $"{chain.PropertyName}.LessThanOrEqualTo",
-                message ?? $"'{chain.PropertyName}' must be less than or equal to {threshold}."));
+                message ?? $"'{chain.PropertyName}' must be less than or equal to {threshold}.");
         return chain;
     }
 
@@ -126,9 +126,9 @@ public static class ComparableValidators
         if (min.CompareTo(max) > 0)
             throw new ArgumentOutOfRangeException(nameof(min), $"min ({min}) must not be greater than max ({max}).");
         if (!chain.HasFailed && chain.Value is not null && (chain.Value.CompareTo(min) < 0 || chain.Value.CompareTo(max) > 0))
-            chain.AddError(Error.Validation(
+            chain.AddError(
                 $"{chain.PropertyName}.InclusiveBetween",
-                message ?? $"'{chain.PropertyName}' must be between {min} and {max} (inclusive)."));
+                message ?? $"'{chain.PropertyName}' must be between {min} and {max} (inclusive).");
         return chain;
     }
 
@@ -162,9 +162,9 @@ public static class ComparableValidators
         if (min.CompareTo(max) >= 0)
             throw new ArgumentOutOfRangeException(nameof(min), $"min ({min}) must be less than max ({max}) for an exclusive range.");
         if (!chain.HasFailed && chain.Value is not null && (chain.Value.CompareTo(min) <= 0 || chain.Value.CompareTo(max) >= 0))
-            chain.AddError(Error.Validation(
+            chain.AddError(
                 $"{chain.PropertyName}.ExclusiveBetween",
-                message ?? $"'{chain.PropertyName}' must be between {min} and {max} (exclusive)."));
+                message ?? $"'{chain.PropertyName}' must be between {min} and {max} (exclusive).");
         return chain;
     }
 
@@ -193,9 +193,9 @@ public static class ComparableValidators
         where TProp : IEquatable<TProp>
     {
         if (!chain.HasFailed && (chain.Value is null || !chain.Value.Equals(expected)))
-            chain.AddError(Error.Validation(
+            chain.AddError(
                 $"{chain.PropertyName}.Equal",
-                message ?? $"'{chain.PropertyName}' must be equal to {expected}."));
+                message ?? $"'{chain.PropertyName}' must be equal to {expected}.");
         return chain;
     }
 
@@ -219,9 +219,9 @@ public static class ComparableValidators
         where TProp : IEquatable<TProp>
     {
         if (!chain.HasFailed && chain.Value is not null && chain.Value.Equals(forbidden))
-            chain.AddError(Error.Validation(
+            chain.AddError(
                 $"{chain.PropertyName}.NotEqual",
-                message ?? $"'{chain.PropertyName}' must not be equal to {forbidden}."));
+                message ?? $"'{chain.PropertyName}' must not be equal to {forbidden}.");
         return chain;
     }
 

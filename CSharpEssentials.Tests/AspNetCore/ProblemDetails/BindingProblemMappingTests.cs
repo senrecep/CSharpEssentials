@@ -77,6 +77,20 @@ public class BindingProblemMappingTests
 
     [Theory]
     [MemberData(nameof(Paths))]
+    public async Task BodyError_Should_BeKeyedByField_When_ByFieldIsConfigured(string prefix)
+    {
+        await using BindingHost host = await BindingHost.StartAsync(s =>
+            s.Configure<EnhancedProblemDetailsOptions>(o => o.ValidationErrorsFormat = ValidationErrorsFormat.ByField));
+
+        BindingResponse response = await host.PostAsync($"{prefix}/order", WrongNestedType);
+
+        response.Status.Should().Be(400);
+        JsonObject errors = response.Json["errors"]!.AsObject();
+        errors["items[1].quantity"]!.AsArray().Select(n => n!.GetValue<string>()).Should().Equal(Invalid);
+    }
+
+    [Theory]
+    [MemberData(nameof(Paths))]
     public async Task MissingRequiredProperties_Should_ReturnOneErrorPerMember(string prefix)
     {
         await using BindingHost host = await BindingHost.StartAsync();

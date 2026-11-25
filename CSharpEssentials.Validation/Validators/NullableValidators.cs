@@ -14,9 +14,9 @@ public static class NullableValidators
         where TValue : struct
     {
         if (!chain.HasFailed && chain.Value is null)
-            chain.AddError(Error.Validation(
+            chain.AddError(
                 $"{chain.PropertyName}.NotNull",
-                message ?? $"'{chain.PropertyName}' must not be null."));
+                message ?? $"'{chain.PropertyName}' must not be null.");
         return chain;
     }
 
@@ -38,9 +38,9 @@ public static class NullableValidators
         where TValue : struct
     {
         if (!chain.HasFailed && chain.Value.HasValue)
-            chain.AddError(Error.Validation(
+            chain.AddError(
                 $"{chain.PropertyName}.Null",
-                message ?? $"'{chain.PropertyName}' must be null."));
+                message ?? $"'{chain.PropertyName}' must be null.");
         return chain;
     }
 
@@ -69,9 +69,9 @@ public static class NullableValidators
         if (chain.HasFailed || chain.Value is null)
             return chain;
         if (chain.Value.Value.CompareTo(threshold) <= 0)
-            chain.AddError(Error.Validation(
+            chain.AddError(
                 $"{chain.PropertyName}.GreaterThan",
-                message ?? $"'{chain.PropertyName}' must be greater than {threshold}."));
+                message ?? $"'{chain.PropertyName}' must be greater than {threshold}.");
         return chain;
     }
 
@@ -99,9 +99,9 @@ public static class NullableValidators
         if (chain.HasFailed || chain.Value is null)
             return chain;
         if (chain.Value.Value.CompareTo(threshold) < 0)
-            chain.AddError(Error.Validation(
+            chain.AddError(
                 $"{chain.PropertyName}.GreaterThanOrEqualTo",
-                message ?? $"'{chain.PropertyName}' must be greater than or equal to {threshold}."));
+                message ?? $"'{chain.PropertyName}' must be greater than or equal to {threshold}.");
         return chain;
     }
 
@@ -129,9 +129,9 @@ public static class NullableValidators
         if (chain.HasFailed || chain.Value is null)
             return chain;
         if (chain.Value.Value.CompareTo(threshold) >= 0)
-            chain.AddError(Error.Validation(
+            chain.AddError(
                 $"{chain.PropertyName}.LessThan",
-                message ?? $"'{chain.PropertyName}' must be less than {threshold}."));
+                message ?? $"'{chain.PropertyName}' must be less than {threshold}.");
         return chain;
     }
 
@@ -159,9 +159,9 @@ public static class NullableValidators
         if (chain.HasFailed || chain.Value is null)
             return chain;
         if (chain.Value.Value.CompareTo(threshold) > 0)
-            chain.AddError(Error.Validation(
+            chain.AddError(
                 $"{chain.PropertyName}.LessThanOrEqualTo",
-                message ?? $"'{chain.PropertyName}' must be less than or equal to {threshold}."));
+                message ?? $"'{chain.PropertyName}' must be less than or equal to {threshold}.");
         return chain;
     }
 
@@ -196,9 +196,9 @@ public static class NullableValidators
             return chain;
         if (chain.Value.Value.CompareTo(min) < 0
             || chain.Value.Value.CompareTo(max) > 0)
-            chain.AddError(Error.Validation(
+            chain.AddError(
                 $"{chain.PropertyName}.InclusiveBetween",
-                message ?? $"'{chain.PropertyName}' must be between {min} and {max} (inclusive)."));
+                message ?? $"'{chain.PropertyName}' must be between {min} and {max} (inclusive).");
         return chain;
     }
 
@@ -239,9 +239,9 @@ public static class NullableValidators
         if (chain.HasFailed || chain.Value is null)
             return chain;
         if (chain.Value.Value.CompareTo(min) <= 0 || chain.Value.Value.CompareTo(max) >= 0)
-            chain.AddError(Error.Validation(
+            chain.AddError(
                 $"{chain.PropertyName}.ExclusiveBetween",
-                message ?? $"'{chain.PropertyName}' must be between {min} and {max} (exclusive)."));
+                message ?? $"'{chain.PropertyName}' must be between {min} and {max} (exclusive).");
         return chain;
     }
 

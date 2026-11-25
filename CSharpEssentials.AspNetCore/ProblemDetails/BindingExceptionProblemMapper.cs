@@ -12,7 +12,8 @@ namespace CSharpEssentials.AspNetCore;
 /// a <see cref="BadHttpRequestException"/> whose inner exception is a <see cref="JsonException"/> (a request body that
 /// failed to bind) becomes a 400 with one
 /// <see cref="ErrorType.Validation"/> error per field, keyed by the JSON path without <c>$.</c> (for example
-/// <c>items[2].quantity</c>) and described by a fixed message. A missing required member gives one error per member.
+/// <c>items[2].quantity</c>, also written under the <see cref="ErrorMetadata.FieldKey"/> metadata key) and described
+/// by a fixed message. A missing required member gives one error per member.
 /// An <see cref="EnumValueJsonException"/> is left to the enum conventions mapper. Any other <see cref="JsonException"/>
 /// is a server fault and falls through to the 500 of <see cref="DefaultExceptionProblemMapper"/>.
 /// <see cref="GlobalExceptionHandler"/> tries this mapper after every other registered mapper.
@@ -42,12 +43,14 @@ internal sealed partial class BindingExceptionProblemMapper : IExceptionProblemM
         string key = ToKey(path);
         Match match = MissingRequiredRegex().Match(message);
         if (!match.Success)
-            return [Error.Validation(code: key, description: InvalidValueDescription)];
+            return [FieldError(key, InvalidValueDescription)];
 
-        return [.. match.Groups["name"].Captures.Select(name => Error.Validation(
-            code: key == "$" ? name.Value : $"{key}.{name.Value}",
-            description: RequiredDescription))];
+        return [.. match.Groups["name"].Captures.Select(name =>
+            FieldError(key == "$" ? name.Value : $"{key}.{name.Value}", RequiredDescription))];
     }
+
+    private static Error FieldError(string field, string description) =>
+        Error.Validation(code: field, description: description, metadata: new ErrorMetadata(ErrorMetadata.FieldKey, field));
 
     internal static string ToKey(string? path)
     {

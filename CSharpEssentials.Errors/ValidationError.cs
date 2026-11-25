@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace CSharpEssentials.Errors;
 
 /// <summary>
@@ -17,6 +19,14 @@ public record ValidationError : TypedError
         : base(code, description, metadata)
     {
     }
+
+    /// <summary>
+    /// The property path the error belongs to, read from the <see cref="ErrorMetadata.FieldKey"/> metadata entry.
+    /// Set when the error is built from a validation failure, for example
+    /// <c>new ValidationError(error.Code, error.Description, error.Metadata)</c>; <see langword="null"/> otherwise.
+    /// </summary>
+    [JsonIgnore]
+    public string? Field => Metadata?.GetField();
 
     /// <inheritdoc />
     public sealed override ErrorType Type => ErrorType.Validation;

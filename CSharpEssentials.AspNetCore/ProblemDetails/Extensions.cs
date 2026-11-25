@@ -115,7 +115,7 @@ public static partial class Extensions
     /// binding failures such as an unknown enum value) as an enhanced problem response, so it carries the same
     /// <c>errorCodes</c>/<c>errors</c> fields (and honors <see cref="EnhancedProblemDetailsOptions.ErrorFields"/>)
     /// as every other problem response. Each model error becomes an <see cref="ErrorType.Validation"/> error whose
-    /// code is the model state key (for example <c>status</c> or <c>dto.status</c>). A JSON body error is keyed by its JSON path
+    /// code and <c>field</c> metadata are the model state key (for example <c>status</c> or <c>dto.status</c>). A JSON body error is keyed by its JSON path
     /// without <c>$.</c> (<c>items[2].quantity</c>), described by a fixed message instead of the framework text, and a missing
     /// required member gives one error per member, the same as <see cref="GlobalExceptionHandler"/> writes for Minimal APIs.
     /// <para>
@@ -158,7 +158,8 @@ public static partial class Extensions
             return BindingExceptionProblemMapper.CreateErrors(key, error.ErrorMessage);
         return [Error.Validation(
             code: string.IsNullOrEmpty(key) ? InvalidModelStateCode : key,
-            description: string.IsNullOrEmpty(error.ErrorMessage) ? InvalidModelStateDescription : error.ErrorMessage)];
+            description: string.IsNullOrEmpty(error.ErrorMessage) ? InvalidModelStateDescription : error.ErrorMessage,
+            metadata: string.IsNullOrEmpty(key) ? null : new ErrorMetadata(ErrorMetadata.FieldKey, key))];
     }
 
     /// <summary>

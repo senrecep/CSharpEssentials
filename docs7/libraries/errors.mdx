@@ -222,6 +222,8 @@ string message = error switch
 };
 ```
 
+`ValidationError.Field` reads the `field` metadata entry (`ErrorMetadata.FieldKey`), the property path that CSharpEssentials.Validation stores on each failure. Build the typed error from a validation failure with its metadata to keep it: `new ValidationError(error.Code, error.Description, error.Metadata).Field` is `Address.City`. `ErrorMetadata.GetField()` returns the same value from any metadata, including a string read back from JSON. `Field` is not serialized; the entry stays in `Metadata`.
+
 `ToError()` turns a typed error into an `Error` with the same code, description and type, and the same `ErrorMetadata` instance, so it feeds today's `Result` and the AspNetCore problem details:
 
 ```csharp
