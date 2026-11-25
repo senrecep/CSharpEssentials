@@ -55,6 +55,12 @@ Releases are automated with [release-please](https://github.com/googleapis/relea
 
 `<Version>` in `Directory.Build.props` is the only version source. Internal package pins (`[$(Version)]`), `AssemblyVersion` and `FileVersion` derive from it.
 
+`dotnet pack` runs package validation (`EnablePackageValidation` in `Directory.Build.props`). It checks that the target frameworks of each package expose compatible APIs. The intended differences between frameworks are recorded in the `CompatibilitySuppressions.xml` next to the project (Enums, Results and Time). There is no baseline version yet, because 9.0 breaks the 8.x API on purpose. After 9.0.0 is on NuGet, add a baseline so later releases are checked against it:
+
+1. Set `<PackageValidationBaselineVersion>9.0.0</PackageValidationBaselineVersion>` in `Directory.Build.props`.
+2. A package first published after that version has nothing to compare with: set `<PackageValidationBaselineVersion></PackageValidationBaselineVersion>` in its project file until it ships.
+3. Run `dotnet pack CSharpEssentials.slnx -c Release`. For a break that is intended, rerun it with `-p:ApiCompatGenerateSuppressionFile=true`, review the regenerated `CompatibilitySuppressions.xml` files, and record the break in the migration guide.
+
 ## Third-party dependencies
 
 - Don't reference a package the code does not use. Remove it instead of hiding it.
@@ -62,6 +68,7 @@ Releases are automated with [release-please](https://github.com/googleapis/relea
 - If its types appear in the public API, keep it visible and treat its major version as part of our API.
 - Keep version ranges as wide as the code allows. Add an upper bound only where the next major is known to break us, such as the EF Core major per target framework, and say why in a comment.
 - Hiding compile assets does not change version resolution. NuGet still picks one version of the package for the whole app.
+- `CSharpEssentials.Tests/Packaging/PackageDependencyAllowListTests.cs` lists every package and project each source project may reference, and fails when a project file adds or drops one. A new dependency means updating that list on purpose. Library packages take no new third-party dependency: infrastructure plugs in through an abstraction and an adapter, the way Redis plugs into Idempotency.
 
 ## Don't
 

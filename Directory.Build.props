@@ -11,6 +11,9 @@
 		<IsPackable>true</IsPackable>
 		<IncludeBuildOutput>true</IncludeBuildOutput>
 		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+		<!-- Pack checks that every target framework of a package exposes a compatible API. No baseline is set while the v9
+		     breaking changes land; AGENTS.md (Releasing) says how to add one. -->
+		<EnablePackageValidation>true</EnablePackageValidation>
 
 		<!-- Compiler and analysis settings -->
 		<ImplicitUsings>enable</ImplicitUsings>
