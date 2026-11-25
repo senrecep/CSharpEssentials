@@ -44,6 +44,7 @@
           "libraries/entity",
           "libraries/entityframeworkcore",
           "libraries/entityframeworkcore-healthchecks",
+          "libraries/entityframeworkcore-hosting",
           "libraries/enums",
           "libraries/errors-exceptions",
           "libraries/errors",

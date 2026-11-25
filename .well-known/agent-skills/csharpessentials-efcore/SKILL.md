@@ -334,6 +334,8 @@ await app.Services.MigrateDatabaseAsync<AppDbContext>();   // opt-in; runs insid
 
 `AddEfCoreOutbox(types => types.Add("orders.placed", AppJsonContext.Default.OrderPlaced))` registers `EfCoreDomainEventOutbox`; call `modelBuilder.AddOutboxMessages()` in `OnModelCreating`. After-save events become `OutboxMessage` rows written by the same `SaveChanges` as the entities (both `DispatchDomainEventsOnSaveChanges` and `DomainEventInterceptor`). Only registered event types are stored; an unregistered one throws and nothing is saved. A custom `IDomainEventOutbox` gets `StoreAsync(DbContext context, events, ct)` and must not call `SaveChanges`.
 
+Relay with `AddOutboxProcessor<AppDbContext>(o => ...)` plus a registered `IOutboxMessageHandler`; call `IOutboxProcessor.ProcessBatchAsync` yourself or add `CSharpEssentials.EntityFrameworkCore.Hosting` and `AddOutboxProcessorHostedService()`. Delivery is at least once (dedupe on `OutboxMessage.Id`); failures get `Error`, a backoff `NextAttemptAt` and, after `MaxAttempts`, `DeadLetteredAt`. For PostgreSQL or SQL Server set `o.Claimer = new SqlOutboxMessageClaimer(OutboxClaimDialect.PostgreSql)` (SKIP LOCKED / READPAST); no provider package is needed.
+
 ## Idempotency records
 
 ```csharp

@@ -1,4 +1,5 @@
 using CSharpEssentials.EntityFrameworkCore.Interceptors;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -26,6 +27,30 @@ public static class OutboxServiceCollectionExtensions
         services.AddSingleton(registry);
         services.TryAddSingleton<IOutboxMessageSerializer, JsonOutboxMessageSerializer>();
         services.Replace(ServiceDescriptor.Scoped<IDomainEventOutbox, EfCoreDomainEventOutbox>());
+        return services;
+    }
+
+    /// <summary>
+    /// Registers <see cref="OutboxProcessor{TContext}"/> as the singleton <see cref="IOutboxProcessor"/> and the
+    /// <see cref="OutboxProcessorOptions"/> configured by <paramref name="configure"/>. Register an
+    /// <see cref="IOutboxMessageHandler"/> (it is resolved in a scope per message) and call
+    /// <see cref="AddEfCoreOutbox"/> for the serializer. <typeparamref name="TContext"/> must be registered and map
+    /// <see cref="OutboxMessage"/>. A registered <see cref="TimeProvider"/> is used for leases and retries.
+    /// </summary>
+    /// <param name="services">The services.</param>
+    /// <param name="configure">Sets batch size, attempts, lease, retry delays and the claimer.</param>
+    /// <returns><paramref name="services"/>.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">An option is out of range.</exception>
+    public static IServiceCollection AddOutboxProcessor<TContext>(this IServiceCollection services, Action<OutboxProcessorOptions>? configure = null)
+        where TContext : DbContext
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        OutboxProcessorOptions options = new();
+        configure?.Invoke(options);
+        options.Validate();
+        services.Replace(ServiceDescriptor.Singleton(options));
+        services.Replace(ServiceDescriptor.Singleton<IOutboxProcessor, OutboxProcessor<TContext>>());
         return services;
     }
 }

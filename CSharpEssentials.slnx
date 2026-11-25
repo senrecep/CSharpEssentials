@@ -11,6 +11,7 @@
   <Project Path="CSharpEssentials.Entity/CSharpEssentials.Entity.csproj" />
   <Project Path="CSharpEssentials.EntityFrameworkCore/CSharpEssentials.EntityFrameworkCore.csproj" />
   <Project Path="CSharpEssentials.EntityFrameworkCore.HealthChecks/CSharpEssentials.EntityFrameworkCore.HealthChecks.csproj" />
+  <Project Path="CSharpEssentials.EntityFrameworkCore.Hosting/CSharpEssentials.EntityFrameworkCore.Hosting.csproj" />
   <Project Path="CSharpEssentials.EntityFrameworkCore.CodeFixes/CSharpEssentials.EntityFrameworkCore.CodeFixes.csproj" />
   <Project Path="CSharpEssentials.EntityFrameworkCore.Generators/CSharpEssentials.EntityFrameworkCore.Generators.csproj" />
   <Project Path="CSharpEssentials.Endpoints/CSharpEssentials.Endpoints.csproj" />
