@@ -10,7 +10,7 @@ namespace CSharpEssentials.ResultPattern;
 /// <see langword="default"/>(<see cref="Result"/>) is uninitialized and fails closed: it reports a failure with the
 /// <c>Result.Default</c> error, and combinators that would read its errors throw <see cref="InvalidOperationException"/>.
 /// </summary>
-public readonly partial record struct Result : IResult, IFailureFactory<Result>
+public readonly partial record struct Result : IResult, IFailureFactory<Result>, IFailureProbe<Result>
 {
     private readonly Error[]? _errors = null;
 
@@ -39,6 +39,8 @@ public readonly partial record struct Result : IResult, IFailureFactory<Result>
     /// <c>true</c> for a failure and for <see langword="default"/>(<see cref="Result"/>).
     /// </summary>
     public readonly bool IsFailure => !IsSuccess;
+
+    bool IFailureProbe<Result>.IsFailureOf(in Result value) => value.IsFailure;
 
     /// <summary>
     /// <c>true</c> only for a result created as a success.

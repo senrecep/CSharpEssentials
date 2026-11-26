@@ -16,7 +16,9 @@ namespace CSharpEssentials.Mediator.Benchmarks;
 /// <para>
 /// Rows: a class response (no box possible, baseline), <see cref="Result{TValue}"/> and a typed
 /// <c>Result&lt;int, NotFoundError&gt;</c> (both structs), and the typed struct through a helper constrained to
-/// <see cref="IResultBase"/>, which reads <c>IsFailure</c> without a box. <c>Succeed</c> picks a success or a failure.
+/// <see cref="IResultBase"/>, which reads <c>IsFailure</c> without a box. The <c>*_Mediator</c> rows call the shipped
+/// <c>TransactionOutcome.ShouldCommit</c> itself, so they follow changes to the library; the copied rows do not.
+/// <c>Succeed</c> picks a success or a failure.
 /// </para>
 /// </summary>
 [MemoryDiagnoser]
@@ -38,7 +40,8 @@ public class ResultBaseCheckBenchmarks
         _result = Succeed ? 42 : Missing.ToError();
         _typed = Succeed ? 42 : Missing;
         bool expected = Succeed;
-        if (!ClassResponse() || Result() != expected || Typed() != expected || Typed_Constrained() != expected)
+        if (!ClassResponse() || Result() != expected || Typed() != expected || Typed_Constrained() != expected
+            || Result_Mediator() != expected || Typed_Mediator() != expected)
             throw new InvalidOperationException($"{nameof(ResultBaseCheckBenchmarks)}: the rows disagree for Succeed={Succeed}.");
     }
 
@@ -53,6 +56,16 @@ public class ResultBaseCheckBenchmarks
 
     [Benchmark]
     public bool Typed_Constrained() => ShouldCommitConstrained(_typed);
+
+    [Benchmark]
+    public bool Result_Mediator() => ShouldCommitMediator(_result);
+
+    [Benchmark]
+    public bool Typed_Mediator() => ShouldCommitMediator(_typed);
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static bool ShouldCommitMediator<TResponse>(TResponse response) =>
+        TransactionOutcome.ShouldCommit(response);
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static bool ShouldCommit<TResponse>(TResponse response) =>

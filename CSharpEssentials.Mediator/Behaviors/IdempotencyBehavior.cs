@@ -303,7 +303,11 @@ public sealed partial class IdempotencyBehavior<TRequest, TResponse> : IPipeline
 
         public IdempotencyResultHandling Classify(TResponse result)
         {
+#if NET10_0_OR_GREATER
             if (result is not IResultBase { IsFailure: true } failure)
+#else
+            if (!ResponseFailure.IsFailure(result) || result is not IResultBase failure)
+#endif
                 return IdempotencyResultHandling.Store;
             if (releaseFailures || result is IUnion { Value: Exception })
                 return IdempotencyResultHandling.Release;

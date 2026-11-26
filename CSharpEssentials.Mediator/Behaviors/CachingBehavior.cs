@@ -43,7 +43,11 @@ public sealed partial class CachingBehavior<TRequest, TResponse>(
 
         TResponse result = await next(message, cancellationToken).ConfigureAwait(false);
 
+#if NET10_0_OR_GREATER
         if (!message.CacheFailures && result is IResultBase r && r.IsFailure)
+#else
+        if (!message.CacheFailures && ResponseFailure.IsFailure(result))
+#endif
             return result;
 
         if (!TrySerialize(result, out byte[]? serialized))

@@ -21,7 +21,7 @@ namespace CSharpEssentials.ResultPattern;
 [SuppressMessage("Naming", "CA1715:Identifiers should have correct prefix", Justification = "E1..E3 name the error slots, matching the documented Result<T, E1, E2> shape.")]
 [Union]
 [JsonConverter(typeof(TypedResultJsonConverterFactory))]
-public readonly partial struct Result<T, E1> : IUnion, IValueResult, ITypedResult, IEquatable<Result<T, E1>>
+public readonly partial struct Result<T, E1> : IUnion, IValueResult, ITypedResult, IEquatable<Result<T, E1>>, IFailureProbe<Result<T, E1>>
     where T : notnull
     where E1 : notnull
 {
@@ -74,6 +74,8 @@ public readonly partial struct Result<T, E1> : IUnion, IValueResult, ITypedResul
 
     /// <summary>Gets a value indicating whether the result holds no success value: an error, or nothing for <see langword="default"/>.</summary>
     public bool IsFailure => Tag != TypedResultLogic.SuccessTag;
+
+    bool IFailureProbe<Result<T, E1>>.IsFailureOf(in Result<T, E1> value) => value.IsFailure;
 
     object? IValueResult.BoxedValue => IsSuccess ? RawValue : null;
 
