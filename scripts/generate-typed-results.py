@@ -222,10 +222,10 @@ def ensure(n: int) -> list[Op]:
                     DEFAULT_DOC,
                 ],
                 lambda call, r, name=name, i=i: switch([
-                    f"{SUCCESS} => {choose(name, call('RawValue'), 'this', f'new({tag(i)}, default!, TypedResultLogic.NotNull(error, nameof(error)))')},",
-                    f"{error_tags(n)} => this,",
+                    f"{SUCCESS} => {choose(name, call(f'{r}RawValue'), self_of(r), f'new({tag(i)}, default!, TypedResultLogic.NotNull(error, nameof(error)))')},",
+                    f"{error_tags(n)} => {self_of(r)},",
                     DEFAULT_ARM,
-                ]),
+                ], r),
             ))
         if n < MAX_SLOTS:
             ops.append(Op(
@@ -244,10 +244,10 @@ def ensure(n: int) -> list[Op]:
                     DEFAULT_DOC,
                 ],
                 lambda call, r, name=name: switch([
-                    f"{SUCCESS} => {choose(name, call('RawValue'), f'new({SUCCESS}, RawValue, null)', f'new({tag(n + 1)}, default!, TypedResultLogic.NotNull(error, nameof(error)))')},",
-                    f"{error_tags(n)} => new(Tag, default!, RawError),",
+                    f"{SUCCESS} => {choose(name, call(f'{r}RawValue'), f'new({SUCCESS}, {r}RawValue, null)', f'new({tag(n + 1)}, default!, TypedResultLogic.NotNull(error, nameof(error)))')},",
+                    f"{error_tags(n)} => new({r}Tag, default!, {r}RawError),",
                     DEFAULT_ARM,
-                ]),
+                ], r),
             ))
     return ops
 
@@ -259,10 +259,10 @@ def map_error(n: int) -> list[Op]:
         replaced = ["TError" if x == e else x for x in errors]
 
         def body(call, r, i=i, e=e):
-            arms = [f"{SUCCESS} => new(Tag, RawValue, null),", f"{tag(i)} => new(Tag, default!, TypedResultLogic.NotNull({call(f'({e})RawError!')}, nameof(map))),"]
+            arms = [f"{SUCCESS} => new({r}Tag, {r}RawValue, null),", f"{tag(i)} => new({r}Tag, default!, TypedResultLogic.NotNull({call(f'({e}){r}RawError!')}, nameof(map))),"]
             if n > 1:
-                arms.append(f"{error_tags(n, i)} => new(Tag, default!, RawError),")
-            return switch([*arms, DEFAULT_ARM])
+                arms.append(f"{error_tags(n, i)} => new({r}Tag, default!, {r}RawError),")
+            return switch([*arms, DEFAULT_ARM], r)
 
         ops.append(Op(
             "MapError", "MapError", ["TError"], result("T", replaced), "map", e, "TError", [],
@@ -280,8 +280,8 @@ def map_error(n: int) -> list[Op]:
     return ops
 
 
-def removing_arms(n: int, removed: int, handled: str) -> list[str]:
-    return [f"{tag(j)} => {handled if j == removed else f'new({removed_tag(j, removed)}, default!, RawError)'}," for j in range(1, n + 1)]
+def removing_arms(n: int, removed: int, handled: str, r: str = "") -> list[str]:
+    return [f"{tag(j)} => {handled if j == removed else f'new({removed_tag(j, removed)}, default!, {r}RawError)'}," for j in range(1, n + 1)]
 
 
 def recover(n: int) -> list[str]:
@@ -323,10 +323,10 @@ def compensate(n: int) -> list[Op]:
             ]
 
         def body(call, r, i=i, e=e):
-            handled = call(f"({e})RawError!")
+            handled = call(f"({e}){r}RawError!")
             if n == 1:
-                return switch([f"{SUCCESS} => this,", f"{tag(i)} => {handled},", DEFAULT_ARM])
-            return switch([f"{SUCCESS} => new(Tag, RawValue, null),", *removing_arms(n, i, handled), DEFAULT_ARM])
+                return switch([f"{SUCCESS} => {self_of(r)},", f"{tag(i)} => {handled},", DEFAULT_ARM], r)
+            return switch([f"{SUCCESS} => new({r}Tag, {r}RawValue, null),", *removing_arms(n, i, handled, r), DEFAULT_ARM], r)
 
         ops.append(Op(
             "Compensate", "Compensate", [], out, "compensate", e, out, [],
@@ -412,11 +412,22 @@ def token_doc(op: Op, awaited: str | None) -> str:
     return f"{check}Observed while awaiting {awaited}."
 
 
+def handler_await(op: Op, delegate: str, extension: bool):
+    """How a cell awaits the handler, so an inlined extension awaits it exactly as the instance member does."""
+    if op.family in NO_INSTANCE_TOKEN:
+        # A null Bind step task still fails with NullReferenceException, as it did when the instance member awaited it.
+        if extension and delegate == "Task":
+            return lambda a: f"await TypedResultLogic.Step({op.param}({a}), cancellationToken).ConfigureAwait(false)"
+        if not extension:
+            return lambda a: f"await {op.param}({a}).ConfigureAwait(false)"
+    awaiter = ".ConfigureAwait(false)" if op.family in UNABANDONED else AWAIT_TOKEN
+    return lambda a: f"await {op.param}({a}){awaiter}"
+
+
 def instance_cell(op: Op, delegate: str, priority: bool) -> list[str]:
     token = op.family not in NO_INSTANCE_TOKEN
-    awaiter = AWAIT_TOKEN if token and op.family not in UNABANDONED else ".ConfigureAwait(false)"
     params = op.parameters(delegate) + (f", {CT_PARAM}" if token else "")
-    body = op.body(lambda a: f"await {op.param}({a}){awaiter}", "")
+    body = op.body(handler_await(op, delegate, False), "")
     return method(
         async_doc(op.doc, f"<paramref name=\"{op.param}\"/> returns a {'task' if delegate == 'Task' else 'value task'}, which is awaited.",
                   token_doc(op, None if op.family in UNABANDONED else f'<paramref name="{op.param}"/>') if token else None),
@@ -427,27 +438,19 @@ def instance_cell(op: Op, delegate: str, priority: bool) -> list[str]:
     )
 
 
-def extension_cell(op: Op, n: int, receiver: str, delegate: str, priority: bool, map_inline: bool) -> list[str]:
+def extension_cell(op: Op, n: int, receiver: str, delegate: str, priority: bool) -> list[str]:
     errors = slots(n)
     source = result("T", errors)
     generics = ["T", *errors, *op.generics]
-    call_args = op.arguments()
     if delegate == "sync":
-        tail = [f"return result.{op.name}{op.type_args()}({call_args});"]
+        tail = [f"return result.{op.name}{op.type_args()}({op.arguments()});"]
         sentence = f"Awaits <paramref name=\"task\"/>, then calls <c>{op.name}</c>."
         observed = 'Observed while awaiting <paramref name="task"/>.'
     else:
         sentence = f"Awaits <paramref name=\"task\"/>, then awaits the {'task' if delegate == 'Task' else 'value task'} that <paramref name=\"{op.param}\"/> returns."
         observed = token_doc(op, '<paramref name="task"/>' if op.family in UNABANDONED else f'<paramref name="task"/> and <paramref name="{op.param}"/>')
-        if map_inline:
-            # A null Bind step task still fails with NullReferenceException, as it did when the instance member awaited it.
-            step = (lambda a: f"await TypedResultLogic.Step({op.param}({a}), cancellationToken).ConfigureAwait(false)") if delegate == "Task" and op.family == "Bind" \
-                else (lambda a: f"await {op.param}({a}){AWAIT_TOKEN}")
-            tail = checked(op, "result.", op.body(step, "result."))
-        elif op.family in NO_INSTANCE_TOKEN:
-            tail = [f"return await result.{op.name}Async{op.type_args()}({call_args}){AWAIT_TOKEN};"]
-        else:
-            tail = [f"return await result.{op.name}Async{op.type_args()}({call_args}, cancellationToken).ConfigureAwait(false);"]
+        # The handler call is inlined: awaiting the async instance member would cost a second state machine and, for Task, a second Task.
+        tail = checked(op, "result.", op.body(handler_await(op, delegate, True), "result."))
     level = (1 if priority else 0) + (SAME_SLOT_LIFT if op.family == "Ensure" and not op.generics and n < MAX_SLOTS else 0) + op.lift
     typeparams = ['<typeparam name="T">The success value type.</typeparam>',
                   *[f'<typeparam name="{e}">The {ORDINALS[i]} error type.</typeparam>' for i, e in enumerate(errors, 1)]]
@@ -471,11 +474,7 @@ def emit(n: int, family: str, ops: list[Op]) -> tuple[list[str], list[str]]:
             if receiver == "this":
                 (instance_gated if net9 else instance).append(instance_cell(op, delegate, priority))
             else:
-                # Inline the handler call when no instance member with this handler exists on every target the cell exists on.
-                twin = [gate for r, d, gate, _ in op.cells if r == "this" and d == delegate]
-                # Bind always inlines: nesting the instance member costs a second state machine and, for Task, a second Task.
-                inline = delegate != "sync" and (op.family == "Bind" or not (twin and (not twin[0] or net9)))
-                (extensions_gated if net9 else extensions).append(extension_cell(op, n, receiver, delegate, priority, inline))
+                (extensions_gated if net9 else extensions).append(extension_cell(op, n, receiver, delegate, priority))
     struct = join([op.sync() for op in ops] + instance + gated(instance_gated))
     return struct, join(extensions + gated(extensions_gated))
 

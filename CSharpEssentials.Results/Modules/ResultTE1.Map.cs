@@ -113,7 +113,15 @@ public static partial class ResultExtensions
         where TOut : notnull
     {
         Result<T, E1> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.MapAsync<TOut>(map, cancellationToken).ConfigureAwait(false);
+        if (result.Tag == TypedResultLogic.SuccessTag)
+            cancellationToken.ThrowIfCancellationRequested();
+
+        return result.Tag switch
+        {
+            TypedResultLogic.SuccessTag => new(TypedResultLogic.SuccessTag, TypedResultLogic.NotNull(await map(result.RawValue).WithCancellation(cancellationToken).ConfigureAwait(false), nameof(map)), null),
+            2 => new(result.Tag, default!, result.RawError),
+            _ => throw TypedResultLogic.DefaultInitialized(),
+        };
     }
 
     /// <summary>Replaces the success value with the return value of <paramref name="map"/>. An error passes through in its slot.

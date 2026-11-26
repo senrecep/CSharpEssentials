@@ -423,7 +423,12 @@ public static partial class ResultExtensions
         where E2 : notnull
     {
         Result<T, E1, E2> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.EnsureAsync(predicate, error, cancellationToken).ConfigureAwait(false);
+        return result.Tag switch
+        {
+            TypedResultLogic.SuccessTag => await predicate(result.RawValue).WithCancellation(cancellationToken).ConfigureAwait(false) ? result : new(2, default!, TypedResultLogic.NotNull(error, nameof(error))),
+            2 or 3 => result,
+            _ => throw TypedResultLogic.DefaultInitialized(),
+        };
     }
 
     /// <summary>Turns a success into the error <paramref name="error"/> in the <typeparamref name="E1"/> slot when <paramref name="predicate"/> does not hold.
@@ -471,7 +476,12 @@ public static partial class ResultExtensions
         where E2 : notnull
     {
         Result<T, E1, E2> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.EnsureAsync(predicate, error, cancellationToken).ConfigureAwait(false);
+        return result.Tag switch
+        {
+            TypedResultLogic.SuccessTag => await predicate(result.RawValue).WithCancellation(cancellationToken).ConfigureAwait(false) ? result : new(2, default!, TypedResultLogic.NotNull(error, nameof(error))),
+            2 or 3 => result,
+            _ => throw TypedResultLogic.DefaultInitialized(),
+        };
     }
 
     /// <summary>Turns a success into the error <paramref name="error"/> in the <typeparamref name="E2"/> slot when <paramref name="predicate"/> does not hold.
@@ -519,7 +529,12 @@ public static partial class ResultExtensions
         where E2 : notnull
     {
         Result<T, E1, E2> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.EnsureAsync(predicate, error, cancellationToken).ConfigureAwait(false);
+        return result.Tag switch
+        {
+            TypedResultLogic.SuccessTag => await predicate(result.RawValue).WithCancellation(cancellationToken).ConfigureAwait(false) ? result : new(3, default!, TypedResultLogic.NotNull(error, nameof(error))),
+            2 or 3 => result,
+            _ => throw TypedResultLogic.DefaultInitialized(),
+        };
     }
 
     /// <summary>Turns a success into the error <paramref name="error"/> in the <typeparamref name="E2"/> slot when <paramref name="predicate"/> does not hold.
@@ -567,7 +582,12 @@ public static partial class ResultExtensions
         where E2 : notnull
     {
         Result<T, E1, E2> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.EnsureAsync(predicate, error, cancellationToken).ConfigureAwait(false);
+        return result.Tag switch
+        {
+            TypedResultLogic.SuccessTag => await predicate(result.RawValue).WithCancellation(cancellationToken).ConfigureAwait(false) ? result : new(3, default!, TypedResultLogic.NotNull(error, nameof(error))),
+            2 or 3 => result,
+            _ => throw TypedResultLogic.DefaultInitialized(),
+        };
     }
 
     /// <summary>
@@ -623,7 +643,12 @@ public static partial class ResultExtensions
         where TError : notnull
     {
         Result<T, E1, E2> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.EnsureAsync<TError>(predicate, error, cancellationToken).ConfigureAwait(false);
+        return result.Tag switch
+        {
+            TypedResultLogic.SuccessTag => await predicate(result.RawValue).WithCancellation(cancellationToken).ConfigureAwait(false) ? new(TypedResultLogic.SuccessTag, result.RawValue, null) : new(4, default!, TypedResultLogic.NotNull(error, nameof(error))),
+            2 or 3 => new(result.Tag, default!, result.RawError),
+            _ => throw TypedResultLogic.DefaultInitialized(),
+        };
     }
 
     /// <summary>
@@ -680,7 +705,12 @@ public static partial class ResultExtensions
         where TError : notnull
     {
         Result<T, E1, E2> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.EnsureAsync<TError>(predicate, error, cancellationToken).ConfigureAwait(false);
+        return result.Tag switch
+        {
+            TypedResultLogic.SuccessTag => await predicate(result.RawValue).WithCancellation(cancellationToken).ConfigureAwait(false) ? new(TypedResultLogic.SuccessTag, result.RawValue, null) : new(4, default!, TypedResultLogic.NotNull(error, nameof(error))),
+            2 or 3 => new(result.Tag, default!, result.RawError),
+            _ => throw TypedResultLogic.DefaultInitialized(),
+        };
     }
 
     /// <summary>Turns a success into the error <paramref name="error"/> in the <typeparamref name="E1"/> slot when <paramref name="predicate"/> holds.
@@ -728,7 +758,12 @@ public static partial class ResultExtensions
         where E2 : notnull
     {
         Result<T, E1, E2> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.FailIfAsync(predicate, error, cancellationToken).ConfigureAwait(false);
+        return result.Tag switch
+        {
+            TypedResultLogic.SuccessTag => await predicate(result.RawValue).WithCancellation(cancellationToken).ConfigureAwait(false) ? new(2, default!, TypedResultLogic.NotNull(error, nameof(error))) : result,
+            2 or 3 => result,
+            _ => throw TypedResultLogic.DefaultInitialized(),
+        };
     }
 
     /// <summary>Turns a success into the error <paramref name="error"/> in the <typeparamref name="E1"/> slot when <paramref name="predicate"/> holds.
@@ -776,7 +811,12 @@ public static partial class ResultExtensions
         where E2 : notnull
     {
         Result<T, E1, E2> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.FailIfAsync(predicate, error, cancellationToken).ConfigureAwait(false);
+        return result.Tag switch
+        {
+            TypedResultLogic.SuccessTag => await predicate(result.RawValue).WithCancellation(cancellationToken).ConfigureAwait(false) ? new(2, default!, TypedResultLogic.NotNull(error, nameof(error))) : result,
+            2 or 3 => result,
+            _ => throw TypedResultLogic.DefaultInitialized(),
+        };
     }
 
     /// <summary>Turns a success into the error <paramref name="error"/> in the <typeparamref name="E2"/> slot when <paramref name="predicate"/> holds.
@@ -824,7 +864,12 @@ public static partial class ResultExtensions
         where E2 : notnull
     {
         Result<T, E1, E2> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.FailIfAsync(predicate, error, cancellationToken).ConfigureAwait(false);
+        return result.Tag switch
+        {
+            TypedResultLogic.SuccessTag => await predicate(result.RawValue).WithCancellation(cancellationToken).ConfigureAwait(false) ? new(3, default!, TypedResultLogic.NotNull(error, nameof(error))) : result,
+            2 or 3 => result,
+            _ => throw TypedResultLogic.DefaultInitialized(),
+        };
     }
 
     /// <summary>Turns a success into the error <paramref name="error"/> in the <typeparamref name="E2"/> slot when <paramref name="predicate"/> holds.
@@ -872,7 +917,12 @@ public static partial class ResultExtensions
         where E2 : notnull
     {
         Result<T, E1, E2> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.FailIfAsync(predicate, error, cancellationToken).ConfigureAwait(false);
+        return result.Tag switch
+        {
+            TypedResultLogic.SuccessTag => await predicate(result.RawValue).WithCancellation(cancellationToken).ConfigureAwait(false) ? new(3, default!, TypedResultLogic.NotNull(error, nameof(error))) : result,
+            2 or 3 => result,
+            _ => throw TypedResultLogic.DefaultInitialized(),
+        };
     }
 
     /// <summary>
@@ -928,7 +978,12 @@ public static partial class ResultExtensions
         where TError : notnull
     {
         Result<T, E1, E2> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.FailIfAsync<TError>(predicate, error, cancellationToken).ConfigureAwait(false);
+        return result.Tag switch
+        {
+            TypedResultLogic.SuccessTag => await predicate(result.RawValue).WithCancellation(cancellationToken).ConfigureAwait(false) ? new(4, default!, TypedResultLogic.NotNull(error, nameof(error))) : new(TypedResultLogic.SuccessTag, result.RawValue, null),
+            2 or 3 => new(result.Tag, default!, result.RawError),
+            _ => throw TypedResultLogic.DefaultInitialized(),
+        };
     }
 
     /// <summary>
@@ -985,7 +1040,12 @@ public static partial class ResultExtensions
         where TError : notnull
     {
         Result<T, E1, E2> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.FailIfAsync<TError>(predicate, error, cancellationToken).ConfigureAwait(false);
+        return result.Tag switch
+        {
+            TypedResultLogic.SuccessTag => await predicate(result.RawValue).WithCancellation(cancellationToken).ConfigureAwait(false) ? new(4, default!, TypedResultLogic.NotNull(error, nameof(error))) : new(TypedResultLogic.SuccessTag, result.RawValue, null),
+            2 or 3 => new(result.Tag, default!, result.RawError),
+            _ => throw TypedResultLogic.DefaultInitialized(),
+        };
     }
 
 #if NET9_0_OR_GREATER
@@ -1010,7 +1070,12 @@ public static partial class ResultExtensions
         where E2 : notnull
     {
         Result<T, E1, E2> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.EnsureAsync(predicate, error, cancellationToken).ConfigureAwait(false);
+        return result.Tag switch
+        {
+            TypedResultLogic.SuccessTag => await predicate(result.RawValue).WithCancellation(cancellationToken).ConfigureAwait(false) ? result : new(2, default!, TypedResultLogic.NotNull(error, nameof(error))),
+            2 or 3 => result,
+            _ => throw TypedResultLogic.DefaultInitialized(),
+        };
     }
 
     /// <summary>Turns a success into the error <paramref name="error"/> in the <typeparamref name="E2"/> slot when <paramref name="predicate"/> does not hold.
@@ -1034,7 +1099,12 @@ public static partial class ResultExtensions
         where E2 : notnull
     {
         Result<T, E1, E2> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.EnsureAsync(predicate, error, cancellationToken).ConfigureAwait(false);
+        return result.Tag switch
+        {
+            TypedResultLogic.SuccessTag => await predicate(result.RawValue).WithCancellation(cancellationToken).ConfigureAwait(false) ? result : new(3, default!, TypedResultLogic.NotNull(error, nameof(error))),
+            2 or 3 => result,
+            _ => throw TypedResultLogic.DefaultInitialized(),
+        };
     }
 
     /// <summary>
@@ -1062,7 +1132,12 @@ public static partial class ResultExtensions
         where TError : notnull
     {
         Result<T, E1, E2> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.EnsureAsync<TError>(predicate, error, cancellationToken).ConfigureAwait(false);
+        return result.Tag switch
+        {
+            TypedResultLogic.SuccessTag => await predicate(result.RawValue).WithCancellation(cancellationToken).ConfigureAwait(false) ? new(TypedResultLogic.SuccessTag, result.RawValue, null) : new(4, default!, TypedResultLogic.NotNull(error, nameof(error))),
+            2 or 3 => new(result.Tag, default!, result.RawError),
+            _ => throw TypedResultLogic.DefaultInitialized(),
+        };
     }
 
     /// <summary>Turns a success into the error <paramref name="error"/> in the <typeparamref name="E1"/> slot when <paramref name="predicate"/> holds.
@@ -1086,7 +1161,12 @@ public static partial class ResultExtensions
         where E2 : notnull
     {
         Result<T, E1, E2> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.FailIfAsync(predicate, error, cancellationToken).ConfigureAwait(false);
+        return result.Tag switch
+        {
+            TypedResultLogic.SuccessTag => await predicate(result.RawValue).WithCancellation(cancellationToken).ConfigureAwait(false) ? new(2, default!, TypedResultLogic.NotNull(error, nameof(error))) : result,
+            2 or 3 => result,
+            _ => throw TypedResultLogic.DefaultInitialized(),
+        };
     }
 
     /// <summary>Turns a success into the error <paramref name="error"/> in the <typeparamref name="E2"/> slot when <paramref name="predicate"/> holds.
@@ -1110,7 +1190,12 @@ public static partial class ResultExtensions
         where E2 : notnull
     {
         Result<T, E1, E2> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.FailIfAsync(predicate, error, cancellationToken).ConfigureAwait(false);
+        return result.Tag switch
+        {
+            TypedResultLogic.SuccessTag => await predicate(result.RawValue).WithCancellation(cancellationToken).ConfigureAwait(false) ? new(3, default!, TypedResultLogic.NotNull(error, nameof(error))) : result,
+            2 or 3 => result,
+            _ => throw TypedResultLogic.DefaultInitialized(),
+        };
     }
 
     /// <summary>
@@ -1138,7 +1223,12 @@ public static partial class ResultExtensions
         where TError : notnull
     {
         Result<T, E1, E2> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.FailIfAsync<TError>(predicate, error, cancellationToken).ConfigureAwait(false);
+        return result.Tag switch
+        {
+            TypedResultLogic.SuccessTag => await predicate(result.RawValue).WithCancellation(cancellationToken).ConfigureAwait(false) ? new(4, default!, TypedResultLogic.NotNull(error, nameof(error))) : new(TypedResultLogic.SuccessTag, result.RawValue, null),
+            2 or 3 => new(result.Tag, default!, result.RawError),
+            _ => throw TypedResultLogic.DefaultInitialized(),
+        };
     }
 #endif
 }

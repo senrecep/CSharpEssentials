@@ -183,7 +183,16 @@ public static partial class ResultExtensions
         where TError : notnull
     {
         Result<T, E1, E2> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.MapErrorAsync<TError>(map, cancellationToken).ConfigureAwait(false);
+        if (result.Tag == 2)
+            cancellationToken.ThrowIfCancellationRequested();
+
+        return result.Tag switch
+        {
+            TypedResultLogic.SuccessTag => new(result.Tag, result.RawValue, null),
+            2 => new(result.Tag, default!, TypedResultLogic.NotNull(await map((E1)result.RawError!).ConfigureAwait(false), nameof(map))),
+            3 => new(result.Tag, default!, result.RawError),
+            _ => throw TypedResultLogic.DefaultInitialized(),
+        };
     }
 
     /// <summary>Replaces the error in the <typeparamref name="E1"/> slot with the return value of <paramref name="map"/>. Every other case passes through.
@@ -229,7 +238,16 @@ public static partial class ResultExtensions
         where TError : notnull
     {
         Result<T, E1, E2> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.MapErrorAsync<TError>(map, cancellationToken).ConfigureAwait(false);
+        if (result.Tag == 2)
+            cancellationToken.ThrowIfCancellationRequested();
+
+        return result.Tag switch
+        {
+            TypedResultLogic.SuccessTag => new(result.Tag, result.RawValue, null),
+            2 => new(result.Tag, default!, TypedResultLogic.NotNull(await map((E1)result.RawError!).ConfigureAwait(false), nameof(map))),
+            3 => new(result.Tag, default!, result.RawError),
+            _ => throw TypedResultLogic.DefaultInitialized(),
+        };
     }
 
     /// <summary>Replaces the error in the <typeparamref name="E2"/> slot with the return value of <paramref name="map"/>. Every other case passes through.
@@ -275,7 +293,16 @@ public static partial class ResultExtensions
         where TError : notnull
     {
         Result<T, E1, E2> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.MapErrorAsync<TError>(map, cancellationToken).ConfigureAwait(false);
+        if (result.Tag == 3)
+            cancellationToken.ThrowIfCancellationRequested();
+
+        return result.Tag switch
+        {
+            TypedResultLogic.SuccessTag => new(result.Tag, result.RawValue, null),
+            3 => new(result.Tag, default!, TypedResultLogic.NotNull(await map((E2)result.RawError!).ConfigureAwait(false), nameof(map))),
+            2 => new(result.Tag, default!, result.RawError),
+            _ => throw TypedResultLogic.DefaultInitialized(),
+        };
     }
 
     /// <summary>Replaces the error in the <typeparamref name="E2"/> slot with the return value of <paramref name="map"/>. Every other case passes through.
@@ -321,6 +348,15 @@ public static partial class ResultExtensions
         where TError : notnull
     {
         Result<T, E1, E2> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.MapErrorAsync<TError>(map, cancellationToken).ConfigureAwait(false);
+        if (result.Tag == 3)
+            cancellationToken.ThrowIfCancellationRequested();
+
+        return result.Tag switch
+        {
+            TypedResultLogic.SuccessTag => new(result.Tag, result.RawValue, null),
+            3 => new(result.Tag, default!, TypedResultLogic.NotNull(await map((E2)result.RawError!).ConfigureAwait(false), nameof(map))),
+            2 => new(result.Tag, default!, result.RawError),
+            _ => throw TypedResultLogic.DefaultInitialized(),
+        };
     }
 }

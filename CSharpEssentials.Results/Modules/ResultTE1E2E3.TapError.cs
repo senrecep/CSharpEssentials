@@ -165,7 +165,11 @@ public static partial class ResultExtensions
         where E3 : notnull
     {
         Result<T, E1, E2, E3> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.TapErrorAsync(action, cancellationToken).ConfigureAwait(false);
+        TypedResultLogic.EnsureInitialized(result.Tag);
+        if (result.Tag == 2)
+            await action((E1)result.RawError!).WithCancellation(cancellationToken).ConfigureAwait(false);
+
+        return result;
     }
 
     /// <summary>Calls <paramref name="action"/> with the error in the <typeparamref name="E1"/> slot. Every other case passes through.
@@ -188,7 +192,11 @@ public static partial class ResultExtensions
         where E3 : notnull
     {
         Result<T, E1, E2, E3> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.TapErrorAsync(action, cancellationToken).ConfigureAwait(false);
+        TypedResultLogic.EnsureInitialized(result.Tag);
+        if (result.Tag == 2)
+            await action((E1)result.RawError!).WithCancellation(cancellationToken).ConfigureAwait(false);
+
+        return result;
     }
 
     /// <summary>Calls <paramref name="action"/> with the error in the <typeparamref name="E2"/> slot. Every other case passes through.
@@ -211,7 +219,11 @@ public static partial class ResultExtensions
         where E3 : notnull
     {
         Result<T, E1, E2, E3> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.TapErrorAsync(action, cancellationToken).ConfigureAwait(false);
+        TypedResultLogic.EnsureInitialized(result.Tag);
+        if (result.Tag == 3)
+            await action((E2)result.RawError!).WithCancellation(cancellationToken).ConfigureAwait(false);
+
+        return result;
     }
 
     /// <summary>Calls <paramref name="action"/> with the error in the <typeparamref name="E2"/> slot. Every other case passes through.
@@ -234,7 +246,11 @@ public static partial class ResultExtensions
         where E3 : notnull
     {
         Result<T, E1, E2, E3> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.TapErrorAsync(action, cancellationToken).ConfigureAwait(false);
+        TypedResultLogic.EnsureInitialized(result.Tag);
+        if (result.Tag == 3)
+            await action((E2)result.RawError!).WithCancellation(cancellationToken).ConfigureAwait(false);
+
+        return result;
     }
 
     /// <summary>Calls <paramref name="action"/> with the error in the <typeparamref name="E3"/> slot. Every other case passes through.
@@ -257,7 +273,11 @@ public static partial class ResultExtensions
         where E3 : notnull
     {
         Result<T, E1, E2, E3> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.TapErrorAsync(action, cancellationToken).ConfigureAwait(false);
+        TypedResultLogic.EnsureInitialized(result.Tag);
+        if (result.Tag == 4)
+            await action((E3)result.RawError!).WithCancellation(cancellationToken).ConfigureAwait(false);
+
+        return result;
     }
 
     /// <summary>Calls <paramref name="action"/> with the error in the <typeparamref name="E3"/> slot. Every other case passes through.
@@ -280,7 +300,11 @@ public static partial class ResultExtensions
         where E3 : notnull
     {
         Result<T, E1, E2, E3> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.TapErrorAsync(action, cancellationToken).ConfigureAwait(false);
+        TypedResultLogic.EnsureInitialized(result.Tag);
+        if (result.Tag == 4)
+            await action((E3)result.RawError!).WithCancellation(cancellationToken).ConfigureAwait(false);
+
+        return result;
     }
 
 #if NET9_0_OR_GREATER
@@ -304,7 +328,11 @@ public static partial class ResultExtensions
         where E3 : notnull
     {
         Result<T, E1, E2, E3> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.TapErrorAsync(action, cancellationToken).ConfigureAwait(false);
+        TypedResultLogic.EnsureInitialized(result.Tag);
+        if (result.Tag == 2)
+            await action((E1)result.RawError!).WithCancellation(cancellationToken).ConfigureAwait(false);
+
+        return result;
     }
 
     /// <summary>Calls <paramref name="action"/> with the error in the <typeparamref name="E2"/> slot. Every other case passes through.
@@ -327,7 +355,11 @@ public static partial class ResultExtensions
         where E3 : notnull
     {
         Result<T, E1, E2, E3> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.TapErrorAsync(action, cancellationToken).ConfigureAwait(false);
+        TypedResultLogic.EnsureInitialized(result.Tag);
+        if (result.Tag == 3)
+            await action((E2)result.RawError!).WithCancellation(cancellationToken).ConfigureAwait(false);
+
+        return result;
     }
 
     /// <summary>Calls <paramref name="action"/> with the error in the <typeparamref name="E3"/> slot. Every other case passes through.
@@ -350,7 +382,11 @@ public static partial class ResultExtensions
         where E3 : notnull
     {
         Result<T, E1, E2, E3> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.TapErrorAsync(action, cancellationToken).ConfigureAwait(false);
+        TypedResultLogic.EnsureInitialized(result.Tag);
+        if (result.Tag == 4)
+            await action((E3)result.RawError!).WithCancellation(cancellationToken).ConfigureAwait(false);
+
+        return result;
     }
 #endif
 

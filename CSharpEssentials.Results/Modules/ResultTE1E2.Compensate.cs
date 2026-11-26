@@ -136,7 +136,13 @@ public static partial class ResultExtensions
         where E2 : notnull
     {
         Result<T, E1, E2> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.CompensateAsync(compensate, cancellationToken).ConfigureAwait(false);
+        return result.Tag switch
+        {
+            TypedResultLogic.SuccessTag => new(result.Tag, result.RawValue, null),
+            2 => await compensate((E1)result.RawError!).WithCancellation(cancellationToken).ConfigureAwait(false),
+            3 => new(2, default!, result.RawError),
+            _ => throw TypedResultLogic.DefaultInitialized(),
+        };
     }
 
     /// <summary>Replaces the error in the <typeparamref name="E1"/> slot with the result of <paramref name="compensate"/> and removes the slot.
@@ -158,7 +164,13 @@ public static partial class ResultExtensions
         where E2 : notnull
     {
         Result<T, E1, E2> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.CompensateAsync(compensate, cancellationToken).ConfigureAwait(false);
+        return result.Tag switch
+        {
+            TypedResultLogic.SuccessTag => new(result.Tag, result.RawValue, null),
+            2 => await compensate((E1)result.RawError!).WithCancellation(cancellationToken).ConfigureAwait(false),
+            3 => new(2, default!, result.RawError),
+            _ => throw TypedResultLogic.DefaultInitialized(),
+        };
     }
 
     /// <summary>Replaces the error in the <typeparamref name="E2"/> slot with the result of <paramref name="compensate"/> and removes the slot.
@@ -179,7 +191,13 @@ public static partial class ResultExtensions
         where E2 : notnull
     {
         Result<T, E1, E2> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.CompensateAsync(compensate, cancellationToken).ConfigureAwait(false);
+        return result.Tag switch
+        {
+            TypedResultLogic.SuccessTag => new(result.Tag, result.RawValue, null),
+            2 => new(2, default!, result.RawError),
+            3 => await compensate((E2)result.RawError!).WithCancellation(cancellationToken).ConfigureAwait(false),
+            _ => throw TypedResultLogic.DefaultInitialized(),
+        };
     }
 
     /// <summary>Replaces the error in the <typeparamref name="E2"/> slot with the result of <paramref name="compensate"/> and removes the slot.
@@ -201,7 +219,13 @@ public static partial class ResultExtensions
         where E2 : notnull
     {
         Result<T, E1, E2> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.CompensateAsync(compensate, cancellationToken).ConfigureAwait(false);
+        return result.Tag switch
+        {
+            TypedResultLogic.SuccessTag => new(result.Tag, result.RawValue, null),
+            2 => new(2, default!, result.RawError),
+            3 => await compensate((E2)result.RawError!).WithCancellation(cancellationToken).ConfigureAwait(false),
+            _ => throw TypedResultLogic.DefaultInitialized(),
+        };
     }
 
 #if NET9_0_OR_GREATER
@@ -223,7 +247,13 @@ public static partial class ResultExtensions
         where E2 : notnull
     {
         Result<T, E1, E2> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.CompensateAsync(compensate, cancellationToken).ConfigureAwait(false);
+        return result.Tag switch
+        {
+            TypedResultLogic.SuccessTag => new(result.Tag, result.RawValue, null),
+            2 => await compensate((E1)result.RawError!).WithCancellation(cancellationToken).ConfigureAwait(false),
+            3 => new(2, default!, result.RawError),
+            _ => throw TypedResultLogic.DefaultInitialized(),
+        };
     }
 
     /// <summary>Replaces the error in the <typeparamref name="E2"/> slot with the result of <paramref name="compensate"/> and removes the slot.
@@ -244,7 +274,13 @@ public static partial class ResultExtensions
         where E2 : notnull
     {
         Result<T, E1, E2> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.CompensateAsync(compensate, cancellationToken).ConfigureAwait(false);
+        return result.Tag switch
+        {
+            TypedResultLogic.SuccessTag => new(result.Tag, result.RawValue, null),
+            2 => new(2, default!, result.RawError),
+            3 => await compensate((E2)result.RawError!).WithCancellation(cancellationToken).ConfigureAwait(false),
+            _ => throw TypedResultLogic.DefaultInitialized(),
+        };
     }
 #endif
 }

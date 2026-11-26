@@ -41,6 +41,14 @@ internal static class TypedSources
     public static ValueTask<Result<int, NotFoundError, ConflictError, ValidationError>> ValueTaskResult(int value, bool yield) =>
         yield ? YieldResultOfValueValueTask(value) : new ValueTask<Result<int, NotFoundError, ConflictError, ValidationError>>(value);
 
+    public static Task<int> TaskValue(int value, bool yield) => yield ? YieldValue(value) : Task.FromResult(value);
+
+    private static async Task<int> YieldValue(int value)
+    {
+        await Task.Yield();
+        return value;
+    }
+
     private static async Task<Result<int, NotFoundError, ConflictError, ValidationError>> YieldResultTask(bool succeed)
     {
         await Task.Yield();

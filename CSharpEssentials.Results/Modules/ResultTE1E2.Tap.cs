@@ -149,7 +149,14 @@ public static partial class ResultExtensions
         where E2 : notnull
     {
         Result<T, E1, E2> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.TapAsync(action, cancellationToken).ConfigureAwait(false);
+        if (result.Tag == TypedResultLogic.SuccessTag)
+            cancellationToken.ThrowIfCancellationRequested();
+
+        TypedResultLogic.EnsureInitialized(result.Tag);
+        if (result.Tag == TypedResultLogic.SuccessTag)
+            await action(result.RawValue).WithCancellation(cancellationToken).ConfigureAwait(false);
+
+        return result;
     }
 
     /// <summary>Calls <paramref name="action"/> with the success value. An error passes through and <paramref name="action"/> is not called.
@@ -240,7 +247,11 @@ public static partial class ResultExtensions
         where E2 : notnull
     {
         Result<T, E1, E2> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.TapIfAsync(predicate, action, cancellationToken).ConfigureAwait(false);
+        TypedResultLogic.EnsureInitialized(result.Tag);
+        if (result.Tag == TypedResultLogic.SuccessTag && predicate(result.RawValue))
+            await action(result.RawValue).WithCancellation(cancellationToken).ConfigureAwait(false);
+
+        return result;
     }
 
     /// <summary>Calls <paramref name="action"/> with the success value when <paramref name="predicate"/> holds. An error passes
@@ -285,7 +296,11 @@ public static partial class ResultExtensions
         where E2 : notnull
     {
         Result<T, E1, E2> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.TapIfAsync(predicate, action, cancellationToken).ConfigureAwait(false);
+        TypedResultLogic.EnsureInitialized(result.Tag);
+        if (result.Tag == TypedResultLogic.SuccessTag && predicate(result.RawValue))
+            await action(result.RawValue).WithCancellation(cancellationToken).ConfigureAwait(false);
+
+        return result;
     }
 
 #if NET9_0_OR_GREATER
@@ -308,7 +323,11 @@ public static partial class ResultExtensions
         where E2 : notnull
     {
         Result<T, E1, E2> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.TapIfAsync(predicate, action, cancellationToken).ConfigureAwait(false);
+        TypedResultLogic.EnsureInitialized(result.Tag);
+        if (result.Tag == TypedResultLogic.SuccessTag && predicate(result.RawValue))
+            await action(result.RawValue).WithCancellation(cancellationToken).ConfigureAwait(false);
+
+        return result;
     }
 #endif
 }

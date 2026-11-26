@@ -78,7 +78,12 @@ public static partial class ResultExtensions
         where E1 : notnull
     {
         Result<T, E1> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.CompensateAsync(compensate, cancellationToken).ConfigureAwait(false);
+        return result.Tag switch
+        {
+            TypedResultLogic.SuccessTag => result,
+            2 => await compensate((E1)result.RawError!).WithCancellation(cancellationToken).ConfigureAwait(false),
+            _ => throw TypedResultLogic.DefaultInitialized(),
+        };
     }
 
     /// <summary>Replaces the error with the result of <paramref name="compensate"/>, which can fail again with the same error type.
@@ -98,7 +103,12 @@ public static partial class ResultExtensions
         where E1 : notnull
     {
         Result<T, E1> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.CompensateAsync(compensate, cancellationToken).ConfigureAwait(false);
+        return result.Tag switch
+        {
+            TypedResultLogic.SuccessTag => result,
+            2 => await compensate((E1)result.RawError!).WithCancellation(cancellationToken).ConfigureAwait(false),
+            _ => throw TypedResultLogic.DefaultInitialized(),
+        };
     }
 
 #if NET9_0_OR_GREATER
@@ -118,7 +128,12 @@ public static partial class ResultExtensions
         where E1 : notnull
     {
         Result<T, E1> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.CompensateAsync(compensate, cancellationToken).ConfigureAwait(false);
+        return result.Tag switch
+        {
+            TypedResultLogic.SuccessTag => result,
+            2 => await compensate((E1)result.RawError!).WithCancellation(cancellationToken).ConfigureAwait(false),
+            _ => throw TypedResultLogic.DefaultInitialized(),
+        };
     }
 #endif
 }
