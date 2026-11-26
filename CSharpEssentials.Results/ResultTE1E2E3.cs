@@ -173,7 +173,6 @@ public readonly partial struct Result<T, E1, E2, E3> : IUnion, IValueResult, ITy
     /// <param name="onError3">Called with the error of type <typeparamref name="E3"/>.</param>
     /// <returns>The return value of the called function.</returns>
     /// <exception cref="InvalidOperationException">The result is <see langword="default"/>.</exception>
-    // The IL switch over 3+ dense cases blocks the JIT inliner; inlining removes the call and the generic dictionary lookup.
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public TOut Match<TOut>(Func<T, TOut> onSuccess, Func<E1, TOut> onError1, Func<E2, TOut> onError2, Func<E3, TOut> onError3) => Tag switch
     {
@@ -190,7 +189,6 @@ public readonly partial struct Result<T, E1, E2, E3> : IUnion, IValueResult, ITy
     /// <param name="onError2">Called with the error of type <typeparamref name="E2"/>.</param>
     /// <param name="onError3">Called with the error of type <typeparamref name="E3"/>.</param>
     /// <exception cref="InvalidOperationException">The result is <see langword="default"/>.</exception>
-    // The IL switch over 3+ dense cases blocks the JIT inliner; inlining removes the call and the generic dictionary lookup.
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Switch(Action<T> onSuccess, Action<E1> onError1, Action<E2> onError2, Action<E3> onError3)
     {
