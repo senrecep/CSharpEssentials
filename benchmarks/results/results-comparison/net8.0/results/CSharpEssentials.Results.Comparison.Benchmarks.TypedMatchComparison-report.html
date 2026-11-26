@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Results.Comparison.Benchmarks.TypedMatchComparison-20261126-032218</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100
+  [Host]     : .NET 8.0.33 (8.0.3326.52219), X64 RyuJIT AVX2
+  DefaultJob : .NET 8.0.33 (8.0.3326.52219), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method                      </th><th>Categories</th><th>Case</th><th>Mean </th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>CSharpEssentials_Typed_Match</td><td>Match</td><td>NotFound</td><td>4.2091 ns</td><td>0.0048 ns</td><td>0.0043 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_Result_Match</td><td>Match</td><td>NotFound</td><td>1.6321 ns</td><td>0.0095 ns</td><td>0.0089 ns</td><td>0.39</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_Any_Match</td><td>Match</td><td>NotFound</td><td>9.5105 ns</td><td>0.0162 ns</td><td>0.0151 ns</td><td>2.26</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>OneOf_Match</td><td>Match</td><td>NotFound</td><td>2.4740 ns</td><td>0.0032 ns</td><td>0.0025 ns</td><td>0.59</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>Dunet_Match</td><td>Match</td><td>NotFound</td><td>5.2476 ns</td><td>0.0093 ns</td><td>0.0078 ns</td><td>1.25</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>ErrorOr_Match</td><td>Match</td><td>NotFound</td><td>1.6584 ns</td><td>0.0089 ns</td><td>0.0079 ns</td><td>0.39</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpFunctionalExtensions_Match</td><td>Match</td><td>NotFound</td><td>3.1136 ns</td><td>0.0081 ns</td><td>0.0076 ns</td><td>0.74</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>FluentResults_Match</td><td>Match</td><td>NotFound</td><td>130.1149 ns</td><td>0.4994 ns</td><td>0.4427 ns</td><td>30.91</td><td>0.11</td><td>0.0181</td><td>304 B</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_Typed_Match</td><td>Match</td><td>Success</td><td>3.3576 ns</td><td>0.0070 ns</td><td>0.0062 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_Result_Match</td><td>Match</td><td>Success</td><td>1.0501 ns</td><td>0.0043 ns</td><td>0.0040 ns</td><td>0.31</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_Any_Match</td><td>Match</td><td>Success</td><td>9.6072 ns</td><td>0.0171 ns</td><td>0.0160 ns</td><td>2.86</td><td>0.01</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>OneOf_Match</td><td>Match</td><td>Success</td><td>1.6266 ns</td><td>0.0033 ns</td><td>0.0029 ns</td><td>0.48</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>Dunet_Match</td><td>Match</td><td>Success</td><td>5.4336 ns</td><td>0.0120 ns</td><td>0.0112 ns</td><td>1.62</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>ErrorOr_Match</td><td>Match</td><td>Success</td><td>1.0520 ns</td><td>0.0044 ns</td><td>0.0041 ns</td><td>0.31</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpFunctionalExtensions_Match</td><td>Match</td><td>Success</td><td>2.3232 ns</td><td>0.0084 ns</td><td>0.0075 ns</td><td>0.69</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>FluentResults_Match</td><td>Match</td><td>Success</td><td>55.5031 ns</td><td>0.2147 ns</td><td>0.2008 ns</td><td>16.53</td><td>0.07</td><td>0.0067</td><td>112 B</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_Typed_Match</td><td>Match</td><td>Validation</td><td>4.2075 ns</td><td>0.0063 ns</td><td>0.0056 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_Result_Match</td><td>Match</td><td>Validation</td><td>1.7714 ns</td><td>0.0053 ns</td><td>0.0050 ns</td><td>0.42</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_Any_Match</td><td>Match</td><td>Validation</td><td>9.5190 ns</td><td>0.0181 ns</td><td>0.0169 ns</td><td>2.26</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>OneOf_Match</td><td>Match</td><td>Validation</td><td>2.7615 ns</td><td>0.0031 ns</td><td>0.0026 ns</td><td>0.66</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>Dunet_Match</td><td>Match</td><td>Validation</td><td>4.9016 ns</td><td>0.0072 ns</td><td>0.0068 ns</td><td>1.16</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>ErrorOr_Match</td><td>Match</td><td>Validation</td><td>1.9032 ns</td><td>0.0098 ns</td><td>0.0092 ns</td><td>0.45</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpFunctionalExtensions_Match</td><td>Match</td><td>Validation</td><td>5.7127 ns</td><td>0.0083 ns</td><td>0.0077 ns</td><td>1.36</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>FluentResults_Match</td><td>Match</td><td>Validation</td><td>127.1941 ns</td><td>0.2992 ns</td><td>0.2798 ns</td><td>30.23</td><td>0.08</td><td>0.0181</td><td>304 B</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_Typed_Switch</td><td>Switch</td><td>NotFound</td><td>1.2908 ns</td><td>0.0075 ns</td><td>0.0067 ns</td><td>1.00</td><td>0.01</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_Typed_TryGetValue</td><td>Switch</td><td>NotFound</td><td>0.7583 ns</td><td>0.0013 ns</td><td>0.0011 ns</td><td>0.59</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>OneOf_Switch</td><td>Switch</td><td>NotFound</td><td>2.9135 ns</td><td>0.0107 ns</td><td>0.0100 ns</td><td>2.26</td><td>0.01</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>Dunet_Switch</td><td>Switch</td><td>NotFound</td><td>0.4699 ns</td><td>0.0012 ns</td><td>0.0012 ns</td><td>0.36</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_Typed_Switch</td><td>Switch</td><td>Success</td><td>1.0489 ns</td><td>0.0025 ns</td><td>0.0022 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_Typed_TryGetValue</td><td>Switch</td><td>Success</td><td>0.4708 ns</td><td>0.0016 ns</td><td>0.0014 ns</td><td>0.45</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>OneOf_Switch</td><td>Switch</td><td>Success</td><td>6.6654 ns</td><td>0.0365 ns</td><td>0.0341 ns</td><td>6.35</td><td>0.03</td><td>0.0014</td><td>24 B</td><td>NA</td>
+</tr><tr><td>Dunet_Switch</td><td>Switch</td><td>Success</td><td>0.3247 ns</td><td>0.0021 ns</td><td>0.0020 ns</td><td>0.31</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_Typed_Switch</td><td>Switch</td><td>Validation</td><td>1.3382 ns</td><td>0.0038 ns</td><td>0.0033 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_Typed_TryGetValue</td><td>Switch</td><td>Validation</td><td>0.2911 ns</td><td>0.0032 ns</td><td>0.0030 ns</td><td>0.22</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>OneOf_Switch</td><td>Switch</td><td>Validation</td><td>7.7746 ns</td><td>0.1676 ns</td><td>0.1568 ns</td><td>5.81</td><td>0.11</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>Dunet_Switch</td><td>Switch</td><td>Validation</td><td>0.8701 ns</td><td>0.0063 ns</td><td>0.0052 ns</td><td>0.65</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr></tbody></table>
+</body>
+</html>

@@ -1,0 +1,43 @@
+```
+
+BenchmarkDotNet v0.14.0, CachyOS
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100
+  [Host]     : .NET 11.0.0 (11.0.26.53018), X64 RyuJIT AVX2
+  DefaultJob : .NET 11.0.0 (11.0.26.53018), X64 RyuJIT AVX2
+
+
+```
+| Method                            | Succeed | Yield | Mean        | Error     | StdDev    | Ratio | RatioSD | Gen0   | Allocated | Alloc Ratio |
+|---------------------------------- |-------- |------ |------------:|----------:|----------:|------:|--------:|-------:|----------:|------------:|
+| **CSharpEssentials_Typed_Task**       | **False**   | **False** |    **50.25 ns** |  **0.782 ns** |  **0.693 ns** |  **1.00** |    **0.02** | **0.0095** |     **160 B** |        **1.00** |
+| CSharpEssentials_Typed_ValueTask  | False   | False |    63.33 ns |  0.039 ns |  0.035 ns |  1.26 |    0.02 |      - |         - |        0.00 |
+| CSharpEssentials_Result_Task      | False   | False |    15.21 ns |  0.101 ns |  0.089 ns |  0.30 |    0.00 | 0.0048 |      80 B |        0.50 |
+| CSharpEssentials_Result_ValueTask | False   | False |    31.74 ns |  0.042 ns |  0.039 ns |  0.63 |    0.01 |      - |         - |        0.00 |
+| ErrorOr_Task                      | False   | False |    30.40 ns |  0.179 ns |  0.167 ns |  0.61 |    0.01 | 0.0095 |     160 B |        1.00 |
+| CSharpFunctionalExtensions_Task   | False   | False |    32.54 ns |  0.230 ns |  0.215 ns |  0.65 |    0.01 | 0.0095 |     160 B |        1.00 |
+| FluentResults_Task                | False   | False |    85.01 ns |  0.430 ns |  0.403 ns |  1.69 |    0.02 | 0.0210 |     352 B |        2.20 |
+|                                   |         |       |             |           |           |       |         |        |           |             |
+| **CSharpEssentials_Typed_Task**       | **False**   | **True**  |   **619.80 ns** |  **8.149 ns** |  **6.363 ns** |  **1.00** |    **0.01** | **0.0210** |     **351 B** |        **1.00** |
+| CSharpEssentials_Typed_ValueTask  | False   | True  |   688.15 ns |  4.626 ns |  4.101 ns |  1.11 |    0.01 | 0.0210 |     358 B |        1.02 |
+| CSharpEssentials_Result_Task      | False   | True  |   546.44 ns |  5.776 ns |  5.403 ns |  0.88 |    0.01 | 0.0153 |     263 B |        0.75 |
+| CSharpEssentials_Result_ValueTask | False   | True  |   636.83 ns |  5.610 ns |  4.973 ns |  1.03 |    0.01 | 0.0210 |     356 B |        1.01 |
+| ErrorOr_Task                      | False   | True  |   584.81 ns |  7.874 ns |  6.575 ns |  0.94 |    0.01 | 0.0200 |     343 B |        0.98 |
+| CSharpFunctionalExtensions_Task   | False   | True  |   591.65 ns |  2.772 ns |  2.458 ns |  0.95 |    0.01 | 0.0200 |     343 B |        0.98 |
+| FluentResults_Task                | False   | True  |   675.01 ns |  7.482 ns |  6.999 ns |  1.09 |    0.02 | 0.0296 |     503 B |        1.43 |
+|                                   |         |       |             |           |           |       |         |        |           |             |
+| **CSharpEssentials_Typed_Task**       | **True**    | **False** |    **55.78 ns** |  **0.312 ns** |  **0.292 ns** |  **1.00** |    **0.01** | **0.0143** |     **240 B** |        **1.00** |
+| CSharpEssentials_Typed_ValueTask  | True    | False |    70.06 ns |  0.137 ns |  0.128 ns |  1.26 |    0.01 |      - |         - |        0.00 |
+| CSharpEssentials_Result_Task      | True    | False |    21.47 ns |  0.194 ns |  0.172 ns |  0.38 |    0.00 | 0.0095 |     160 B |        0.67 |
+| CSharpEssentials_Result_ValueTask | True    | False |    39.48 ns |  0.197 ns |  0.184 ns |  0.71 |    0.00 |      - |         - |        0.00 |
+| ErrorOr_Task                      | True    | False |    37.48 ns |  0.198 ns |  0.175 ns |  0.67 |    0.00 | 0.0143 |     240 B |        1.00 |
+| CSharpFunctionalExtensions_Task   | True    | False |    29.23 ns |  0.206 ns |  0.182 ns |  0.52 |    0.00 | 0.0095 |     160 B |        0.67 |
+| FluentResults_Task                | True    | False |   100.19 ns |  0.475 ns |  0.444 ns |  1.80 |    0.01 | 0.0319 |     536 B |        2.23 |
+|                                   |         |       |             |           |           |       |         |        |           |             |
+| **CSharpEssentials_Typed_Task**       | **True**    | **True**  | **1,088.30 ns** |  **3.836 ns** |  **3.203 ns** |  **1.00** |    **0.00** | **0.0305** |     **525 B** |        **1.00** |
+| CSharpEssentials_Typed_ValueTask  | True    | True  | 1,203.60 ns | 17.922 ns | 14.965 ns |  1.11 |    0.01 | 0.0381 |     655 B |        1.25 |
+| CSharpEssentials_Result_Task      | True    | True  |   946.30 ns | 18.394 ns | 24.556 ns |  0.87 |    0.02 | 0.0229 |     384 B |        0.73 |
+| CSharpEssentials_Result_ValueTask | True    | True  | 1,001.38 ns | 10.244 ns |  9.582 ns |  0.92 |    0.01 | 0.0286 |     496 B |        0.94 |
+| ErrorOr_Task                      | True    | True  | 1,053.07 ns |  6.964 ns |  5.437 ns |  0.97 |    0.01 | 0.0305 |     516 B |        0.98 |
+| CSharpFunctionalExtensions_Task   | True    | True  |   953.89 ns |  8.973 ns |  7.954 ns |  0.88 |    0.01 | 0.0229 |     408 B |        0.78 |
+| FluentResults_Task                | True    | True  | 1,241.80 ns | 14.256 ns | 12.638 ns |  1.14 |    0.01 | 0.0458 |     766 B |        1.46 |

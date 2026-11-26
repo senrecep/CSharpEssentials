@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Results.Benchmarks.TypedMatchBenchmarks-20261126-050712</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100
+  [Host]     : .NET 9.0.22 (9.0.2226.52218), X64 RyuJIT AVX2
+  DefaultJob : .NET 9.0.22 (9.0.2226.52218), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method                 </th><th>Succeed</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>Result</td><td>False</td><td>1.3206 ns</td><td>0.0017 ns</td><td>0.0013 ns</td><td>1.00</td><td>-</td><td>NA</td>
+</tr><tr><td>Typed_OneError</td><td>False</td><td>1.4495 ns</td><td>0.0047 ns</td><td>0.0044 ns</td><td>1.10</td><td>-</td><td>NA</td>
+</tr><tr><td>Typed_TwoErrors</td><td>False</td><td>3.0765 ns</td><td>0.0061 ns</td><td>0.0057 ns</td><td>2.33</td><td>-</td><td>NA</td>
+</tr><tr><td>Typed_ThreeErrors</td><td>False</td><td>4.2107 ns</td><td>0.0038 ns</td><td>0.0032 ns</td><td>3.19</td><td>-</td><td>NA</td>
+</tr><tr><td>Typed_ThreeErrors_Switch</td><td>False</td><td>1.3362 ns</td><td>0.0014 ns</td><td>0.0011 ns</td><td>1.01</td><td>-</td><td>NA</td>
+</tr><tr><td>Typed_ThreeErrors_TryGetValue</td><td>False</td><td>0.7403 ns</td><td>0.0023 ns</td><td>0.0020 ns</td><td>0.56</td><td>-</td><td>NA</td>
+</tr><tr><td>Result</td><td>True</td><td>1.2264 ns</td><td>0.0074 ns</td><td>0.0066 ns</td><td>1.00</td><td>-</td><td>NA</td>
+</tr><tr><td>Typed_OneError</td><td>True</td><td>1.2201 ns</td><td>0.0028 ns</td><td>0.0026 ns</td><td>0.99</td><td>-</td><td>NA</td>
+</tr><tr><td>Typed_TwoErrors</td><td>True</td><td>2.6330 ns</td><td>0.0038 ns</td><td>0.0035 ns</td><td>2.15</td><td>-</td><td>NA</td>
+</tr><tr><td>Typed_ThreeErrors</td><td>True</td><td>3.3620 ns</td><td>0.0051 ns</td><td>0.0048 ns</td><td>2.74</td><td>-</td><td>NA</td>
+</tr><tr><td>Typed_ThreeErrors_Switch</td><td>True</td><td>0.8142 ns</td><td>0.0042 ns</td><td>0.0039 ns</td><td>0.66</td><td>-</td><td>NA</td>
+</tr><tr><td>Typed_ThreeErrors_TryGetValue</td><td>True</td><td>0.4681 ns</td><td>0.0006 ns</td><td>0.0005 ns</td><td>0.38</td><td>-</td><td>NA</td>
+</tr></tbody></table>
+</body>
+</html>

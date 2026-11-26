@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Results.Benchmarks.TypedBindBenchmarks-20261126-050419</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100
+  [Host]     : .NET 9.0.22 (9.0.2226.52218), X64 RyuJIT AVX2
+  DefaultJob : .NET 9.0.22 (9.0.2226.52218), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method     </th><th>Succeed</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>Result</td><td>False</td><td>4.308 ns</td><td>0.0030 ns</td><td>0.0025 ns</td><td>1.00</td><td>-</td><td>NA</td>
+</tr><tr><td>Typed_OneError</td><td>False</td><td>9.215 ns</td><td>0.0106 ns</td><td>0.0099 ns</td><td>2.14</td><td>-</td><td>NA</td>
+</tr><tr><td>Typed_TwoErrors</td><td>False</td><td>9.488 ns</td><td>0.0086 ns</td><td>0.0080 ns</td><td>2.20</td><td>-</td><td>NA</td>
+</tr><tr><td>Typed_ThreeErrors</td><td>False</td><td>9.205 ns</td><td>0.0144 ns</td><td>0.0135 ns</td><td>2.14</td><td>-</td><td>NA</td>
+</tr><tr><td>Result</td><td>True</td><td>4.989 ns</td><td>0.0078 ns</td><td>0.0069 ns</td><td>1.00</td><td>-</td><td>NA</td>
+</tr><tr><td>Typed_OneError</td><td>True</td><td>18.722 ns</td><td>0.0183 ns</td><td>0.0171 ns</td><td>3.75</td><td>-</td><td>NA</td>
+</tr><tr><td>Typed_TwoErrors</td><td>True</td><td>19.100 ns</td><td>0.0135 ns</td><td>0.0126 ns</td><td>3.83</td><td>-</td><td>NA</td>
+</tr><tr><td>Typed_ThreeErrors</td><td>True</td><td>17.173 ns</td><td>0.0125 ns</td><td>0.0117 ns</td><td>3.44</td><td>-</td><td>NA</td>
+</tr></tbody></table>
+</body>
+</html>

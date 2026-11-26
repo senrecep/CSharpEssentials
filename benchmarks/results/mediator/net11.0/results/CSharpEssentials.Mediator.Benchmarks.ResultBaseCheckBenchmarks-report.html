@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Mediator.Benchmarks.ResultBaseCheckBenchmarks-20261126-075337</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100
+  [Host]     : .NET 11.0.0 (11.0.26.53018), X64 RyuJIT AVX2
+  DefaultJob : .NET 11.0.0 (11.0.26.53018), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method     </th><th>Succeed</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>ClassResponse</td><td>False</td><td>0.4370 ns</td><td>0.0075 ns</td><td>0.0067 ns</td><td>1.00</td><td>0.02</td><td>-</td><td>NA</td>
+</tr><tr><td>Result</td><td>False</td><td>0.4348 ns</td><td>0.0071 ns</td><td>0.0066 ns</td><td>1.00</td><td>0.02</td><td>-</td><td>NA</td>
+</tr><tr><td>Typed</td><td>False</td><td>0.4501 ns</td><td>0.0100 ns</td><td>0.0094 ns</td><td>1.03</td><td>0.03</td><td>-</td><td>NA</td>
+</tr><tr><td>Typed_Constrained</td><td>False</td><td>2.1666 ns</td><td>0.0095 ns</td><td>0.0084 ns</td><td>4.96</td><td>0.07</td><td>-</td><td>NA</td>
+</tr><tr><td>ClassResponse</td><td>True</td><td>0.4379 ns</td><td>0.0075 ns</td><td>0.0070 ns</td><td>1.00</td><td>0.02</td><td>-</td><td>NA</td>
+</tr><tr><td>Result</td><td>True</td><td>0.4446 ns</td><td>0.0137 ns</td><td>0.0122 ns</td><td>1.02</td><td>0.03</td><td>-</td><td>NA</td>
+</tr><tr><td>Typed</td><td>True</td><td>0.4228 ns</td><td>0.0065 ns</td><td>0.0058 ns</td><td>0.97</td><td>0.02</td><td>-</td><td>NA</td>
+</tr><tr><td>Typed_Constrained</td><td>True</td><td>2.4488 ns</td><td>0.0033 ns</td><td>0.0030 ns</td><td>5.59</td><td>0.09</td><td>-</td><td>NA</td>
+</tr></tbody></table>
+</body>
+</html>

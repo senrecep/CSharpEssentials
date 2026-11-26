@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
 <meta charset='utf-8' />
-<title>CSharpEssentials.Results.Comparison.Benchmarks.BindComparison-20261105-073129</title>
+<title>CSharpEssentials.Results.Comparison.Benchmarks.BindComparison-20261126-040128</title>
 
 <style type="text/css">
 	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
@@ -14,24 +14,26 @@
 <body>
 <pre><code>
 BenchmarkDotNet v0.14.0, CachyOS
-x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
-.NET SDK 11.0.100-rc.1.26425.128
-  [Host]     : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
-  DefaultJob : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100
+  [Host]     : .NET 9.0.22 (9.0.2226.52218), X64 RyuJIT AVX2
+  DefaultJob : .NET 9.0.22 (9.0.2226.52218), X64 RyuJIT AVX2
 </code></pre>
 <pre><code></code></pre>
 
 <table>
 <thead><tr><th>Method              </th><th>Succeed</th><th>Mean </th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
 </tr>
-</thead><tbody><tr><td>CSharpEssentials</td><td>False</td><td>0.9707 ns</td><td>0.0025 ns</td><td>0.0020 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>CSharpFunctionalExtensions</td><td>False</td><td>9.0585 ns</td><td>0.0463 ns</td><td>0.0433 ns</td><td>9.33</td><td>0.05</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>ErrorOr</td><td>False</td><td>0.9328 ns</td><td>0.0105 ns</td><td>0.0098 ns</td><td>0.96</td><td>0.01</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>FluentResults</td><td>False</td><td>74.5485 ns</td><td>0.7710 ns</td><td>0.7212 ns</td><td>76.80</td><td>0.73</td><td>0.0124</td><td>208 B</td><td>NA</td>
-</tr><tr><td>CSharpEssentials</td><td>True</td><td>0.8536 ns</td><td>0.0023 ns</td><td>0.0022 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>CSharpFunctionalExtensions</td><td>True</td><td>9.2209 ns</td><td>0.0013 ns</td><td>0.0011 ns</td><td>10.80</td><td>0.03</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>ErrorOr</td><td>True</td><td>0.8515 ns</td><td>0.0009 ns</td><td>0.0007 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>FluentResults</td><td>True</td><td>121.2580 ns</td><td>0.6765 ns</td><td>0.6328 ns</td><td>142.05</td><td>0.80</td><td>0.0191</td><td>320 B</td><td>NA</td>
+</thead><tbody><tr><td>CSharpEssentials</td><td>False</td><td>1.6394 ns</td><td>0.0216 ns</td><td>0.0202 ns</td><td>1.00</td><td>0.02</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_Typed</td><td>False</td><td>5.5150 ns</td><td>0.0037 ns</td><td>0.0032 ns</td><td>3.36</td><td>0.04</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpFunctionalExtensions</td><td>False</td><td>8.9922 ns</td><td>0.0278 ns</td><td>0.0260 ns</td><td>5.49</td><td>0.07</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>ErrorOr</td><td>False</td><td>0.8654 ns</td><td>0.0038 ns</td><td>0.0036 ns</td><td>0.53</td><td>0.01</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>FluentResults</td><td>False</td><td>71.9494 ns</td><td>0.4095 ns</td><td>0.3197 ns</td><td>43.89</td><td>0.56</td><td>0.0124</td><td>208 B</td><td>NA</td>
+</tr><tr><td>CSharpEssentials</td><td>True</td><td>1.1069 ns</td><td>0.0013 ns</td><td>0.0011 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_Typed</td><td>True</td><td>5.7298 ns</td><td>0.0058 ns</td><td>0.0055 ns</td><td>5.18</td><td>0.01</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpFunctionalExtensions</td><td>True</td><td>8.9661 ns</td><td>0.0200 ns</td><td>0.0187 ns</td><td>8.10</td><td>0.02</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>ErrorOr</td><td>True</td><td>0.8994 ns</td><td>0.0064 ns</td><td>0.0060 ns</td><td>0.81</td><td>0.01</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>FluentResults</td><td>True</td><td>119.4795 ns</td><td>0.9027 ns</td><td>0.8444 ns</td><td>107.94</td><td>0.75</td><td>0.0191</td><td>320 B</td><td>NA</td>
 </tr></tbody></table>
 </body>
 </html>
