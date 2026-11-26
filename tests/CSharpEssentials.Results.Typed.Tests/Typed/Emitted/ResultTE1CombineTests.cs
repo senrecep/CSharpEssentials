@@ -44,7 +44,18 @@ public sealed class ResultTE1CombineTests
     }
 
     [Fact]
-    public void Combine2_Should_Throw_When_AResultBeforeTheFirstErrorIsDefault()
+    public void Combine2_Should_Throw_When_TheFirstResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError> first = default;
+        Result<int, NotFoundError> second = TypedFixture.NotFound;
+
+        Action act = () => _ = Result<int, NotFoundError>.Combine(first, second);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine2_Should_Throw_When_TheLastResultIsDefault()
     {
         Result<int, NotFoundError> first = 1;
         Result<int, NotFoundError> second = default;
@@ -107,7 +118,31 @@ public sealed class ResultTE1CombineTests
     }
 
     [Fact]
-    public void Combine3_Should_Throw_When_AResultBeforeTheFirstErrorIsDefault()
+    public void Combine3_Should_Throw_When_TheFirstResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError> first = default;
+        Result<int, NotFoundError> second = TypedFixture.NotFound;
+        Result<int, NotFoundError> third = default;
+
+        Action act = () => _ = Result<int, NotFoundError>.Combine(first, second, third);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine3_Should_Throw_When_TheSecondResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError> first = 1;
+        Result<int, NotFoundError> second = default;
+        Result<int, NotFoundError> third = TypedFixture.NotFound;
+
+        Action act = () => _ = Result<int, NotFoundError>.Combine(first, second, third);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine3_Should_Throw_When_TheLastResultIsDefault()
     {
         Result<int, NotFoundError> first = 1;
         Result<int, NotFoundError> second = 2;
@@ -189,7 +224,46 @@ public sealed class ResultTE1CombineTests
     }
 
     [Fact]
-    public void Combine4_Should_Throw_When_AResultBeforeTheFirstErrorIsDefault()
+    public void Combine4_Should_Throw_When_TheFirstResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError> first = default;
+        Result<int, NotFoundError> second = TypedFixture.NotFound;
+        Result<int, NotFoundError> third = default;
+        Result<int, NotFoundError> fourth = default;
+
+        Action act = () => _ = Result<int, NotFoundError>.Combine(first, second, third, fourth);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine4_Should_Throw_When_TheSecondResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError> first = 1;
+        Result<int, NotFoundError> second = default;
+        Result<int, NotFoundError> third = TypedFixture.NotFound;
+        Result<int, NotFoundError> fourth = default;
+
+        Action act = () => _ = Result<int, NotFoundError>.Combine(first, second, third, fourth);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine4_Should_Throw_When_TheThirdResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError> first = 1;
+        Result<int, NotFoundError> second = 2;
+        Result<int, NotFoundError> third = default;
+        Result<int, NotFoundError> fourth = TypedFixture.NotFound;
+
+        Action act = () => _ = Result<int, NotFoundError>.Combine(first, second, third, fourth);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine4_Should_Throw_When_TheLastResultIsDefault()
     {
         Result<int, NotFoundError> first = 1;
         Result<int, NotFoundError> second = 2;
@@ -292,7 +366,63 @@ public sealed class ResultTE1CombineTests
     }
 
     [Fact]
-    public void Combine5_Should_Throw_When_AResultBeforeTheFirstErrorIsDefault()
+    public void Combine5_Should_Throw_When_TheFirstResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError> first = default;
+        Result<int, NotFoundError> second = TypedFixture.NotFound;
+        Result<int, NotFoundError> third = default;
+        Result<int, NotFoundError> fourth = default;
+        Result<int, NotFoundError> fifth = default;
+
+        Action act = () => _ = Result<int, NotFoundError>.Combine(first, second, third, fourth, fifth);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine5_Should_Throw_When_TheSecondResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError> first = 1;
+        Result<int, NotFoundError> second = default;
+        Result<int, NotFoundError> third = TypedFixture.NotFound;
+        Result<int, NotFoundError> fourth = default;
+        Result<int, NotFoundError> fifth = default;
+
+        Action act = () => _ = Result<int, NotFoundError>.Combine(first, second, third, fourth, fifth);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine5_Should_Throw_When_TheThirdResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError> first = 1;
+        Result<int, NotFoundError> second = 2;
+        Result<int, NotFoundError> third = default;
+        Result<int, NotFoundError> fourth = TypedFixture.NotFound;
+        Result<int, NotFoundError> fifth = default;
+
+        Action act = () => _ = Result<int, NotFoundError>.Combine(first, second, third, fourth, fifth);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine5_Should_Throw_When_TheFourthResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError> first = 1;
+        Result<int, NotFoundError> second = 2;
+        Result<int, NotFoundError> third = 3;
+        Result<int, NotFoundError> fourth = default;
+        Result<int, NotFoundError> fifth = TypedFixture.NotFound;
+
+        Action act = () => _ = Result<int, NotFoundError>.Combine(first, second, third, fourth, fifth);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine5_Should_Throw_When_TheLastResultIsDefault()
     {
         Result<int, NotFoundError> first = 1;
         Result<int, NotFoundError> second = 2;
@@ -418,7 +548,82 @@ public sealed class ResultTE1CombineTests
     }
 
     [Fact]
-    public void Combine6_Should_Throw_When_AResultBeforeTheFirstErrorIsDefault()
+    public void Combine6_Should_Throw_When_TheFirstResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError> first = default;
+        Result<int, NotFoundError> second = TypedFixture.NotFound;
+        Result<int, NotFoundError> third = default;
+        Result<int, NotFoundError> fourth = default;
+        Result<int, NotFoundError> fifth = default;
+        Result<int, NotFoundError> sixth = default;
+
+        Action act = () => _ = Result<int, NotFoundError>.Combine(first, second, third, fourth, fifth, sixth);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine6_Should_Throw_When_TheSecondResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError> first = 1;
+        Result<int, NotFoundError> second = default;
+        Result<int, NotFoundError> third = TypedFixture.NotFound;
+        Result<int, NotFoundError> fourth = default;
+        Result<int, NotFoundError> fifth = default;
+        Result<int, NotFoundError> sixth = default;
+
+        Action act = () => _ = Result<int, NotFoundError>.Combine(first, second, third, fourth, fifth, sixth);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine6_Should_Throw_When_TheThirdResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError> first = 1;
+        Result<int, NotFoundError> second = 2;
+        Result<int, NotFoundError> third = default;
+        Result<int, NotFoundError> fourth = TypedFixture.NotFound;
+        Result<int, NotFoundError> fifth = default;
+        Result<int, NotFoundError> sixth = default;
+
+        Action act = () => _ = Result<int, NotFoundError>.Combine(first, second, third, fourth, fifth, sixth);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine6_Should_Throw_When_TheFourthResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError> first = 1;
+        Result<int, NotFoundError> second = 2;
+        Result<int, NotFoundError> third = 3;
+        Result<int, NotFoundError> fourth = default;
+        Result<int, NotFoundError> fifth = TypedFixture.NotFound;
+        Result<int, NotFoundError> sixth = default;
+
+        Action act = () => _ = Result<int, NotFoundError>.Combine(first, second, third, fourth, fifth, sixth);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine6_Should_Throw_When_TheFifthResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError> first = 1;
+        Result<int, NotFoundError> second = 2;
+        Result<int, NotFoundError> third = 3;
+        Result<int, NotFoundError> fourth = 4;
+        Result<int, NotFoundError> fifth = default;
+        Result<int, NotFoundError> sixth = TypedFixture.NotFound;
+
+        Action act = () => _ = Result<int, NotFoundError>.Combine(first, second, third, fourth, fifth, sixth);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine6_Should_Throw_When_TheLastResultIsDefault()
     {
         Result<int, NotFoundError> first = 1;
         Result<int, NotFoundError> second = 2;
@@ -569,7 +774,103 @@ public sealed class ResultTE1CombineTests
     }
 
     [Fact]
-    public void Combine7_Should_Throw_When_AResultBeforeTheFirstErrorIsDefault()
+    public void Combine7_Should_Throw_When_TheFirstResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError> first = default;
+        Result<int, NotFoundError> second = TypedFixture.NotFound;
+        Result<int, NotFoundError> third = default;
+        Result<int, NotFoundError> fourth = default;
+        Result<int, NotFoundError> fifth = default;
+        Result<int, NotFoundError> sixth = default;
+        Result<int, NotFoundError> seventh = default;
+
+        Action act = () => _ = Result<int, NotFoundError>.Combine(first, second, third, fourth, fifth, sixth, seventh);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine7_Should_Throw_When_TheSecondResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError> first = 1;
+        Result<int, NotFoundError> second = default;
+        Result<int, NotFoundError> third = TypedFixture.NotFound;
+        Result<int, NotFoundError> fourth = default;
+        Result<int, NotFoundError> fifth = default;
+        Result<int, NotFoundError> sixth = default;
+        Result<int, NotFoundError> seventh = default;
+
+        Action act = () => _ = Result<int, NotFoundError>.Combine(first, second, third, fourth, fifth, sixth, seventh);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine7_Should_Throw_When_TheThirdResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError> first = 1;
+        Result<int, NotFoundError> second = 2;
+        Result<int, NotFoundError> third = default;
+        Result<int, NotFoundError> fourth = TypedFixture.NotFound;
+        Result<int, NotFoundError> fifth = default;
+        Result<int, NotFoundError> sixth = default;
+        Result<int, NotFoundError> seventh = default;
+
+        Action act = () => _ = Result<int, NotFoundError>.Combine(first, second, third, fourth, fifth, sixth, seventh);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine7_Should_Throw_When_TheFourthResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError> first = 1;
+        Result<int, NotFoundError> second = 2;
+        Result<int, NotFoundError> third = 3;
+        Result<int, NotFoundError> fourth = default;
+        Result<int, NotFoundError> fifth = TypedFixture.NotFound;
+        Result<int, NotFoundError> sixth = default;
+        Result<int, NotFoundError> seventh = default;
+
+        Action act = () => _ = Result<int, NotFoundError>.Combine(first, second, third, fourth, fifth, sixth, seventh);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine7_Should_Throw_When_TheFifthResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError> first = 1;
+        Result<int, NotFoundError> second = 2;
+        Result<int, NotFoundError> third = 3;
+        Result<int, NotFoundError> fourth = 4;
+        Result<int, NotFoundError> fifth = default;
+        Result<int, NotFoundError> sixth = TypedFixture.NotFound;
+        Result<int, NotFoundError> seventh = default;
+
+        Action act = () => _ = Result<int, NotFoundError>.Combine(first, second, third, fourth, fifth, sixth, seventh);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine7_Should_Throw_When_TheSixthResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError> first = 1;
+        Result<int, NotFoundError> second = 2;
+        Result<int, NotFoundError> third = 3;
+        Result<int, NotFoundError> fourth = 4;
+        Result<int, NotFoundError> fifth = 5;
+        Result<int, NotFoundError> sixth = default;
+        Result<int, NotFoundError> seventh = TypedFixture.NotFound;
+
+        Action act = () => _ = Result<int, NotFoundError>.Combine(first, second, third, fourth, fifth, sixth, seventh);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine7_Should_Throw_When_TheLastResultIsDefault()
     {
         Result<int, NotFoundError> first = 1;
         Result<int, NotFoundError> second = 2;
@@ -747,7 +1048,126 @@ public sealed class ResultTE1CombineTests
     }
 
     [Fact]
-    public void Combine8_Should_Throw_When_AResultBeforeTheFirstErrorIsDefault()
+    public void Combine8_Should_Throw_When_TheFirstResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError> first = default;
+        Result<int, NotFoundError> second = TypedFixture.NotFound;
+        Result<int, NotFoundError> third = default;
+        Result<int, NotFoundError> fourth = default;
+        Result<int, NotFoundError> fifth = default;
+        Result<int, NotFoundError> sixth = default;
+        Result<int, NotFoundError> seventh = default;
+        Result<int, NotFoundError> eighth = default;
+
+        Action act = () => _ = Result<int, NotFoundError>.Combine(first, second, third, fourth, fifth, sixth, seventh, eighth);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine8_Should_Throw_When_TheSecondResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError> first = 1;
+        Result<int, NotFoundError> second = default;
+        Result<int, NotFoundError> third = TypedFixture.NotFound;
+        Result<int, NotFoundError> fourth = default;
+        Result<int, NotFoundError> fifth = default;
+        Result<int, NotFoundError> sixth = default;
+        Result<int, NotFoundError> seventh = default;
+        Result<int, NotFoundError> eighth = default;
+
+        Action act = () => _ = Result<int, NotFoundError>.Combine(first, second, third, fourth, fifth, sixth, seventh, eighth);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine8_Should_Throw_When_TheThirdResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError> first = 1;
+        Result<int, NotFoundError> second = 2;
+        Result<int, NotFoundError> third = default;
+        Result<int, NotFoundError> fourth = TypedFixture.NotFound;
+        Result<int, NotFoundError> fifth = default;
+        Result<int, NotFoundError> sixth = default;
+        Result<int, NotFoundError> seventh = default;
+        Result<int, NotFoundError> eighth = default;
+
+        Action act = () => _ = Result<int, NotFoundError>.Combine(first, second, third, fourth, fifth, sixth, seventh, eighth);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine8_Should_Throw_When_TheFourthResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError> first = 1;
+        Result<int, NotFoundError> second = 2;
+        Result<int, NotFoundError> third = 3;
+        Result<int, NotFoundError> fourth = default;
+        Result<int, NotFoundError> fifth = TypedFixture.NotFound;
+        Result<int, NotFoundError> sixth = default;
+        Result<int, NotFoundError> seventh = default;
+        Result<int, NotFoundError> eighth = default;
+
+        Action act = () => _ = Result<int, NotFoundError>.Combine(first, second, third, fourth, fifth, sixth, seventh, eighth);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine8_Should_Throw_When_TheFifthResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError> first = 1;
+        Result<int, NotFoundError> second = 2;
+        Result<int, NotFoundError> third = 3;
+        Result<int, NotFoundError> fourth = 4;
+        Result<int, NotFoundError> fifth = default;
+        Result<int, NotFoundError> sixth = TypedFixture.NotFound;
+        Result<int, NotFoundError> seventh = default;
+        Result<int, NotFoundError> eighth = default;
+
+        Action act = () => _ = Result<int, NotFoundError>.Combine(first, second, third, fourth, fifth, sixth, seventh, eighth);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine8_Should_Throw_When_TheSixthResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError> first = 1;
+        Result<int, NotFoundError> second = 2;
+        Result<int, NotFoundError> third = 3;
+        Result<int, NotFoundError> fourth = 4;
+        Result<int, NotFoundError> fifth = 5;
+        Result<int, NotFoundError> sixth = default;
+        Result<int, NotFoundError> seventh = TypedFixture.NotFound;
+        Result<int, NotFoundError> eighth = default;
+
+        Action act = () => _ = Result<int, NotFoundError>.Combine(first, second, third, fourth, fifth, sixth, seventh, eighth);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine8_Should_Throw_When_TheSeventhResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError> first = 1;
+        Result<int, NotFoundError> second = 2;
+        Result<int, NotFoundError> third = 3;
+        Result<int, NotFoundError> fourth = 4;
+        Result<int, NotFoundError> fifth = 5;
+        Result<int, NotFoundError> sixth = 6;
+        Result<int, NotFoundError> seventh = default;
+        Result<int, NotFoundError> eighth = TypedFixture.NotFound;
+
+        Action act = () => _ = Result<int, NotFoundError>.Combine(first, second, third, fourth, fifth, sixth, seventh, eighth);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine8_Should_Throw_When_TheLastResultIsDefault()
     {
         Result<int, NotFoundError> first = 1;
         Result<int, NotFoundError> second = 2;

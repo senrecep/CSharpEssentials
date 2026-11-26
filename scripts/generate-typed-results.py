@@ -1275,7 +1275,16 @@ def combine_tests(n: int) -> list:
                 f"{out} result = {call};", "",
                 f"{out} expected = {FIXTURE[error]};", "result.Should().Be(expected);",
             ]))
-        tests.append(RawTest(f"Combine{k}_Should_Throw_When_AResultBeforeTheFirstErrorIsDefault", [
+        for p, word in enumerate(names[:-1]):
+            sources = [f"{src} {w} = {i + 1};" for i, w in enumerate(names[:p])]
+            sources += [f"{src} {word} = default;", f"{src} {names[p + 1]} = {FIXTURE[errors[0]]};"]
+            sources += [f"{src} {w} = default;" for w in names[p + 2:]]
+            tests.append(RawTest(f"Combine{k}_Should_Throw_When_The{word.capitalize()}ResultIsDefaultBeforeAnError", [
+                *sources, "",
+                f"Action act = () => _ = {call};", "",
+                "act.Should().Throw<InvalidOperationException>();",
+            ]))
+        tests.append(RawTest(f"Combine{k}_Should_Throw_When_TheLastResultIsDefault", [
             *[f"{src} {w} = {i + 1};" for i, w in enumerate(names[:-1])], f"{src} {names[-1]} = default;", "",
             f"Action act = () => _ = {call};", "",
             "act.Should().Throw<InvalidOperationException>();",

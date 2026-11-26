@@ -9,7 +9,7 @@ namespace CSharpEssentials.Results.Benchmarks;
 /// (instance, Task, ValueTask) and handler flavours (sync, Task, ValueTask) of <see cref="BindBenchmarks"/>, against the same
 /// hand-written <c>await</c> plus <c>if</c> baseline written for the typed result. Compare a row with its
 /// <see cref="BindBenchmarks"/> twin to see the typed cost over <see cref="Result{TValue}"/>. <c>TaskSource_MapTaskHandler</c>
-/// covers the other Task-source families, which share its shape.
+/// measures <c>MapAsync</c> on a Task source only; the other Task-source and ValueTask-source extensions have no row here.
 /// </summary>
 [MemoryDiagnoser]
 public class TypedAsyncBenchmarks

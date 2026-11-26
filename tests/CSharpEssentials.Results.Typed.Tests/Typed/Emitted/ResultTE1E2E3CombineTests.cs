@@ -44,7 +44,18 @@ public sealed class ResultTE1E2E3CombineTests
     }
 
     [Fact]
-    public void Combine2_Should_Throw_When_AResultBeforeTheFirstErrorIsDefault()
+    public void Combine2_Should_Throw_When_TheFirstResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> first = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> second = TypedFixture.NotFound;
+
+        Action act = () => _ = Result<int, NotFoundError, ConflictError, RateLimited>.Combine(first, second);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine2_Should_Throw_When_TheLastResultIsDefault()
     {
         Result<int, NotFoundError, ConflictError, RateLimited> first = 1;
         Result<int, NotFoundError, ConflictError, RateLimited> second = default;
@@ -107,7 +118,31 @@ public sealed class ResultTE1E2E3CombineTests
     }
 
     [Fact]
-    public void Combine3_Should_Throw_When_AResultBeforeTheFirstErrorIsDefault()
+    public void Combine3_Should_Throw_When_TheFirstResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> first = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> second = TypedFixture.NotFound;
+        Result<int, NotFoundError, ConflictError, RateLimited> third = default;
+
+        Action act = () => _ = Result<int, NotFoundError, ConflictError, RateLimited>.Combine(first, second, third);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine3_Should_Throw_When_TheSecondResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> first = 1;
+        Result<int, NotFoundError, ConflictError, RateLimited> second = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> third = TypedFixture.NotFound;
+
+        Action act = () => _ = Result<int, NotFoundError, ConflictError, RateLimited>.Combine(first, second, third);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine3_Should_Throw_When_TheLastResultIsDefault()
     {
         Result<int, NotFoundError, ConflictError, RateLimited> first = 1;
         Result<int, NotFoundError, ConflictError, RateLimited> second = 2;
@@ -189,7 +224,46 @@ public sealed class ResultTE1E2E3CombineTests
     }
 
     [Fact]
-    public void Combine4_Should_Throw_When_AResultBeforeTheFirstErrorIsDefault()
+    public void Combine4_Should_Throw_When_TheFirstResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> first = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> second = TypedFixture.NotFound;
+        Result<int, NotFoundError, ConflictError, RateLimited> third = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> fourth = default;
+
+        Action act = () => _ = Result<int, NotFoundError, ConflictError, RateLimited>.Combine(first, second, third, fourth);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine4_Should_Throw_When_TheSecondResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> first = 1;
+        Result<int, NotFoundError, ConflictError, RateLimited> second = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> third = TypedFixture.NotFound;
+        Result<int, NotFoundError, ConflictError, RateLimited> fourth = default;
+
+        Action act = () => _ = Result<int, NotFoundError, ConflictError, RateLimited>.Combine(first, second, third, fourth);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine4_Should_Throw_When_TheThirdResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> first = 1;
+        Result<int, NotFoundError, ConflictError, RateLimited> second = 2;
+        Result<int, NotFoundError, ConflictError, RateLimited> third = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> fourth = TypedFixture.NotFound;
+
+        Action act = () => _ = Result<int, NotFoundError, ConflictError, RateLimited>.Combine(first, second, third, fourth);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine4_Should_Throw_When_TheLastResultIsDefault()
     {
         Result<int, NotFoundError, ConflictError, RateLimited> first = 1;
         Result<int, NotFoundError, ConflictError, RateLimited> second = 2;
@@ -292,7 +366,63 @@ public sealed class ResultTE1E2E3CombineTests
     }
 
     [Fact]
-    public void Combine5_Should_Throw_When_AResultBeforeTheFirstErrorIsDefault()
+    public void Combine5_Should_Throw_When_TheFirstResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> first = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> second = TypedFixture.NotFound;
+        Result<int, NotFoundError, ConflictError, RateLimited> third = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> fourth = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> fifth = default;
+
+        Action act = () => _ = Result<int, NotFoundError, ConflictError, RateLimited>.Combine(first, second, third, fourth, fifth);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine5_Should_Throw_When_TheSecondResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> first = 1;
+        Result<int, NotFoundError, ConflictError, RateLimited> second = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> third = TypedFixture.NotFound;
+        Result<int, NotFoundError, ConflictError, RateLimited> fourth = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> fifth = default;
+
+        Action act = () => _ = Result<int, NotFoundError, ConflictError, RateLimited>.Combine(first, second, third, fourth, fifth);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine5_Should_Throw_When_TheThirdResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> first = 1;
+        Result<int, NotFoundError, ConflictError, RateLimited> second = 2;
+        Result<int, NotFoundError, ConflictError, RateLimited> third = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> fourth = TypedFixture.NotFound;
+        Result<int, NotFoundError, ConflictError, RateLimited> fifth = default;
+
+        Action act = () => _ = Result<int, NotFoundError, ConflictError, RateLimited>.Combine(first, second, third, fourth, fifth);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine5_Should_Throw_When_TheFourthResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> first = 1;
+        Result<int, NotFoundError, ConflictError, RateLimited> second = 2;
+        Result<int, NotFoundError, ConflictError, RateLimited> third = 3;
+        Result<int, NotFoundError, ConflictError, RateLimited> fourth = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> fifth = TypedFixture.NotFound;
+
+        Action act = () => _ = Result<int, NotFoundError, ConflictError, RateLimited>.Combine(first, second, third, fourth, fifth);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine5_Should_Throw_When_TheLastResultIsDefault()
     {
         Result<int, NotFoundError, ConflictError, RateLimited> first = 1;
         Result<int, NotFoundError, ConflictError, RateLimited> second = 2;
@@ -418,7 +548,82 @@ public sealed class ResultTE1E2E3CombineTests
     }
 
     [Fact]
-    public void Combine6_Should_Throw_When_AResultBeforeTheFirstErrorIsDefault()
+    public void Combine6_Should_Throw_When_TheFirstResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> first = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> second = TypedFixture.NotFound;
+        Result<int, NotFoundError, ConflictError, RateLimited> third = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> fourth = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> fifth = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> sixth = default;
+
+        Action act = () => _ = Result<int, NotFoundError, ConflictError, RateLimited>.Combine(first, second, third, fourth, fifth, sixth);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine6_Should_Throw_When_TheSecondResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> first = 1;
+        Result<int, NotFoundError, ConflictError, RateLimited> second = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> third = TypedFixture.NotFound;
+        Result<int, NotFoundError, ConflictError, RateLimited> fourth = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> fifth = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> sixth = default;
+
+        Action act = () => _ = Result<int, NotFoundError, ConflictError, RateLimited>.Combine(first, second, third, fourth, fifth, sixth);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine6_Should_Throw_When_TheThirdResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> first = 1;
+        Result<int, NotFoundError, ConflictError, RateLimited> second = 2;
+        Result<int, NotFoundError, ConflictError, RateLimited> third = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> fourth = TypedFixture.NotFound;
+        Result<int, NotFoundError, ConflictError, RateLimited> fifth = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> sixth = default;
+
+        Action act = () => _ = Result<int, NotFoundError, ConflictError, RateLimited>.Combine(first, second, third, fourth, fifth, sixth);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine6_Should_Throw_When_TheFourthResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> first = 1;
+        Result<int, NotFoundError, ConflictError, RateLimited> second = 2;
+        Result<int, NotFoundError, ConflictError, RateLimited> third = 3;
+        Result<int, NotFoundError, ConflictError, RateLimited> fourth = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> fifth = TypedFixture.NotFound;
+        Result<int, NotFoundError, ConflictError, RateLimited> sixth = default;
+
+        Action act = () => _ = Result<int, NotFoundError, ConflictError, RateLimited>.Combine(first, second, third, fourth, fifth, sixth);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine6_Should_Throw_When_TheFifthResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> first = 1;
+        Result<int, NotFoundError, ConflictError, RateLimited> second = 2;
+        Result<int, NotFoundError, ConflictError, RateLimited> third = 3;
+        Result<int, NotFoundError, ConflictError, RateLimited> fourth = 4;
+        Result<int, NotFoundError, ConflictError, RateLimited> fifth = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> sixth = TypedFixture.NotFound;
+
+        Action act = () => _ = Result<int, NotFoundError, ConflictError, RateLimited>.Combine(first, second, third, fourth, fifth, sixth);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine6_Should_Throw_When_TheLastResultIsDefault()
     {
         Result<int, NotFoundError, ConflictError, RateLimited> first = 1;
         Result<int, NotFoundError, ConflictError, RateLimited> second = 2;
@@ -569,7 +774,103 @@ public sealed class ResultTE1E2E3CombineTests
     }
 
     [Fact]
-    public void Combine7_Should_Throw_When_AResultBeforeTheFirstErrorIsDefault()
+    public void Combine7_Should_Throw_When_TheFirstResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> first = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> second = TypedFixture.NotFound;
+        Result<int, NotFoundError, ConflictError, RateLimited> third = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> fourth = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> fifth = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> sixth = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> seventh = default;
+
+        Action act = () => _ = Result<int, NotFoundError, ConflictError, RateLimited>.Combine(first, second, third, fourth, fifth, sixth, seventh);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine7_Should_Throw_When_TheSecondResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> first = 1;
+        Result<int, NotFoundError, ConflictError, RateLimited> second = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> third = TypedFixture.NotFound;
+        Result<int, NotFoundError, ConflictError, RateLimited> fourth = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> fifth = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> sixth = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> seventh = default;
+
+        Action act = () => _ = Result<int, NotFoundError, ConflictError, RateLimited>.Combine(first, second, third, fourth, fifth, sixth, seventh);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine7_Should_Throw_When_TheThirdResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> first = 1;
+        Result<int, NotFoundError, ConflictError, RateLimited> second = 2;
+        Result<int, NotFoundError, ConflictError, RateLimited> third = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> fourth = TypedFixture.NotFound;
+        Result<int, NotFoundError, ConflictError, RateLimited> fifth = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> sixth = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> seventh = default;
+
+        Action act = () => _ = Result<int, NotFoundError, ConflictError, RateLimited>.Combine(first, second, third, fourth, fifth, sixth, seventh);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine7_Should_Throw_When_TheFourthResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> first = 1;
+        Result<int, NotFoundError, ConflictError, RateLimited> second = 2;
+        Result<int, NotFoundError, ConflictError, RateLimited> third = 3;
+        Result<int, NotFoundError, ConflictError, RateLimited> fourth = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> fifth = TypedFixture.NotFound;
+        Result<int, NotFoundError, ConflictError, RateLimited> sixth = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> seventh = default;
+
+        Action act = () => _ = Result<int, NotFoundError, ConflictError, RateLimited>.Combine(first, second, third, fourth, fifth, sixth, seventh);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine7_Should_Throw_When_TheFifthResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> first = 1;
+        Result<int, NotFoundError, ConflictError, RateLimited> second = 2;
+        Result<int, NotFoundError, ConflictError, RateLimited> third = 3;
+        Result<int, NotFoundError, ConflictError, RateLimited> fourth = 4;
+        Result<int, NotFoundError, ConflictError, RateLimited> fifth = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> sixth = TypedFixture.NotFound;
+        Result<int, NotFoundError, ConflictError, RateLimited> seventh = default;
+
+        Action act = () => _ = Result<int, NotFoundError, ConflictError, RateLimited>.Combine(first, second, third, fourth, fifth, sixth, seventh);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine7_Should_Throw_When_TheSixthResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> first = 1;
+        Result<int, NotFoundError, ConflictError, RateLimited> second = 2;
+        Result<int, NotFoundError, ConflictError, RateLimited> third = 3;
+        Result<int, NotFoundError, ConflictError, RateLimited> fourth = 4;
+        Result<int, NotFoundError, ConflictError, RateLimited> fifth = 5;
+        Result<int, NotFoundError, ConflictError, RateLimited> sixth = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> seventh = TypedFixture.NotFound;
+
+        Action act = () => _ = Result<int, NotFoundError, ConflictError, RateLimited>.Combine(first, second, third, fourth, fifth, sixth, seventh);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine7_Should_Throw_When_TheLastResultIsDefault()
     {
         Result<int, NotFoundError, ConflictError, RateLimited> first = 1;
         Result<int, NotFoundError, ConflictError, RateLimited> second = 2;
@@ -747,7 +1048,126 @@ public sealed class ResultTE1E2E3CombineTests
     }
 
     [Fact]
-    public void Combine8_Should_Throw_When_AResultBeforeTheFirstErrorIsDefault()
+    public void Combine8_Should_Throw_When_TheFirstResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> first = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> second = TypedFixture.NotFound;
+        Result<int, NotFoundError, ConflictError, RateLimited> third = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> fourth = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> fifth = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> sixth = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> seventh = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> eighth = default;
+
+        Action act = () => _ = Result<int, NotFoundError, ConflictError, RateLimited>.Combine(first, second, third, fourth, fifth, sixth, seventh, eighth);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine8_Should_Throw_When_TheSecondResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> first = 1;
+        Result<int, NotFoundError, ConflictError, RateLimited> second = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> third = TypedFixture.NotFound;
+        Result<int, NotFoundError, ConflictError, RateLimited> fourth = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> fifth = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> sixth = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> seventh = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> eighth = default;
+
+        Action act = () => _ = Result<int, NotFoundError, ConflictError, RateLimited>.Combine(first, second, third, fourth, fifth, sixth, seventh, eighth);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine8_Should_Throw_When_TheThirdResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> first = 1;
+        Result<int, NotFoundError, ConflictError, RateLimited> second = 2;
+        Result<int, NotFoundError, ConflictError, RateLimited> third = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> fourth = TypedFixture.NotFound;
+        Result<int, NotFoundError, ConflictError, RateLimited> fifth = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> sixth = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> seventh = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> eighth = default;
+
+        Action act = () => _ = Result<int, NotFoundError, ConflictError, RateLimited>.Combine(first, second, third, fourth, fifth, sixth, seventh, eighth);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine8_Should_Throw_When_TheFourthResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> first = 1;
+        Result<int, NotFoundError, ConflictError, RateLimited> second = 2;
+        Result<int, NotFoundError, ConflictError, RateLimited> third = 3;
+        Result<int, NotFoundError, ConflictError, RateLimited> fourth = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> fifth = TypedFixture.NotFound;
+        Result<int, NotFoundError, ConflictError, RateLimited> sixth = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> seventh = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> eighth = default;
+
+        Action act = () => _ = Result<int, NotFoundError, ConflictError, RateLimited>.Combine(first, second, third, fourth, fifth, sixth, seventh, eighth);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine8_Should_Throw_When_TheFifthResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> first = 1;
+        Result<int, NotFoundError, ConflictError, RateLimited> second = 2;
+        Result<int, NotFoundError, ConflictError, RateLimited> third = 3;
+        Result<int, NotFoundError, ConflictError, RateLimited> fourth = 4;
+        Result<int, NotFoundError, ConflictError, RateLimited> fifth = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> sixth = TypedFixture.NotFound;
+        Result<int, NotFoundError, ConflictError, RateLimited> seventh = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> eighth = default;
+
+        Action act = () => _ = Result<int, NotFoundError, ConflictError, RateLimited>.Combine(first, second, third, fourth, fifth, sixth, seventh, eighth);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine8_Should_Throw_When_TheSixthResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> first = 1;
+        Result<int, NotFoundError, ConflictError, RateLimited> second = 2;
+        Result<int, NotFoundError, ConflictError, RateLimited> third = 3;
+        Result<int, NotFoundError, ConflictError, RateLimited> fourth = 4;
+        Result<int, NotFoundError, ConflictError, RateLimited> fifth = 5;
+        Result<int, NotFoundError, ConflictError, RateLimited> sixth = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> seventh = TypedFixture.NotFound;
+        Result<int, NotFoundError, ConflictError, RateLimited> eighth = default;
+
+        Action act = () => _ = Result<int, NotFoundError, ConflictError, RateLimited>.Combine(first, second, third, fourth, fifth, sixth, seventh, eighth);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine8_Should_Throw_When_TheSeventhResultIsDefaultBeforeAnError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> first = 1;
+        Result<int, NotFoundError, ConflictError, RateLimited> second = 2;
+        Result<int, NotFoundError, ConflictError, RateLimited> third = 3;
+        Result<int, NotFoundError, ConflictError, RateLimited> fourth = 4;
+        Result<int, NotFoundError, ConflictError, RateLimited> fifth = 5;
+        Result<int, NotFoundError, ConflictError, RateLimited> sixth = 6;
+        Result<int, NotFoundError, ConflictError, RateLimited> seventh = default;
+        Result<int, NotFoundError, ConflictError, RateLimited> eighth = TypedFixture.NotFound;
+
+        Action act = () => _ = Result<int, NotFoundError, ConflictError, RateLimited>.Combine(first, second, third, fourth, fifth, sixth, seventh, eighth);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Combine8_Should_Throw_When_TheLastResultIsDefault()
     {
         Result<int, NotFoundError, ConflictError, RateLimited> first = 1;
         Result<int, NotFoundError, ConflictError, RateLimited> second = 2;
