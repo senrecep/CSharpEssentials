@@ -10,7 +10,7 @@ MediatR is pinned to 12.5.0, the last release under Apache-2.0. The latest stabl
 
 ## What was measured
 
-Twelve BenchmarkDotNet classes in `benchmarks/CSharpEssentials.Mediator.Benchmarks/` plus a Native AOT script. The first five are described here; the other seven (validator fan-out, validation scope, idempotency, lock, lock contention, caching, logging) in [section 7](#7-validator-fan-out-idempotency-lock-caching-and-logging-behaviors). Every class uses `[MemoryDiagnoser]`. Each class runs a self-check (`MediatorSelfCheck`) in its setup. It fails unless MediatR is 12.5.0 and Mediator.Abstractions is 3.0.2 at run time, and unless every column returns the same result and runs the behaviors and handlers it claims to run: `Ping(41)` returns 42 after exactly 0 or 2 behavior calls, a publish reaches exactly 1 or 5 handlers, both startups register exactly 50 request handlers, and in Part B every column returns success 6 for the valid order, exactly `Name.NotEmpty,Quantity.InclusiveBetween` for the invalid one, and one `InvalidOperationException` error for an order whose handler throws.
+Thirteen BenchmarkDotNet classes in `benchmarks/CSharpEssentials.Mediator.Benchmarks/` plus a Native AOT script. The first five are described here; seven more (validator fan-out, validation scope, idempotency, lock, lock contention, caching, logging) in [section 7](#7-validator-fan-out-idempotency-lock-caching-and-logging-behaviors), and `ResultBaseCheckBenchmarks`, the `IResultBase` check on struct responses, in [section 8](#8-iresultbase-check-on-a-struct-response). Every class uses `[MemoryDiagnoser]`. Each class runs a self-check (`MediatorSelfCheck`) in its setup. It fails unless MediatR is 12.5.0 and Mediator.Abstractions is 3.0.2 at run time, and unless every column returns the same result and runs the behaviors and handlers it claims to run: `Ping(41)` returns 42 after exactly 0 or 2 behavior calls, a publish reaches exactly 1 or 5 handlers, both startups register exactly 50 request handlers, and in Part B every column returns success 6 for the valid order, exactly `Name.NotEmpty,Quantity.InclusiveBetween` for the invalid one, and one `InvalidOperationException` error for an order whose handler throws.
 
 | # | Class | Measured unit | Columns |
 |---|---|---|---|
@@ -44,10 +44,10 @@ Environment:
 |---|---|
 | Machine | 6-core, 12-thread x64 desktop CPU (RyuJIT AVX2) |
 | OS | Linux, kernel 7.3.0 |
-| Machine load | Desktop session in the background. All twelve classes ran on 2026-11-05 from 12:59 to 14:50, run order net8, net9, net10, net11. 1-minute load average 1.90 at the suite start and 1.63 at the end (5-minute 1.73 and 1.68). No other benchmark ran at the same time. The AOT script ran separately, on 2026-11-06, at 4.70 (3.86 / 3.63). Four classes were rerun later with no load recorded: `ValidationFanOutBenchmarks` and `IdempotencyBehaviorBenchmarks` on 2026-11-07 from 15:00, after performance changes to those behaviors, and `BehaviorBenchmarks` and `ValidationScopeBenchmarks` after the performance changes in #230-#256 |
+| Machine load | Desktop session in the background. All twelve classes ran on 2026-11-05 from 12:59 to 14:50, run order net8, net9, net10, net11. 1-minute load average 1.90 at the suite start and 1.63 at the end (5-minute 1.73 and 1.68). No other benchmark ran at the same time. The AOT script ran separately, on 2026-11-06, at 4.70 (3.86 / 3.63). Four classes were rerun later with no load recorded: `ValidationFanOutBenchmarks` and `IdempotencyBehaviorBenchmarks` on 2026-11-07 from 15:00, after performance changes to those behaviors, and `BehaviorBenchmarks` and `ValidationScopeBenchmarks` after the performance changes in #230-#256. `ResultBaseCheckBenchmarks` ran on 2026-11-26 against commit c97867c8, at a 1-minute load of 1.1 to 2.7 at the start (no end value recorded); its net10 report comes from a rerun after a first pass above 5% CV |
 | Tool | BenchmarkDotNet v0.14.0, [MemoryDiagnoser]; default job for warm classes, ColdStart job (15 launches) for the cold class |
-| .NET SDK | 11.0.100-rc.1.26425.128 (11.0.100-rc.3.26522.148 for the four rerun classes) |
-| Runtimes tested | .NET 8.0.30, .NET 9.0.19, .NET 10.0.11, .NET 11.0.0 (.NET 8.0.33, 9.0.22, 10.0.14 and 11.0.0 for the four rerun classes) |
+| .NET SDK | 11.0.100-rc.1.26425.128 (11.0.100-rc.3.26522.148 for the four rerun classes); 11.0.100 for `ResultBaseCheckBenchmarks` |
+| Runtimes tested | .NET 8.0.30, .NET 9.0.19, .NET 10.0.11, .NET 11.0.0 (.NET 8.0.33, 9.0.22, 10.0.14 and 11.0.0 for the four rerun classes); .NET 8.0.33, 9.0.22, 10.0.15 and 11.0.0 for `ResultBaseCheckBenchmarks` |
 | MediatR | 12.5.0 |
 | Mediator.SourceGenerator / Mediator.Abstractions | 3.0.2 / 3.0.2 (the bench sets `VersionOverride="3.0.2"` because CSE floats Mediator.Abstractions at `[3.0.1,)`; generated code must run on the abstractions of its own generator version) |
 | Microsoft.Extensions.DependencyInjection | 10.0.0 (benchmark project) |
@@ -56,7 +56,7 @@ Environment:
 ### How these numbers were produced
 
 - Full runs of all twelve classes, not `--quick`, on the TFMs one after another; load and rerun dates are in the Environment table.
-- After the run, every row with a coefficient of variation above 5% was rerun up to two times. No row of this suite stayed above 5%.
+- After the run, every row with a coefficient of variation above 5% was rerun up to two times. One row stayed above 5%: net10 `ResultBaseCheckBenchmarks` `Result` with `Succeed=True`, 0.2964 ns with a CV of 5.1%, near timer resolution.
 - Reports: `benchmarks/results/mediator/{tfm}/results/*-report-github.md` (and `.csv`). Native AOT: `benchmarks/results/mediator/aot/aot-report.md`, from a separate run (see section 6).
 - Every table below names its TFM. Mean, Ratio and Allocated are copied from the GitHub Markdown reports; Ratio is BenchmarkDotNet's column against the row named as baseline. "-" in Allocated means 0 B.
 
@@ -80,6 +80,7 @@ Primary runtime: net10. A tie is a difference within the sum of the two Benchmar
 | Invalid input: CSE is faster than hand-written behaviors on MediatR on every TFM and allocates less | net10: 292.5 vs 396.0 ns, 752 vs 1192 B |
 | Section 7 behaviors: where CSE loses | Validator fan-out (three validators): slower than hand-written Mediator in every row (Ratio 1.14-1.25 on net10); against hand-written MediatR it is slower only on net8 invalid input with two groups (a tie with one group). Idempotency: slower than both hand-written stores in most rows; the failing send that releases its key (ExecuteRelease, Supplied) is 649.0 ns against 293.6 and 426.5 ns on net10. Caching: 1.02-1.09 of hand-written Mediator. Lock: faster than both, but 168 B against 48 B. Details in section 7 |
 | Section 7 behaviors: where CSE wins | Validation scope: CSE is the fastest row and allocates least on every TFM (net10: 469.3 vs 511.8 and 519.8 ns, 976 vs 1232 B). Uncontended lock: faster than both hand-written lock behaviors. Contended lock with many keys (PerWorker, Unique): faster than AsyncKeyedLock on net9 to net11. Logging: Ratio 0.95-1.05 against hand-written Mediator on net9 to net11 (up to 1.17 on net8), faster than hand-written MediatR |
+| `is IResultBase` on a typed struct response boxes it on net8 and net9 (CSE loss); no allocation on net10 and net11 | net9: 8.3365 ns / 32 B for `Result<int, NotFoundError>` against 0.5134 ns / 0 B for `Result<int>` (near timer resolution). net8 boxes both (32 B each). net10: 0.7307 ns / 0 B against 0.2967 ns / 0 B, both near timer resolution. Section 8 |
 | Native AOT (report from 2026-11-06): Mediator publishes with 0 IL warnings and runs; MediatR crashes | MediatR 12.5.0: 23 IL warnings (all ILC), exit 134, "A suitable constructor for type 'MediatR.Mediator' could not be located". Mediator 3.0.2: 0 warnings, 2.2 MB, `response 42 behaviors 2 ok` |
 | Native AOT, same 2026-11-06 report: both CSE samples publish with 0 IL warnings and run | CseAot and CseDirectValidatorAot: 0 IL warnings, 2.5 MB each, exit 0, `valid 6 invalid Name.NotEmpty,Quantity.InclusiveBetween ok`. In the earlier 2026-11-02 report both crashed (4 and 3 IL warnings); the source changes in the next row removed both causes |
 | Changes in the CSE source since the earlier AOT report (2026-11-02) | (a) `AddValidator<T, TValidator>` now carries `[DynamicallyAccessedMembers(PublicConstructors)]` on `TValidator` (`CSharpEssentials.Validation/Extensions/ValidatorServiceCollectionExtensions.cs:26`). (b) `BehaviorCache` and its `GetMethod("Failure")` lookup are gone; failures are built through `FailureResponse<TResponse>.Factory`, a static `IFailureFactory<TResponse>` that takes the `Error[]` directly (`Behaviors/FailureResponse.cs`). (c) With one validator, Enforce mode and no listening observer, a failure returns without an async state machine (`Behaviors/ValidationBehavior.cs:97-98`). The Part B numbers in this document were measured with this code |
@@ -349,6 +350,35 @@ Where CSE loses:
 
 Elsewhere CSE ties or beats hand-written Mediator (net10 Enabled RequestResponse is a tie; net11 CSE is faster in every row), and it is faster than hand-written MediatR in every row on every TFM.
 
+### 8. `IResultBase` check on a struct response
+
+The transaction, caching and idempotency behaviors ask whether a response is a failed result with a type test on the generic response: `response is not IResultBase { IsFailure: true }` (`Behaviors/TransactionOutcome.cs:8`, `Behaviors/IdempotencyBehavior.cs:306`) or `result is IResultBase r && r.IsFailure` (`Behaviors/CachingBehavior.cs:46`). `Result<T>` and the typed results are structs, so the test can box them. `ResultBaseCheckBenchmarks` measures that test alone, in a generic method marked `NoInlining`:
+
+| Row | Response | Check |
+|---|---|---|
+| `ClassResponse` (baseline) | a `string`, which does not implement `IResultBase` | `is not IResultBase { IsFailure: true }` |
+| `Result` | `Result<int>` (struct) | the same |
+| `Typed` | `Result<int, NotFoundError>` (struct) | the same |
+| `Typed_Constrained` | `Result<int, NotFoundError>` | `!response.IsFailure` in a method constrained to `where TResponse : IResultBase` |
+
+`Succeed` picks a success (42) or a failure (a `NotFoundError`; `Result<int>` holds it as an `Error`). Each cell is `Mean (Ratio)`, with the allocation where it is not 0 B.
+
+| Row | Succeed | net8 | net9 | net10 | net11 |
+|---|---|---|---|---|---|
+| `ClassResponse` | False | 3.437 ns (1.00) | 0.6436 ns (1.00) | 0.4359 ns (1.00) | 0.4370 ns (1.00) |
+| `Result` | False | 7.089 ns (2.06), 32 B | 0.5134 ns (0.80) | 0.2967 ns (0.68) | 0.4348 ns (1.00) |
+| `Typed` | False | 8.608 ns (2.50), 32 B | 8.3365 ns (12.95), 32 B | 0.7307 ns (1.68) | 0.4501 ns (1.03) |
+| `Typed_Constrained` | False | 3.022 ns (0.88) | 2.7570 ns (4.28) | 2.7454 ns (6.30) | 2.1666 ns (4.96) |
+| `ClassResponse` | True | 3.767 ns (1.00) | 0.6449 ns (1.00) | 0.4463 ns (1.00) | 0.4379 ns (1.00) |
+| `Result` | True | 6.576 ns (1.75), 32 B | 0.5259 ns (0.82) | 0.2964 ns (0.66), CV 5.1% | 0.4446 ns (1.02) |
+| `Typed` | True | 7.758 ns (2.06), 32 B | 8.2595 ns (12.81), 32 B | 0.7357 ns (1.65) | 0.4228 ns (0.97) |
+| `Typed_Constrained` | True | 3.020 ns (0.80) | 2.7624 ns (4.28) | 2.7422 ns (6.15) | 2.4488 ns (5.59) |
+
+- net8 (netstandard2.1 build of Results) boxes both structs: 32 B per check, 6.576 to 8.608 ns.
+- net9 boxes the typed result but not `Result<int>`: 8.3365 ns / 32 B against 0.5134 ns / 0 B on failure (CSE loss). The `ClassResponse` and `Result` rows on net9 are under 1 ns, near timer resolution. No behavior was benchmarked with a typed response, so the cost per send is inferred from this row, not measured.
+- On net10 and net11 neither struct allocates. All unconstrained rows are under 1 ns there, near timer resolution; on net10 the typed check is 0.43 to 0.44 ns slower than `Result<int>`, and the `Result` Success row has a CV of 5.1%.
+- The constrained form never allocates, but it is slower than the unconstrained check on net10 and net11 (2.1666 to 2.7454 ns). It is faster only where the unconstrained check boxes: on net8, and for the typed result on net9.
+
 ---
 
 ## Cross-TFM
@@ -438,7 +468,7 @@ MediatR links point at tag [`v12.5.0`](https://github.com/jbogard/MediatR/tree/v
 
 ## Caveats
 
-- CSE is not a dispatcher. Part A measures MediatR and Mediator; CSE adds nothing to those rows. Part B and section 7 are the only places CSE code runs.
+- CSE is not a dispatcher. Part A measures MediatR and Mediator; CSE adds nothing to those rows. Part B, section 7 and section 8 are the only places CSE code runs.
 - Each library keeps its documented default lifetime in Part A (MediatR transient, Mediator singleton). Much of MediatR's per-send cost and allocation is the transient handler and behavior resolution that this default implies. MediatR could be registered with other lifetimes; that was not measured.
 - The MediatorConcrete column calls the generated concrete class, the form Mediator's own benchmarks measure. Applications that inject `IMediator` get the MediatorIMediator row.
 - The 2 behaviors in Send are pass-through and the handlers do trivial work, so Send and Publish measure dispatch overhead only.
