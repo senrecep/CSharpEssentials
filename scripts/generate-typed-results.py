@@ -1256,27 +1256,30 @@ def combine_tests(n: int) -> list:
     errors = SLOT_TYPES[:n]
     src = result("int", errors)
     tests: list = []
-    for k in (2, 8):
-        values = [str(v) for v in range(1, k + 1)]
-        tuple_type = "(" + ", ".join(["int"] * k) + ")"
-        out = result(tuple_type, errors)
+    for k in range(2, 9):
+        names = COUNT_WORDS[:k]
+        out = result("(" + ", ".join(["int"] * k) + ")", errors)
+        call = f"{src}.Combine({', '.join(names)})"
         tests.append(RawTest(f"Combine{k}_Should_ReturnEveryValue_When_EveryResultHoldsAValue", [
-            *[f"{src} {COUNT_WORDS[i]} = {v};" for i, v in enumerate(values)], "",
-            f"{out} result = {src}.Combine({', '.join(COUNT_WORDS[:k])});", "",
-            f"{out} expected = ({', '.join(values)});", "result.Should().Be(expected);",
+            *[f"{src} {w} = {i + 1};" for i, w in enumerate(names)], "",
+            f"{out} result = {call};", "",
+            f"{out} expected = ({', '.join(str(i + 1) for i in range(k))});", "result.Should().Be(expected);",
         ]))
-    out = result("(int, int, int)", errors)
-    for (case, value), e in zip(source_cases(errors), errors):
-        tests.append(RawTest(f"Combine_Should_ReturnTheFirstErrorWithoutLookingFurther_When_{case}", [
-            f"{src} first = 1;", f"{src} second = {value};", f"{src} third = default;", "",
-            f"{out} result = {src}.Combine(first, second, third);", "",
-            f"{out} expected = {value};", "result.Should().Be(expected);",
+        for p, word in enumerate(names):
+            error = errors[p % n]
+            sources = [f"{src} {w} = {i + 1};" for i, w in enumerate(names[:p])]
+            sources += [f"{src} {word} = {FIXTURE[error]};"]
+            sources += [f"{src} {w} = default;" for w in names[p + 1:]]
+            tests.append(RawTest(f"Combine{k}_Should_ReturnTheErrorOfThe{word.capitalize()}Result_When_ItHolds{error}", [
+                *sources, "",
+                f"{out} result = {call};", "",
+                f"{out} expected = {FIXTURE[error]};", "result.Should().Be(expected);",
+            ]))
+        tests.append(RawTest(f"Combine{k}_Should_Throw_When_AResultBeforeTheFirstErrorIsDefault", [
+            *[f"{src} {w} = {i + 1};" for i, w in enumerate(names[:-1])], f"{src} {names[-1]} = default;", "",
+            f"Action act = () => _ = {call};", "",
+            "act.Should().Throw<InvalidOperationException>();",
         ]))
-    tests.append(RawTest("Combine_Should_Throw_When_AResultBeforeTheFirstErrorIsDefault", [
-        f"{src} first = default;", f"{src} second = {FIXTURE[errors[0]]};", "",
-        f"Action act = () => _ = {src}.Combine(first, second);", "",
-        "act.Should().Throw<InvalidOperationException>();",
-    ]))
     return tests
 
 
