@@ -121,7 +121,12 @@ public static partial class ResultExtensions
         where TOut : notnull
     {
         Result<T, E1, E2, E3> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.BindAsync<TOut>(bind).WithCancellation(cancellationToken).ConfigureAwait(false);
+        return result.Tag switch
+        {
+            TypedResultLogic.SuccessTag => await TypedResultLogic.Step(bind(result.RawValue), cancellationToken).ConfigureAwait(false),
+            2 or 3 or 4 => new(result.Tag, default!, result.RawError),
+            _ => throw TypedResultLogic.DefaultInitialized(),
+        };
     }
 
     /// <summary>
@@ -175,6 +180,11 @@ public static partial class ResultExtensions
         where TOut : notnull
     {
         Result<T, E1, E2, E3> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.BindAsync<TOut>(bind).WithCancellation(cancellationToken).ConfigureAwait(false);
+        return result.Tag switch
+        {
+            TypedResultLogic.SuccessTag => await bind(result.RawValue).WithCancellation(cancellationToken).ConfigureAwait(false),
+            2 or 3 or 4 => new(result.Tag, default!, result.RawError),
+            _ => throw TypedResultLogic.DefaultInitialized(),
+        };
     }
 }

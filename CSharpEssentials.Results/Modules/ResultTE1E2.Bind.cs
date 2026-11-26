@@ -204,7 +204,12 @@ public static partial class ResultExtensions
         where TOut : notnull
     {
         Result<T, E1, E2> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.BindAsync<TOut>(bind).WithCancellation(cancellationToken).ConfigureAwait(false);
+        return result.Tag switch
+        {
+            TypedResultLogic.SuccessTag => await TypedResultLogic.Step(bind(result.RawValue), cancellationToken).ConfigureAwait(false),
+            2 or 3 => new(result.Tag, default!, result.RawError),
+            _ => throw TypedResultLogic.DefaultInitialized(),
+        };
     }
 
     /// <summary>
@@ -254,7 +259,12 @@ public static partial class ResultExtensions
         where TOut : notnull
     {
         Result<T, E1, E2> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.BindAsync<TOut>(bind).WithCancellation(cancellationToken).ConfigureAwait(false);
+        return result.Tag switch
+        {
+            TypedResultLogic.SuccessTag => await bind(result.RawValue).WithCancellation(cancellationToken).ConfigureAwait(false),
+            2 or 3 => new(result.Tag, default!, result.RawError),
+            _ => throw TypedResultLogic.DefaultInitialized(),
+        };
     }
 
     /// <summary>
@@ -312,7 +322,17 @@ public static partial class ResultExtensions
         where TError1 : notnull
     {
         Result<T, E1, E2> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.BindWidenAsync<TOut, TError1>(bind).WithCancellation(cancellationToken).ConfigureAwait(false);
+        if (result.Tag == TypedResultLogic.SuccessTag)
+        {
+            Result<TOut, TError1> inner = await TypedResultLogic.Step(bind(result.RawValue), cancellationToken).ConfigureAwait(false);
+            return new(TypedResultLogic.Remap(inner.Tag, 4), inner.RawValue, inner.RawError);
+        }
+
+        return result.Tag switch
+        {
+            2 or 3 => new(result.Tag, default!, result.RawError),
+            _ => throw TypedResultLogic.DefaultInitialized(),
+        };
     }
 
     /// <summary>
@@ -370,6 +390,16 @@ public static partial class ResultExtensions
         where TError1 : notnull
     {
         Result<T, E1, E2> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.BindWidenAsync<TOut, TError1>(bind).WithCancellation(cancellationToken).ConfigureAwait(false);
+        if (result.Tag == TypedResultLogic.SuccessTag)
+        {
+            Result<TOut, TError1> inner = await bind(result.RawValue).WithCancellation(cancellationToken).ConfigureAwait(false);
+            return new(TypedResultLogic.Remap(inner.Tag, 4), inner.RawValue, inner.RawError);
+        }
+
+        return result.Tag switch
+        {
+            2 or 3 => new(result.Tag, default!, result.RawError),
+            _ => throw TypedResultLogic.DefaultInitialized(),
+        };
     }
 }

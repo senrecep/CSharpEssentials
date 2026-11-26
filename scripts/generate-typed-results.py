@@ -440,7 +440,10 @@ def extension_cell(op: Op, n: int, receiver: str, delegate: str, priority: bool,
         sentence = f"Awaits <paramref name=\"task\"/>, then awaits the {'task' if delegate == 'Task' else 'value task'} that <paramref name=\"{op.param}\"/> returns."
         observed = token_doc(op, '<paramref name="task"/>' if op.family in UNABANDONED else f'<paramref name="task"/> and <paramref name="{op.param}"/>')
         if map_inline:
-            tail = checked(op, "result.", op.body(lambda a: f"await {op.param}({a}){AWAIT_TOKEN}", "result."))
+            # A null Bind step task still fails with NullReferenceException, as it did when the instance member awaited it.
+            step = (lambda a: f"await TypedResultLogic.Step({op.param}({a}), cancellationToken).ConfigureAwait(false)") if delegate == "Task" and op.family == "Bind" \
+                else (lambda a: f"await {op.param}({a}){AWAIT_TOKEN}")
+            tail = checked(op, "result.", op.body(step, "result."))
         elif op.family in NO_INSTANCE_TOKEN:
             tail = [f"return await result.{op.name}Async{op.type_args()}({call_args}){AWAIT_TOKEN};"]
         else:
@@ -470,7 +473,8 @@ def emit(n: int, family: str, ops: list[Op]) -> tuple[list[str], list[str]]:
             else:
                 # Inline the handler call when no instance member with this handler exists on every target the cell exists on.
                 twin = [gate for r, d, gate, _ in op.cells if r == "this" and d == delegate]
-                inline = delegate != "sync" and not (twin and (not twin[0] or net9))
+                # Bind always inlines: nesting the instance member costs a second state machine and, for Task, a second Task.
+                inline = delegate != "sync" and (op.family == "Bind" or not (twin and (not twin[0] or net9)))
                 (extensions_gated if net9 else extensions).append(extension_cell(op, n, receiver, delegate, priority, inline))
     struct = join([op.sync() for op in ops] + instance + gated(instance_gated))
     return struct, join(extensions + gated(extensions_gated))

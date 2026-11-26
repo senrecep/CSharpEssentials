@@ -1,3 +1,4 @@
+using CSharpEssentials.Core;
 using CSharpEssentials.Errors;
 
 namespace CSharpEssentials.ResultPattern;
@@ -27,6 +28,13 @@ internal static class TypedResultLogic
         if (tag == DefaultTag)
             throw DefaultInitialized();
     }
+
+    /// <summary>
+    /// Returns <paramref name="step"/> when it has completed, or the task that observes <paramref name="cancellationToken"/> while
+    /// awaiting it. A <see langword="null"/> step throws <see cref="NullReferenceException"/>, as awaiting it would.
+    /// </summary>
+    internal static Task<TResult> Step<TResult>(Task<TResult> step, CancellationToken cancellationToken) =>
+        step.IsCompleted ? step : step.WithCancellation(cancellationToken);
 
     /// <summary>Returns the tag of a result that holds no success value, or throws for the <see langword="default"/> tag.</summary>
     internal static byte ErrorTag(byte tag) => tag == DefaultTag ? throw DefaultInitialized() : tag;
