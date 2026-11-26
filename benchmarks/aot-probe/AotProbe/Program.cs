@@ -99,7 +99,7 @@ try
 {
     JsonSerializer.Serialize((Result<long, NotFoundError>)1L, UnregisteredTypedResultJsonContext.Default.ResultInt64NotFoundError);
 }
-catch (NotSupportedException ex) when (ex.Message.Contains("TypedResultJsonConverter<Int64, NotFoundError>", StringComparison.Ordinal))
+catch (NotSupportedException ex) when (ex.Message.Contains("TypedResultJsonConverter<System.Int64, CSharpEssentials.Errors.NotFoundError>", StringComparison.Ordinal))
 {
     unregisteredThrows = true;
 }
