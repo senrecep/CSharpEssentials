@@ -12,7 +12,8 @@
       Provides Result&lt;T&gt; and Result types for railway-oriented programming, eliminating
       exceptions for expected failures.
       Foundation for functional programming patterns and robust error handling.
-      Bundles analyzers and code fixes for the typed results (CSE5001-CSE5006).</Description>
+      Bundles analyzers and code fixes for the typed results (CSE5001-CSE5006) and a source generator
+      that registers typed result JSON converters for Native AOT.</Description>
     <PackageTags>
       Result,ResultPattern,FunctionalProgramming,ErrorHandling,RailwayOriented,CSharpEssentials
     </PackageTags>
