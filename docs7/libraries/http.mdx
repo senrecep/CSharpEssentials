@@ -59,7 +59,8 @@ A non-success status becomes an `Error` with code `Http.<status>` (for example `
 
 | Status | `ErrorType` |
 |--------|-------------|
-| 400, 411, 413, 414, 415, 416, 417, 422 | `Validation` |
+| 400, 411, 413, 414, 415, 416, 417 | `Validation` |
+| 422 | `Domain` |
 | 401, 407 | `Unauthorized` |
 | 403 | `Forbidden` |
 | 404, 410 | `NotFound` |

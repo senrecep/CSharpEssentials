@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using AotProbe;
 using CSharpEssentials.Clone;
 using CSharpEssentials.Errors;
@@ -76,6 +77,34 @@ Check("Http", fetched.Value is { Name: "get" }
     && posted.Value is { Name: "echo POST", Count: 3 }
     && builderRedirected.Value is { Name: "get" }
     && read.Value is { Name: "sent", Count: 3 });
+
+static bool RoundTrips<TResult>(TResult result, System.Text.Json.Serialization.Metadata.JsonTypeInfo<TResult> info)
+    where TResult : IEquatable<TResult> =>
+    JsonSerializer.Deserialize(JsonSerializer.Serialize(result, info), info)!.Equals(result);
+
+TypedResultJsonContext typedContext = TypedResultJsonContext.Default;
+NotFoundError notFound = new("Probe.NotFound", "Not found.");
+ConflictError conflict = new("Probe.Conflict", "Conflict.");
+bool typedRoundTrips =
+    RoundTrips<Result<ProbeDto, NotFoundError, ConflictError>>(new ProbeDto("typed", 1), typedContext.ResultProbeDtoNotFoundErrorConflictError)
+    && RoundTrips<Result<ProbeDto, NotFoundError, ConflictError>>(notFound, typedContext.ResultProbeDtoNotFoundErrorConflictError)
+    && RoundTrips<Result<int, NotFoundError>>(7, typedContext.ResultInt32NotFoundError)
+    && RoundTrips<Result<int, NotFoundError>>(notFound, typedContext.ResultInt32NotFoundError)
+    && RoundTrips<Result<int, NotFoundError, ConflictError>>(conflict, typedContext.ResultInt32NotFoundErrorConflictError)
+    && RoundTrips<Result<int, NotFoundError, ConflictError, ProbeLimit>>(8, typedContext.ResultInt32NotFoundErrorConflictErrorProbeLimit)
+    && RoundTrips<Result<int, NotFoundError, ConflictError, ProbeLimit>>(new ProbeLimit(30), typedContext.ResultInt32NotFoundErrorConflictErrorProbeLimit);
+Result<int, NotFoundError> typedDefaultBack = JsonSerializer.Deserialize("null", typedContext.ResultInt32NotFoundError);
+bool unregisteredThrows = false;
+try
+{
+    JsonSerializer.Serialize((Result<long, NotFoundError>)1L, UnregisteredTypedResultJsonContext.Default.ResultInt64NotFoundError);
+}
+catch (NotSupportedException ex) when (ex.Message.Contains("TypedResultJsonConverter<System.Int64, CSharpEssentials.Errors.NotFoundError>", StringComparison.Ordinal))
+{
+    unregisteredThrows = true;
+}
+
+Check("Results.Typed", typedRoundTrips && !typedDefaultBack.HasValue && unregisteredThrows);
 
 ServiceCollection services = new();
 services.AddIdempotencyExecutor();

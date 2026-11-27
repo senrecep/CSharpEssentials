@@ -26,9 +26,12 @@ public class ErrorExceptionComparison
             (nameof(ErrorOr), ErrorOr().Description),
             (nameof(FluentResults), FluentResults().Message));
         Parity.Same(nameof(ErrorExceptionComparison) + ".Code",
-            ("Expected", nameof(InvalidOperationException) + "|" + ErrorType.Failure),
-            (nameof(CSharpEssentials), cse.Code + "|" + cse.Type),
-            (nameof(CSharpEssentials_Failure), failure.Code + "|" + failure.Type));
+            ("Expected", nameof(InvalidOperationException)),
+            (nameof(CSharpEssentials), cse.Code),
+            (nameof(CSharpEssentials_Failure), failure.Code));
+        Parity.Same(nameof(ErrorExceptionComparison) + ".Type",
+            ("Expected", nameof(ErrorType.Unexpected)),
+            (nameof(CSharpEssentials), cse.Type.ToString()));
         Parity.Same(nameof(ErrorExceptionComparison) + ".Metadata",
             ("Expected", "exceptionMessage,exceptionStackTrace,exceptionType"),
             (nameof(CSharpEssentials), string.Join(",", cse.Metadata!.Keys.Order(StringComparer.Ordinal))));

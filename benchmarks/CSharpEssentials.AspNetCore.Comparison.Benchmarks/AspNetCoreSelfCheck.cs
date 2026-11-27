@@ -40,6 +40,11 @@ public static class AspNetCoreSelfCheck
         problems.Cleanup();
         Console.Write($"Problem bodies:{Environment.NewLine}{problems.Bodies}");
 
+        var typedProblems = new TypedProblemDetailsComparison();
+        typedProblems.Setup();
+        typedProblems.Cleanup();
+        Console.Write($"Typed problem bodies:{Environment.NewLine}{typedProblems.Bodies}");
+
         foreach (int rules in new[] { 1, 3 })
         {
             foreach (string outcome in new[] { "Valid", "Invalid" })

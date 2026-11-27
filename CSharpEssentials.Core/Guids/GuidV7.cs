@@ -40,6 +40,16 @@ internal static class GuidV7
         return Compose((utcTicks - _unixEpochTicks) / TimeSpan.TicksPerMillisecond, bytes);
     }
 
+    internal static Guid NewGuid(DateTimeOffset timestamp)
+    {
+        if (timestamp.UtcTicks < _unixEpochTicks)
+            throw new ArgumentOutOfRangeException(nameof(timestamp), timestamp, "The timestamp must not be before 1970-01-01T00:00:00Z.");
+        long unixMs = (timestamp.UtcTicks - _unixEpochTicks) / TimeSpan.TicksPerMillisecond;
+        Span<byte> bytes = stackalloc byte[_byteCount];
+        FillFromNewGuid(bytes);
+        return Compose(unixMs, bytes);
+    }
+
     internal static Guid NewMonotonicGuid()
     {
         Span<byte> bytes = stackalloc byte[_byteCount];

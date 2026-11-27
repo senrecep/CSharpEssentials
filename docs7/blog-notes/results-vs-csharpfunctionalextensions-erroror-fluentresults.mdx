@@ -74,7 +74,7 @@ Raw material for a post. These notes are not the post. Every number comes from `
 
 ## Caveats to keep in the post
 
-- CFE was measured with its default string error. Its 0 B failure paths come from that; a typed `Result<T, E>` was not benchmarked.
+- CFE was measured with its default string error. Its 0 B failure paths come from that. CFE's typed `Result<T, E>` appears only in the typed-result classes (CSharpEssentials.Results/BENCHMARKS.md, "Typed results"), where it allocates 0 B on a cached error and 40 B on a new one, the same as the CSE typed result.
 - Aggregation idioms differ. Compare the ErrorOr row as "what its README tells you to write", not as the same work. CSE's typed `Result<T>.Combine(r1, r2, r3)` was not measured.
 - FluentResults has no column for Ensure, Tap, the async pipeline and Maybe, because it has no matching API.
 - Most single-step rows are under 2 ns. Differences under 1 ns are noise, and rows below about 0.1 ns are at timer resolution.

@@ -36,6 +36,8 @@ internal static class ProblemScenarios
     public const string ParentSpanId = "b7ad6b7169203331";
     public const string Traceparent = "00-" + TraceId + "-" + ParentSpanId + "-01";
     public const string UserName = "alice";
+    public const string Secret = "hunter2";
+    public const string SecretMessage = "Server=db;Password=" + Secret;
 
     public static Error[] Get(string? scenario) => scenario switch
     {
@@ -45,7 +47,14 @@ internal static class ProblemScenarios
             Error.Validation("name.required", "Name is too short"),
             Error.Validation("email.invalid", "Email is invalid"),
         ],
+        "fields" =>
+        [
+            Error.Validation("Lines[1].SkuCode.NotEmpty", "Sku is required", new ErrorMetadata(ErrorMetadata.FieldKey, "Lines[1].SkuCode")),
+            Error.Validation("Lines[1].SkuCode.MaxLength", "Sku is too long", new ErrorMetadata(ErrorMetadata.FieldKey, "Lines[1].SkuCode")),
+            Error.Validation("email.invalid", "Email is invalid"),
+        ],
         "notfound" => [Error.NotFound("user.notFound", "User not found")],
+        "secret" => [Error.Exception(new InvalidOperationException(SecretMessage))],
         "unauthorized" => [Error.Failure("auth.unauthorized", "Login required")],
         "forbidden" => [Error.Failure("auth.forbidden", "Not allowed")],
         _ =>
@@ -68,6 +77,7 @@ internal static class ProblemScenarios
         "validation" => new EnhancedValidationException([Error.Validation("email.invalid", "Email is invalid")]),
         "timeout" => new TimeoutException("upstream secret"),
         "notsupported" => new NotSupportedException("secret notsupported"),
+        "secret" => new InvalidOperationException(SecretMessage),
         _ => new InvalidOperationException("secret"),
     };
 }

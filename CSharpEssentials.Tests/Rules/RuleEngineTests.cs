@@ -202,7 +202,7 @@ public class RuleEngineTests
         IRule<TestContext> rule = new ExplodingRule();
         Result result = RuleEngine.Evaluate(rule, new TestContext());
         result.IsFailure.Should().BeTrue();
-        result.FirstError.Type.Should().Be(ErrorType.Failure);
+        result.FirstError.Type.Should().Be(ErrorType.Unexpected);
     }
 
     #endregion
@@ -232,7 +232,7 @@ public class RuleEngineTests
         IAsyncRule<TestContext> rule = new ExplodingAsyncRule();
         Result result = RuleEngine.Evaluate(rule, new TestContext());
         result.IsFailure.Should().BeTrue();
-        result.FirstError.Type.Should().Be(ErrorType.Failure);
+        result.FirstError.Type.Should().Be(ErrorType.Unexpected);
     }
 
     #endregion

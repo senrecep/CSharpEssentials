@@ -55,7 +55,7 @@ public sealed class ValidationBehaviorAsyncValidatorTests
 
         result.IsFailure.Should().BeTrue();
         result.FirstError.Code.Should().Be("Validator.Exception");
-        result.FirstError.Type.Should().Be(ErrorType.Failure);
+        result.FirstError.Type.Should().Be(ErrorType.Unexpected);
     }
 
     [Fact]

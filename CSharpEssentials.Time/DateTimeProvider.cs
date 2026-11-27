@@ -13,7 +13,8 @@ public sealed class DateTimeProvider : IDateTimeProvider
     public TimeOnly UtcNowTime => UtcNow.UtcDateTime.ToTimeOnly();
 #endif
 
-    public TimeZoneInfo TimeZone => TimeZoneInfo.Local;
+    /// <summary>The <see cref="TimeProvider.LocalTimeZone"/> of the wrapped provider; <see cref="TimeZoneInfo.Local"/> for <see cref="TimeProvider.System"/>.</summary>
+    public TimeZoneInfo TimeZone => _timeProvider.LocalTimeZone;
 
     public TimeZoneInfo TimeZoneUtc => TimeZoneInfo.Utc;
 }

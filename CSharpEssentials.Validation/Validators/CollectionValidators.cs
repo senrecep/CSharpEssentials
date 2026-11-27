@@ -51,9 +51,9 @@ public static class CollectionValidators
         where TCollection : class, IEnumerable
     {
         if (!chain.HasFailed && (chain.Value is null || IsEmpty(chain.Value)))
-            chain.AddError(Error.Validation(
+            chain.AddError(
                 $"{chain.PropertyName}.NotEmpty",
-                message ?? $"'{chain.PropertyName}' must not be empty."));
+                message ?? $"'{chain.PropertyName}' must not be empty.");
         return chain;
     }
 
@@ -75,9 +75,9 @@ public static class CollectionValidators
         where TCollection : class, IEnumerable
     {
         if (!chain.HasFailed && chain.Value is null)
-            chain.AddError(Error.Validation(
+            chain.AddError(
                 $"{chain.PropertyName}.NotNull",
-                message ?? $"'{chain.PropertyName}' must not be null."));
+                message ?? $"'{chain.PropertyName}' must not be null.");
         return chain;
     }
 
@@ -105,9 +105,9 @@ public static class CollectionValidators
             return chain;
         int count = ResolveCount(chain.Value);
         if (count < min)
-            chain.AddError(Error.Validation(
+            chain.AddError(
                 $"{chain.PropertyName}.MinCount",
-                message ?? $"'{chain.PropertyName}' must contain at least {min} item(s). It contains {count}."));
+                message ?? $"'{chain.PropertyName}' must contain at least {min} item(s). It contains {count}.");
         return chain;
     }
 
@@ -141,9 +141,9 @@ public static class CollectionValidators
             return chain;
         int count = ResolveCount(chain.Value);
         if (count > max)
-            chain.AddError(Error.Validation(
+            chain.AddError(
                 $"{chain.PropertyName}.MaxCount",
-                message ?? $"'{chain.PropertyName}' must contain at most {max} item(s). It contains {count}."));
+                message ?? $"'{chain.PropertyName}' must contain at most {max} item(s). It contains {count}.");
         return chain;
     }
 
@@ -183,9 +183,9 @@ public static class CollectionValidators
             return chain;
         int count = ResolveCount(chain.Value);
         if (count < min || count > max)
-            chain.AddError(Error.Validation(
+            chain.AddError(
                 $"{chain.PropertyName}.CountBetween",
-                message ?? $"'{chain.PropertyName}' must contain between {min} and {max} item(s). It contains {count}."));
+                message ?? $"'{chain.PropertyName}' must contain between {min} and {max} item(s). It contains {count}.");
         return chain;
     }
 

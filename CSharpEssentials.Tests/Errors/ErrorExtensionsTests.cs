@@ -25,6 +25,7 @@ public class ErrorExtensionsTests
         ErrorType.Unauthorized.ToHttpStatusCode().Should().Be(HttpCodes.Unauthorized);
         ErrorType.Forbidden.ToHttpStatusCode().Should().Be(HttpCodes.Forbidden);
         ErrorType.Unknown.ToHttpStatusCode().Should().Be(HttpCodes.InternalServerError);
+        ErrorType.Domain.ToHttpStatusCode().Should().Be(HttpCodes.UnprocessableEntity);
     }
 
     [Fact]
@@ -35,6 +36,7 @@ public class ErrorExtensionsTests
         HttpCodes.Forbidden.ToErrorType().Should().Be(ErrorType.Forbidden);
         HttpCodes.NotFound.ToErrorType().Should().Be(ErrorType.NotFound);
         HttpCodes.Conflict.ToErrorType().Should().Be(ErrorType.Conflict);
+        HttpCodes.UnprocessableEntity.ToErrorType().Should().Be(ErrorType.Domain);
         HttpCodes.InternalServerError.ToErrorType().Should().Be(ErrorType.Failure);
     }
 

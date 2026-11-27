@@ -30,6 +30,18 @@ public static class EnumValueParser
         where TEnum : struct, Enum =>
         EnumMetadata.Get<TEnum>().TryParse(text, mode, conventions, out value);
 
+#if !NETSTANDARD2_0
+    /// <summary>Parses one token.</summary>
+    public static bool TryParse<TEnum>(string? text, EnumReadMode mode, EnumConventions conventions,
+        out TEnum value, [NotNullWhen(false)] out EnumValueError? error) where TEnum : struct, Enum =>
+        EnumMetadata.Get<TEnum>().TryParse(text.AsSpan(), mode, conventions, out value, out error);
+
+    /// <summary>Parses one token without building an <see cref="EnumValueError"/> on failure.</summary>
+    public static bool TryParse<TEnum>(string? text, EnumReadMode mode, EnumConventions conventions, out TEnum value)
+        where TEnum : struct, Enum =>
+        EnumMetadata.Get<TEnum>().TryParse(text.AsSpan(), mode, conventions, out value);
+#endif
+
     /// <summary>Accepts a number.</summary>
     public static bool TryParseNumber<TEnum>(long number, EnumReadMode mode, EnumConventions conventions,
         out TEnum value, [NotNullWhen(false)] out EnumValueError? error) where TEnum : struct, Enum =>

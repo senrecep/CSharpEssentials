@@ -66,6 +66,21 @@ public class ValidateModelAttributeTests
         attribute.Should().BeAssignableTo<ActionFilterAttribute>();
     }
 
+    [Fact]
+    public void OnActionExecuting_Should_SetField_And_SkipModelLevelKey()
+    {
+        ValidateModelAttribute attribute = new();
+        ActionExecutingContext context = CreateActionExecutingContext(isValid: true);
+        context.ModelState.AddModelError("Name", "Name is required");
+        context.ModelState.AddModelError("$.items[1].quantity", "Bad value");
+        context.ModelState.AddModelError("", "Model is invalid");
+
+        attribute.OnActionExecuting(context);
+
+        context.Result.Should().BeOfType<EnhancedProblemObjectResult>().Which.Value.Should().BeOfType<EnhancedProblemDetails>()
+            .Which.Errors.Select(e => e.Metadata?.GetField()).Should().BeEquivalentTo("Name", "items[1].quantity", (string?)null);
+    }
+
     private static ActionExecutingContext CreateActionExecutingContext(bool isValid)
     {
         DefaultHttpContext httpContext = new();

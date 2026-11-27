@@ -1,6 +1,6 @@
 ---
 name: csharpessentials-time
-description: Use when you need testable time. Inject IDateTimeProvider (DateTimeProvider over TimeProvider in production, FakeDateTimeProvider with Advance/SetTime in tests), plus DateTime/DateOnly extensions ToDateOnly/ToTimeOnly, NextDayOfWeek/PreviousDayOfWeek and GetAge.
+description: Use when you need testable time. Inject IDateTimeProvider (DateTimeProvider over TimeProvider in production, DateTimeProvider over FakeTimeProvider or FakeDateTimeProvider with Advance/SetTime in tests), TimeZones.Find/TryFind for IANA and Windows ids, NowIn/TodayIn for a user's zone, plus DateTime/DateOnly extensions ToDateOnly/ToTimeOnly, NextDayOfWeek/PreviousDayOfWeek and GetAge.
 ---
 
 # CSharpEssentials.Time
@@ -22,7 +22,7 @@ using CSharpEssentials.Time;
 ```csharp
 public interface IDateTimeProvider
 {
-    TimeZoneInfo TimeZone    { get; }   // DateTimeProvider: TimeZoneInfo.Local
+    TimeZoneInfo TimeZone    { get; }   // DateTimeProvider: TimeProvider.LocalTimeZone
     TimeZoneInfo TimeZoneUtc { get; }   // TimeZoneInfo.Utc
 
     DateTime       UtcNowDateTime { get; }   // Kind == Utc
@@ -107,8 +107,22 @@ int ageToday = birthDate.GetAge(dateTimeProvider);            // "today" in the 
 
 ---
 
+## User time zones
+
+```csharp
+TimeZoneInfo zone = TimeZones.Find("Europe/Istanbul");   // IANA or Windows id; TimeZoneNotFoundException names the id
+bool ok = TimeZones.TryFind(user.TimeZoneId, out TimeZoneInfo? userZone);
+
+DateTimeOffset localNow = time.NowIn(zone);
+DateOnly today = time.TodayIn(zone);                       // not in netstandard2.1
+int age = birthDate.GetAge(time, zone);
+```
+
+---
+
 ## Guidance
 
 - Register `TimeProvider.System` and `DateTimeProvider` as singletons.
+- In tests of code that waits or uses timers, use `new DateTimeProvider(new FakeTimeProvider(...))` so one fake drives both; `FakeDateTimeProvider` is not a `TimeProvider`.
 - The `DateOnly`/`TimeOnly` members (`UtcNowDate`, `UtcNowTime`, `ToDateOnly`, `ToTimeOnly`, the `DateOnly` weekday overloads, `GetAge`) are not in the `netstandard2.1` build.
 - Use `GetAge(IDateTimeProvider)` instead of `DateTime.Today` so age checks are testable.

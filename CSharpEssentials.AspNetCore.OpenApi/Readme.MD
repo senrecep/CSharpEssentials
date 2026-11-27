@@ -104,6 +104,32 @@ Each such operation gets:
 
 An endpoint that already documents a 400, 409 or 422 keeps its description (ours is appended), headers and schema (the content becomes a `oneOf` of both). Header names are read from the options when the document is generated. `CSharpEssentials.AspNetCore.Swashbuckle` produces the same description.
 
+## Bearer security
+
+`options.AddBearerSecurityScheme()` (opt-in) adds an HTTP `bearer` scheme to `components.securitySchemes` and a requirement for it to the operations that need authorization:
+
+```csharp
+builder.Services.AddAuthorization();
+builder.Services.AddOpenApi("v1", o => o.AddBearerSecurityScheme());
+
+app.MapGet("/orders", GetOrders).RequireAuthorization();          // security: [{ "Bearer": [] }]
+app.MapGet("/health", GetHealth);                                 // no security
+app.MapGet("/status", GetStatus).RequireAuthorization().AllowAnonymous(); // no security
+```
+
+```json
+"securitySchemes": {
+  "Bearer": { "type": "http", "scheme": "bearer", "bearerFormat": "JWT" }
+}
+```
+
+- An operation gets the requirement when its endpoint metadata has `IAuthorizeData` (`[Authorize]` on the action, controller or a base class, any `.RequireAuthorization(...)` overload on the endpoint or its group, including the policy-object and policy-builder ones) and no `IAllowAnonymous` (`[AllowAnonymous]`, `.AllowAnonymous()`). Other operations get none.
+- The requirement is added whatever `IAuthorizeData.AuthenticationSchemes` names. An endpoint with `[Authorize(AuthenticationSchemes = "ApiKey")]` or a cookie scheme is still described as needing the bearer token, so call this only when bearer is the scheme your authorized endpoints accept.
+- The `FallbackPolicy` adds no endpoint metadata, so endpoints it alone protects are not described as secured. Add `[Authorize]` or `.RequireAuthorization()` to them.
+- `schemeName` (default `Bearer`), `bearerFormat` (default `JWT`) and `description` (default none) are parameters: `o.AddBearerSecurityScheme("Jwt", "JWT", "Access token from the identity server.")`. A scheme already registered under the same name is replaced; an operation that already requires the scheme is not given a second requirement.
+
+`CSharpEssentials.AspNetCore.Swashbuckle` has no per-operation equivalent: its `AddSwagger` registers the scheme you pass and requires it on every operation.
+
 ## Scalar
 
 No helper is needed; list the documents:

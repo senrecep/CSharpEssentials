@@ -101,9 +101,12 @@ public static partial class RuleEngine
     {
         try
         {
-            Result<TResult> result = rule.Evaluate(context, cancellationToken);
-            if (result.IsFailure)
-                return result;
+            if (HasGate(rule))
+            {
+                Result<TResult> result = rule.Evaluate(context, cancellationToken);
+                if (result.IsFailure)
+                    return result;
+            }
 
             return AndAll(rule.Rules, context, cancellationToken);
         }
@@ -132,9 +135,12 @@ public static partial class RuleEngine
     {
         try
         {
-            Result<TResult> result = rule.Evaluate(context, cancellationToken);
-            if (result.IsFailure)
-                return result;
+            if (HasGate(rule))
+            {
+                Result<TResult> result = rule.Evaluate(context, cancellationToken);
+                if (result.IsFailure)
+                    return result;
+            }
 
             return OrAll(rule.Rules, context, cancellationToken);
         }
@@ -189,6 +195,9 @@ public static partial class RuleEngine
 
     private static Result<TResult> OrAll<TContext, TResult>(IRuleBase<TContext, TResult>[] rules, TContext context, CancellationToken cancellationToken)
     {
+        if (rules.Length == 0)
+            return RuleErrors.EmptyRuleArrayError;
+
         Error[][] failures = RentFailures(rules.Length);
         int count = 0;
         try
@@ -207,6 +216,12 @@ public static partial class RuleEngine
             ReturnFailures(failures, count);
         }
     }
+
+    /// <summary>
+    /// The And and Or adapters built by the extension methods have no gate of their own: their <c>Evaluate</c> runs the whole rule.
+    /// </summary>
+    private static bool HasGate<TContext, TResult>(IRuleBase<TContext, TResult> rule) =>
+        rule is not (AndRuleAdapter<TContext, TResult> or OrRuleAdapter<TContext, TResult>);
 
     private static Result<TResult> InternalEvaluate<TContext, TResult>(IRuleBase<TContext, TResult> rule, TContext context, CancellationToken cancellationToken = default)
     {

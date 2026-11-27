@@ -263,7 +263,7 @@ db.HardDelete(entity);                        // MarkAsHardDeleted + Remove (the
 await db.MigrateDataAsync<Country, CountrySeed>(seed, (set, data) => set.Any(), s => new Country { Code = s.Code }, ct);
 ```
 
-`ApplySoftDeleteQueryFilter()` adds an anonymous `!IsDeleted` filter to every root `ISoftDeletableBase` type; `AddQueryFilter<T>(expression)` ANDs your filter with the existing anonymous one. `MigrateDataAsync` also has an overload with `MigrateDataOptions<TEntity, TSeed, TKey>` for a key-based add/update/remove diff. `ISqlConnectionFactory` and `ISqlReadOnlyConnectionFactory` are interfaces for Dapper-style code; you implement and register them.
+`ApplySoftDeleteQueryFilter()` adds an anonymous `!IsDeleted` filter to every root `ISoftDeletableBase` type; `AddQueryFilter<T>(expression)` ANDs your filter with the existing anonymous one. `MigrateDataAsync` also has an overload with `MigrateDataOptions<TEntity, TSeed, TKey>` for a key-based add/update/remove diff. For Dapper-style code, `AddDbContextSqlSession<TContext>()` registers `ISqlSession` (the context's connection and open transaction; pass `session.Transaction` to every command and never dispose the connection) and `AddDbDataSourceReadOnlyConnectionFactory()` registers an `ISqlReadOnlyConnectionFactory` that opens new connections from a `DbDataSource`.
 
 ---
 
@@ -310,7 +310,35 @@ Result result = await runner.ExecuteAsync(
 
 The outermost call runs inside `CreateExecutionStrategy()` with a transaction, so retrying strategies work (a retry re-runs the whole unit on a cleared change tracker; the context must have no pending changes at the start). A nested call on the same context instance joins the transaction, behind a savepoint when the provider supports them. It needs a relational provider (the InMemory provider throws on `BeginTransactionAsync`) and does not combine with an ambient `TransactionScope`.
 
+For side effects that must wait for the commit, inject `ITransactionCallbacks` (also registered by `AddEfCoreTransactionRunner`) and call `await callbacks.OnCommittedAsync(token => ..., ct)` inside the unit: the callback runs after the outermost commit and is dropped on rollback, retry or a rolled-back nested unit. With no transaction open it runs at once; inside a transaction the runner did not start (or a `TransactionScope`) it throws. A `BaseDbContext` that overrides `DeferDomainEventPublishingUntilCommit => true` publishes its after-save domain events this way (outbox storage is never deferred).
+
 ---
+
+## Migrations and readiness
+
+```csharp
+using CSharpEssentials.EntityFrameworkCore.Migrations;    // MigrateDatabaseAsync, IDatabaseMigrationLock
+using CSharpEssentials.EntityFrameworkCore.HealthChecks;  // AddMigrationsCheck (package CSharpEssentials.EntityFrameworkCore.HealthChecks)
+
+builder.Services.AddHealthChecks().AddMigrationsCheck<AppDbContext>();   // Unhealthy while migrations are pending, tag "ready"
+
+WebApplication app = builder.Build();
+await app.Services.MigrateDatabaseAsync<AppDbContext>();   // opt-in; runs inside a registered IDatabaseMigrationLock
+```
+
+`IDatabaseMigrationLock` has no built-in implementation: register an adapter (PostgreSQL advisory lock, `sp_getapplock`, Redis) so several instances do not migrate at once.
+
+---
+
+## Outbox
+
+`AddEfCoreOutbox(types => types.Add("orders.placed", AppJsonContext.Default.OrderPlaced))` registers `EfCoreDomainEventOutbox`; call `modelBuilder.AddOutboxMessages()` in `OnModelCreating`. After-save events become `OutboxMessage` rows written by the same `SaveChanges` as the entities (both `DispatchDomainEventsOnSaveChanges` and `DomainEventInterceptor`). Only registered event types are stored; an unregistered one throws and nothing is saved. A custom `IDomainEventOutbox` gets `StoreAsync(DbContext context, events, ct)` and must not call `SaveChanges`.
+
+Relay with `AddOutboxProcessor<AppDbContext>(o => ...)` plus a registered `IOutboxMessageHandler`; call `IOutboxProcessor.ProcessBatchAsync` yourself or add `CSharpEssentials.EntityFrameworkCore.Hosting` and `AddOutboxProcessorHostedService()`. Delivery is at least once (dedupe on `OutboxMessage.Id`); failures get `Error`, a backoff `NextAttemptAt` and, after `MaxAttempts`, `DeadLetteredAt`. For PostgreSQL or SQL Server set `o.Claimer = new SqlOutboxMessageClaimer(OutboxClaimDialect.PostgreSql)` (SKIP LOCKED / READPAST); no provider package is needed.
+
+## Distributed lock
+
+`CSharpEssentials.EntityFrameworkCore.Locking`: `services.AddRelationalResourceLock<AppDbContext>(ResourceLockSqlDialect.PostgreSql)` registers a database-session `IResourceLock` for Mediator's `LockBehavior` (PostgreSQL advisory locks, `ResourceLockSqlDialect.SqlServer` for `sp_getapplock`, or `new ResourceLockSqlDialect(tryAcquireSql, releaseSql)` with `{0}` as the key). Each held lock keeps one connection open; keep `LockPlacement.OutsideTransaction`.
 
 ## Idempotency records
 

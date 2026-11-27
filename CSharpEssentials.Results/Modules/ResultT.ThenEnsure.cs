@@ -15,7 +15,7 @@ public readonly partial record struct Result<TValue>
         if (IsFailure)
             return this;
         Result result = validator(Value);
-        return result.IsSuccess ? this : result.ErrorsOrEmptyArray;
+        return result.IsSuccess ? this : result.InitializedErrors;
     }
 
     [OverloadResolutionPriority(1)]
@@ -34,7 +34,7 @@ public readonly partial record struct Result<TValue>
             return this;
         cancellationToken.ThrowIfCancellationRequested();
         Result result = await validator(Value).ConfigureAwait(false);
-        return result.IsSuccess ? this : result.ErrorsOrEmptyArray;
+        return result.IsSuccess ? this : result.InitializedErrors;
     }
 
 #if NET9_0_OR_GREATER
@@ -52,7 +52,7 @@ public readonly partial record struct Result<TValue>
             return this;
         cancellationToken.ThrowIfCancellationRequested();
         Result result = await validator(Value).ConfigureAwait(false);
-        return result.IsSuccess ? this : result.ErrorsOrEmptyArray;
+        return result.IsSuccess ? this : result.InitializedErrors;
     }
 #endif
 }

@@ -17,9 +17,9 @@ public static class StringValidators
         string? message = null)
     {
         if (!chain.HasFailed && string.IsNullOrWhiteSpace(chain.Value))
-            chain.AddError(Error.Validation(
+            chain.AddError(
                 $"{chain.PropertyName}.NotEmpty",
-                message ?? $"'{chain.PropertyName}' must not be empty."));
+                message ?? $"'{chain.PropertyName}' must not be empty.");
         return chain;
     }
 
@@ -39,9 +39,9 @@ public static class StringValidators
         string? message = null)
     {
         if (!chain.HasFailed && chain.Value is null)
-            chain.AddError(Error.Validation(
+            chain.AddError(
                 $"{chain.PropertyName}.NotNull",
-                message ?? $"'{chain.PropertyName}' must not be null."));
+                message ?? $"'{chain.PropertyName}' must not be null.");
         return chain;
     }
 
@@ -68,9 +68,9 @@ public static class StringValidators
         if (max < 0)
             throw new ArgumentOutOfRangeException(nameof(max), $"max ({max}) must not be negative.");
         if (!chain.HasFailed && chain.Value?.Length > max)
-            chain.AddError(Error.Validation(
+            chain.AddError(
                 $"{chain.PropertyName}.MaxLength",
-                message ?? $"'{chain.PropertyName}' must be {max} characters or fewer. You entered {chain.Value.Length} characters."));
+                message ?? $"'{chain.PropertyName}' must be {max} characters or fewer. You entered {chain.Value.Length} characters.");
         return chain;
     }
 
@@ -96,9 +96,9 @@ public static class StringValidators
         if (min < 0)
             throw new ArgumentOutOfRangeException(nameof(min), $"min ({min}) must not be negative.");
         if (!chain.HasFailed && chain.Value is not null && chain.Value.Length < min)
-            chain.AddError(Error.Validation(
+            chain.AddError(
                 $"{chain.PropertyName}.MinLength",
-                message ?? $"'{chain.PropertyName}' must be at least {min} characters. You entered {chain.Value.Length} characters."));
+                message ?? $"'{chain.PropertyName}' must be at least {min} characters. You entered {chain.Value.Length} characters.");
         return chain;
     }
 
@@ -130,9 +130,9 @@ public static class StringValidators
             return chain;
         int len = chain.Value.Length;
         if (len < min || len > max)
-            chain.AddError(Error.Validation(
+            chain.AddError(
                 $"{chain.PropertyName}.Length",
-                message ?? $"'{chain.PropertyName}' must be between {min} and {max} characters. You entered {len} characters."));
+                message ?? $"'{chain.PropertyName}' must be between {min} and {max} characters. You entered {len} characters.");
         return chain;
     }
 
@@ -189,9 +189,9 @@ public static class StringValidators
                 isMatch = false;
             }
             if (!isMatch)
-                chain.AddError(Error.Validation(
+                chain.AddError(
                     $"{chain.PropertyName}.EmailAddress",
-                    message ?? $"'{chain.PropertyName}' is not a valid email address."));
+                    message ?? $"'{chain.PropertyName}' is not a valid email address.");
         }
         return chain;
     }
@@ -242,9 +242,9 @@ public static class StringValidators
                 isMatch = false;
             }
             if (!isMatch)
-                chain.AddError(Error.Validation(
+                chain.AddError(
                     $"{chain.PropertyName}.Matches",
-                    message ?? $"'{chain.PropertyName}' is not in the correct format."));
+                    message ?? $"'{chain.PropertyName}' is not in the correct format.");
         }
         return chain;
     }
@@ -296,9 +296,9 @@ public static class StringValidators
                 isMatch = false;
             }
             if (!isMatch)
-                chain.AddError(Error.Validation(
+                chain.AddError(
                     $"{chain.PropertyName}.Matches",
-                    message ?? $"'{chain.PropertyName}' is not in the correct format."));
+                    message ?? $"'{chain.PropertyName}' is not in the correct format.");
         }
         return chain;
     }
@@ -337,9 +337,9 @@ public static class StringValidators
         string? message = null)
     {
         if (!chain.HasFailed && !string.Equals(chain.Value, expected, StringComparison.Ordinal))
-            chain.AddError(Error.Validation(
+            chain.AddError(
                 $"{chain.PropertyName}.Equal",
-                message ?? $"'{chain.PropertyName}' must be equal to '{expected}'."));
+                message ?? $"'{chain.PropertyName}' must be equal to '{expected}'.");
         return chain;
     }
 
@@ -361,9 +361,9 @@ public static class StringValidators
         string? message = null)
     {
         if (!chain.HasFailed && string.Equals(chain.Value, forbidden, StringComparison.Ordinal))
-            chain.AddError(Error.Validation(
+            chain.AddError(
                 $"{chain.PropertyName}.NotEqual",
-                message ?? $"'{chain.PropertyName}' must not be equal to '{forbidden}'."));
+                message ?? $"'{chain.PropertyName}' must not be equal to '{forbidden}'.");
         return chain;
     }
 
@@ -386,9 +386,9 @@ public static class StringValidators
         string? message = null)
     {
         if (!chain.HasFailed && !string.Equals(chain.Value, expected, comparison))
-            chain.AddError(Error.Validation(
+            chain.AddError(
                 $"{chain.PropertyName}.Equal",
-                message ?? $"'{chain.PropertyName}' must be equal to '{expected}'."));
+                message ?? $"'{chain.PropertyName}' must be equal to '{expected}'.");
         return chain;
     }
 
@@ -412,9 +412,9 @@ public static class StringValidators
         string? message = null)
     {
         if (!chain.HasFailed && string.Equals(chain.Value, forbidden, comparison))
-            chain.AddError(Error.Validation(
+            chain.AddError(
                 $"{chain.PropertyName}.NotEqual",
-                message ?? $"'{chain.PropertyName}' must not be equal to '{forbidden}'."));
+                message ?? $"'{chain.PropertyName}' must not be equal to '{forbidden}'.");
         return chain;
     }
 
@@ -442,9 +442,9 @@ public static class StringValidators
         string? message = null)
     {
         if (!chain.HasFailed && chain.Value is not null && !chain.Value.Contains(substring, comparison))
-            chain.AddError(Error.Validation(
+            chain.AddError(
                 $"{chain.PropertyName}.Contains",
-                message ?? $"'{chain.PropertyName}' must contain '{substring}'."));
+                message ?? $"'{chain.PropertyName}' must contain '{substring}'.");
         return chain;
     }
 
@@ -468,9 +468,9 @@ public static class StringValidators
         string? message = null)
     {
         if (!chain.HasFailed && chain.Value is not null && !chain.Value.StartsWith(prefix, comparison))
-            chain.AddError(Error.Validation(
+            chain.AddError(
                 $"{chain.PropertyName}.StartsWith",
-                message ?? $"'{chain.PropertyName}' must start with '{prefix}'."));
+                message ?? $"'{chain.PropertyName}' must start with '{prefix}'.");
         return chain;
     }
 
@@ -494,9 +494,9 @@ public static class StringValidators
         string? message = null)
     {
         if (!chain.HasFailed && chain.Value is not null && !chain.Value.EndsWith(suffix, comparison))
-            chain.AddError(Error.Validation(
+            chain.AddError(
                 $"{chain.PropertyName}.EndsWith",
-                message ?? $"'{chain.PropertyName}' must end with '{suffix}'."));
+                message ?? $"'{chain.PropertyName}' must end with '{suffix}'.");
         return chain;
     }
 

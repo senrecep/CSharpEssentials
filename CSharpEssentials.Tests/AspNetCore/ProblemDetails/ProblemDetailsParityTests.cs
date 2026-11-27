@@ -1,6 +1,10 @@
 using CSharpEssentials.AspNetCore;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
+using HttpJsonOptions = Microsoft.AspNetCore.Http.Json.JsonOptions;
+using MvcJsonOptions = Microsoft.AspNetCore.Mvc.JsonOptions;
 
 namespace CSharpEssentials.Tests.AspNetCore.ProblemDetailsIntegration;
 
@@ -39,6 +43,7 @@ public class ProblemDetailsParityTests
         ["fields-all"] = o => o.ErrorFields = ProblemErrorFields.All,
         ["validation-list"] = o => o.ValidationErrorsFormat = ValidationErrorsFormat.List,
         ["validation-dictionary"] = o => o.ValidationErrorsFormat = ValidationErrorsFormat.Dictionary,
+        ["validation-byfield"] = o => o.ValidationErrorsFormat = ValidationErrorsFormat.ByField,
         ["type-rfc7231"] = o => o.TypeUriResolver = ProblemTypeUris.Rfc7231,
         ["type-null"] = o => o.TypeUriResolver = _ => null,
     };
@@ -122,6 +127,49 @@ public class ProblemDetailsParityTests
                 kind, services => services.AddEnhancedProblemDetails(configure), path, "application/json", useLibraryJson: false));
 
         AssertAllIdentical([.. responses]);
+    }
+
+    [Fact]
+    public async Task AllEndpointStyles_Should_WriteIdenticalByFieldKeys_When_ErrorsCarryFieldMetadata()
+    {
+        ProblemResponse[] responses = await SendAsync(
+            services => services.AddEnhancedProblemDetails(o => o.ValidationErrorsFormat = ValidationErrorsFormat.ByField),
+            "/problem?s=fields", "application/json", AllKinds);
+
+        AssertAllIdentical(responses);
+        JsonObject errors = responses[0].Json["errors"]!.AsObject();
+        errors.Select(e => e.Key).Should().Equal("lines[1].skuCode", "email.invalid");
+        errors["lines[1].skuCode"]!.AsArray().Select(n => n!.GetValue<string>()).Should().Equal("Sku is required", "Sku is too long");
+    }
+
+    [Theory]
+    [InlineData(HostKind.ApiController)]
+    [InlineData(HostKind.PlainController)]
+    public async Task ControllerEndpoints_Should_UseMvcNamingPolicyForByFieldKeys_When_ItDiffersFromHttpJsonOptions(HostKind kind)
+    {
+        ProblemResponse[] responses = await SendAsync(
+            services =>
+            {
+                services.AddEnhancedProblemDetails(o => o.ValidationErrorsFormat = ValidationErrorsFormat.ByField);
+                services.Configure<MvcJsonOptions>(o => o.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower);
+            },
+            "/problem?s=fields", "application/json", kind);
+
+        responses[0].Json["errors"]!.AsObject().Select(e => e.Key).Should().Equal("lines[1].sku_code", "email.invalid");
+    }
+
+    [Fact]
+    public async Task MinimalApi_Should_UseHttpNamingPolicyForByFieldKeys_When_MvcPolicyDiffers()
+    {
+        ProblemResponse[] responses = await SendAsync(
+            services =>
+            {
+                services.AddEnhancedProblemDetails(o => o.ValidationErrorsFormat = ValidationErrorsFormat.ByField);
+                services.Configure<HttpJsonOptions>(o => o.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower);
+            },
+            "/problem?s=fields", "application/json", HostKind.Minimal);
+
+        responses[0].Json["errors"]!.AsObject().Select(e => e.Key).Should().Equal("lines[1].sku_code", "email.invalid");
     }
 
     private static bool ShouldWriteErrorCodes(string option) => option is not ("fields-none" or "fields-messages" or "fields-validation" or "fields-allerrors");

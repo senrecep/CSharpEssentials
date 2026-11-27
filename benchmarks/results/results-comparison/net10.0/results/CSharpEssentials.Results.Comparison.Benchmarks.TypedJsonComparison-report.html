@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Results.Comparison.Benchmarks.TypedJsonComparison-20261126-055411</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100
+  [Host]     : .NET 10.0.15 (10.0.1526.53008), X64 RyuJIT AVX2
+  DefaultJob : .NET 10.0.15 (10.0.1526.53008), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method                      </th><th>Categories</th><th>Case</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>CSharpEssentials_Typed_Deserialize</td><td>Deserialize</td><td>NotFound</td><td>1,068.5 ns</td><td>3.73 ns</td><td>3.31 ns</td><td>1.00</td><td>0.0191</td><td>320 B</td><td>1.00</td>
+</tr><tr><td>OneOf_Deserialize</td><td>Deserialize</td><td>NotFound</td><td>898.9 ns</td><td>3.12 ns</td><td>2.92 ns</td><td>0.84</td><td>0.0257</td><td>432 B</td><td>1.35</td>
+</tr><tr><td>Dunet_Deserialize</td><td>Deserialize</td><td>NotFound</td><td>789.4 ns</td><td>3.09 ns</td><td>2.89 ns</td><td>0.74</td><td>0.0544</td><td>912 B</td><td>2.85</td>
+</tr><tr><td>CSharpEssentials_Typed_Deserialize</td><td>Deserialize</td><td>Success</td><td>293.4 ns</td><td>0.45 ns</td><td>0.40 ns</td><td>1.00</td><td>0.0024</td><td>40 B</td><td>1.00</td>
+</tr><tr><td>OneOf_Deserialize</td><td>Deserialize</td><td>Success</td><td>314.0 ns</td><td>1.30 ns</td><td>1.21 ns</td><td>1.07</td><td>0.0100</td><td>168 B</td><td>4.20</td>
+</tr><tr><td>Dunet_Deserialize</td><td>Deserialize</td><td>Success</td><td>276.1 ns</td><td>0.54 ns</td><td>0.48 ns</td><td>0.94</td><td>0.0095</td><td>160 B</td><td>4.00</td>
+</tr><tr><td>CSharpEssentials_Typed_Serialize</td><td>Serialize</td><td>NotFound</td><td>419.5 ns</td><td>3.31 ns</td><td>2.94 ns</td><td>1.00</td><td>0.0181</td><td>304 B</td><td>1.00</td>
+</tr><tr><td>OneOf_Serialize</td><td>Serialize</td><td>NotFound</td><td>370.9 ns</td><td>0.84 ns</td><td>0.78 ns</td><td>0.88</td><td>0.0186</td><td>312 B</td><td>1.03</td>
+</tr><tr><td>Dunet_Serialize</td><td>Serialize</td><td>NotFound</td><td>464.2 ns</td><td>1.67 ns</td><td>1.40 ns</td><td>1.11</td><td>0.0358</td><td>600 B</td><td>1.97</td>
+</tr><tr><td>CSharpEssentials_Typed_Serialize</td><td>Serialize</td><td>Success</td><td>195.8 ns</td><td>0.44 ns</td><td>0.39 ns</td><td>1.00</td><td>0.0048</td><td>80 B</td><td>1.00</td>
+</tr><tr><td>OneOf_Serialize</td><td>Serialize</td><td>Success</td><td>160.0 ns</td><td>0.48 ns</td><td>0.45 ns</td><td>0.82</td><td>0.0052</td><td>88 B</td><td>1.10</td>
+</tr><tr><td>Dunet_Serialize</td><td>Serialize</td><td>Success</td><td>229.2 ns</td><td>0.80 ns</td><td>0.62 ns</td><td>1.17</td><td>0.0229</td><td>384 B</td><td>4.80</td>
+</tr></tbody></table>
+</body>
+</html>

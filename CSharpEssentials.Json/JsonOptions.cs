@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using CSharpEssentials.Enums;
 
 namespace CSharpEssentials.Json;
@@ -32,7 +33,8 @@ public static class EnhancedJsonSerializerOptions
     };
 
     /// <summary>
-    /// Strict JSON serializer options that reject trailing commas, comments, and unmapped members. Polymorphic bases marked with
+    /// Strict JSON serializer options that reject trailing commas, comments, and unmapped members, and require every non-nullable
+    /// value-type constructor parameter without a default (<see cref="JsonTypeInfoModifiers.RequireValueTypeConstructorParameters"/>). Polymorphic bases marked with
     /// <see cref="JsonPolymorphicAttribute"/> or <see cref="JsonDerivedTypeAttribute"/> get their derived types from
     /// <see cref="JsonPolymorphismExtensions.AddPolymorphismWithReflection"/>.
     /// </summary>
@@ -47,7 +49,8 @@ public static class EnhancedJsonSerializerOptions
         AllowTrailingCommas = false,
         ReadCommentHandling = JsonCommentHandling.Disallow,
         UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
-    }.AddPolymorphismWithReflection();
+        TypeInfoResolver = new DefaultJsonTypeInfoResolver(),
+    }.RequireValueTypeConstructorParameters().AddPolymorphismWithReflection();
 
     /// <summary>
     /// The default JSON serializer options. Abstract types and interfaces without System.Text.Json polymorphism attributes use
@@ -115,9 +118,15 @@ public static class EnhancedJsonSerializerOptions
         target.PropertyNamingPolicy = source.PropertyNamingPolicy;
         target.ReadCommentHandling = source.ReadCommentHandling;
         target.ReferenceHandler = source.ReferenceHandler;
+        bool requireParameters = JsonSerializerOptionsExtensions.RequiresValueTypeConstructorParameters(source)
+            && !JsonSerializerOptionsExtensions.RequiresValueTypeConstructorParameters(target);
+        if (requireParameters && target.TypeInfoResolver is not null)
+            target.RequireValueTypeConstructorParameters();
         // A null resolver would make the target unusable (ASP.NET Core requires one), so keep the target's own.
         if (!JsonPolymorphismExtensions.TryApplyTo(source, target))
             target.TypeInfoResolver = source.TypeInfoResolver ?? target.TypeInfoResolver;
+        if (requireParameters)
+            JsonSerializerOptionsExtensions.MarkValueTypeConstructorParametersRequired(target);
         target.UnknownTypeHandling = source.UnknownTypeHandling;
         target.UnmappedMemberHandling = source.UnmappedMemberHandling;
         target.WriteIndented = source.WriteIndented;

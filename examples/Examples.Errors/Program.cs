@@ -165,7 +165,7 @@ Console.WriteLine("--- ErrorType Enum / ToIntType / ToErrorType ---");
 ErrorType[] types =
 {
     ErrorType.Failure, ErrorType.Validation, ErrorType.NotFound,
-    ErrorType.Unauthorized, ErrorType.Forbidden, ErrorType.Conflict, ErrorType.Unexpected
+    ErrorType.Unauthorized, ErrorType.Forbidden, ErrorType.Conflict, ErrorType.Domain, ErrorType.Unexpected
 };
 
 foreach (ErrorType t in types)

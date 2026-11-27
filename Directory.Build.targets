@@ -19,7 +19,7 @@
 	     The skill name defaults to csharpessentials-<project suffix in lower case>; a project can set PackageSkillName itself. -->
 	<PropertyGroup Condition="'$(IsPackable)' == 'true' and '$(PackageSkillName)' == ''">
 		<PackageSkillName Condition="'$(MSBuildProjectName)' == 'CSharpEssentials'">csharpessentials-meta</PackageSkillName>
-		<PackageSkillName Condition="'$(MSBuildProjectName)' == 'CSharpEssentials.EntityFrameworkCore'">csharpessentials-efcore</PackageSkillName>
+		<PackageSkillName Condition="'$(MSBuildProjectName)' == 'CSharpEssentials.EntityFrameworkCore' or '$(MSBuildProjectName)' == 'CSharpEssentials.EntityFrameworkCore.HealthChecks' or '$(MSBuildProjectName)' == 'CSharpEssentials.EntityFrameworkCore.Hosting' or '$(MSBuildProjectName)' == 'CSharpEssentials.EntityFrameworkCore.Locking'">csharpessentials-efcore</PackageSkillName>
 		<PackageSkillName Condition="'$(MSBuildProjectName)' == 'CSharpEssentials.RequestResponseLogging'">csharpessentials-logging</PackageSkillName>
 		<PackageSkillName Condition="'$(MSBuildProjectName)' == 'CSharpEssentials.AspNetCore.OpenApi' or '$(MSBuildProjectName)' == 'CSharpEssentials.AspNetCore.Swashbuckle'">csharpessentials-aspnetcore</PackageSkillName>
 		<PackageSkillName Condition="'$(PackageSkillName)' == '' and $(MSBuildProjectName.StartsWith('CSharpEssentials.'))">csharpessentials-$(MSBuildProjectName.Substring(17).ToLowerInvariant())</PackageSkillName>

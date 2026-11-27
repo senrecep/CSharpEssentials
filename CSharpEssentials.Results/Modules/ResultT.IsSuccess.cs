@@ -21,7 +21,7 @@ public readonly partial record struct Result<TValue>
         }
 
         value = default;
-        errors = _errors;
+        errors = Errors;
         return false;
     }
 }

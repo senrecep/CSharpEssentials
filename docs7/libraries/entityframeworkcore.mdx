@@ -303,15 +303,15 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, IServic
 }
 ```
 
-Both hooks are off by default. Interceptors that are not registered in DI, or are already on the options, are skipped. When dispatch is on, `BeforeSave` events go to `IDomainEventPublisher` before the save, and `AfterSave` events go to `IDomainEventOutbox` (if registered) or `IDomainEventPublisher` after the save succeeds. Override `DispatchDomainEventsAsync` to change this. If you override `OnConfiguring`, call `base.OnConfiguring(optionsBuilder)`.
+Both hooks are off by default. Interceptors that are not registered in DI, or are already on the options, are skipped. When dispatch is on, `BeforeSave` events go to `IDomainEventPublisher` before the save, and `AfterSave` events go to `IDomainEventOutbox` before the write, in the same `SaveChanges`, when an outbox is registered, otherwise to `IDomainEventPublisher` after the save succeeds. Override `DispatchDomainEventsAsync` to change how events are published. If you override `OnConfiguring`, call `base.OnConfiguring(optionsBuilder)`.
 
 The two domain event paths differ in when `AfterSave` events are handled:
 
 | | `DispatchDomainEventsOnSaveChanges` | `DomainEventInterceptor` |
 |---|---|---|
-| `AfterSave` events | after the save completes | in `SavingChanges`, before the database write |
-| Outbox write | not atomic with the save: the save is already committed when `StoreAsync` runs; inside an explicit transaction it runs before that transaction commits | before the save, in the same `SaveChanges` call |
-| `SaveChanges` throws | `AfterSave` events are put back on their entities, so a retry dispatches them. They are also put back when `StoreAsync` throws after the save, and a later `SaveChanges` stores them again; they stay cleared when `IDomainEventPublisher` throws while publishing them. An outbox that adds rows to the context and then throws should remove them first, or the retry saves them and stores the events twice. After a rolled-back explicit transaction, a retry stores the put-back events for a row that is not in the database | `AfterSave` events are put back when a `BeforeSave` publish throws or when `StoreAsync` throws. They are not put back when `IDomainEventPublisher` throws while dispatching them, because some may already be published and a retry would publish them twice, or when the database write fails |
+| `AfterSave` events | published after the save completes | in `SavingChanges`, before the database write |
+| Outbox write | before the save, in the same `SaveChanges` call | before the save, in the same `SaveChanges` call |
+| `SaveChanges` throws | `AfterSave` events are put back on their entities, so a retry dispatches them, and the rows the outbox added are detached. They stay cleared when `IDomainEventPublisher` throws while publishing them | `AfterSave` events are put back, and the rows the outbox added detached, when a `BeforeSave` publish throws or when `StoreAsync` throws. They are not put back when `IDomainEventPublisher` throws while dispatching them, because some may already be published and a retry would publish them twice, or when the database write fails |
 
 Use one of them, not both. When `DispatchDomainEventsOnSaveChanges` is `true`, `DbContextInterceptors.DomainEvents` in `InterceptorsFromServices` is ignored and the `DomainEventInterceptor` is not attached. The context's service scope (`ServiceProvider`) is disposed with the context.
 
@@ -583,7 +583,28 @@ await db.MigrateDataAsync(seed, new MigrateDataOptions<Country, CountrySeed, str
 
 ### SQL connection factories
 
-`ISqlConnectionFactory` (`IDbConnection Create()`) and `ISqlReadOnlyConnectionFactory` are interfaces only. Implement and register them yourself for Dapper or raw ADO.NET code that should not go through the `DbContext`.
+`ISqlSession` gives Dapper or raw ADO.NET code the context's connection and its open transaction, so the SQL commits or rolls back with the `DbContext` work, including a unit run by `EfCoreTransactionRunner`. `DbDataSourceSqlConnectionFactory` creates a new connection from a `DbDataSource` for reads outside any transaction.
+
+```csharp
+// namespace: CSharpEssentials.EntityFrameworkCore.Sql
+services.AddDbContextSqlSession<AppDbContext>();      // scoped ISqlSession and ISqlConnectionFactory
+services.AddDbDataSourceReadOnlyConnectionFactory();  // singleton ISqlReadOnlyConnectionFactory over the registered DbDataSource
+
+await transactionRunner.ExecuteAsync(async ct =>
+{
+    await session.Connection.ExecuteAsync(
+        "UPDATE stock SET quantity = quantity - @Quantity WHERE sku = @Sku",
+        command, transaction: session.Transaction);
+    db.Orders.Add(order);
+    await db.SaveChangesAsync(ct);
+    return Result.Success();
+}, outcome => outcome.IsSuccess, cancellationToken);
+```
+
+- Pass `session.Transaction` to every command. It is `null` when no transaction is open; most providers reject a command without it while one is open.
+- `ISqlSession.Connection` and `DbContextSqlSession<T>.Create()` return the context's own connection. Do not dispose or close it.
+- `AddDbContextSqlSession` replaces any `ISqlConnectionFactory` registered before it, so code that takes `ISqlConnectionFactory` then gets the shared connection. Code that wraps `factory.Create()` in `using` must move to `ISqlSession`, or keep its own factory and not call `AddDbContextSqlSession`.
+- A connection from `DbDataSourceSqlConnectionFactory` is new and closed. The caller owns it and should dispose it.
 
 ### Transaction runner
 
@@ -607,6 +628,157 @@ The work delegate returns a `ValueTask<T>` and `shouldCommit` decides whether th
 - Only the same `DbContext` instance is joined. Another context type or connection opens its own transaction and is not atomic with this one.
 - It needs a relational provider: the InMemory provider throws on `BeginTransactionAsync` unless `TransactionIgnoredWarning` is ignored. Retrying strategies also refuse to run inside an ambient `TransactionScope`, so don't combine it with `TransactionScopeBehavior`.
 - If the commit itself fails with a transient error after the database applied it, the retry runs the work again. Make the work idempotent when you use a retrying strategy.
+
+#### After-commit callbacks
+
+`AddEfCoreTransactionRunner` also registers the runner as `ITransactionCallbacks` (from `CSharpEssentials.Core`). Use it for side effects that must not happen unless the data is committed: waking an outbox relay, evicting a cache entry, sending a message.
+
+```csharp
+await transactionRunner.ExecuteAsync(async ct =>
+{
+    db.Orders.Add(order);
+    await db.SaveChangesAsync(ct);
+    await callbacks.OnCommittedAsync(async token => await cache.RemoveAsync($"orders:{order.CustomerId}", token), ct);
+    return Result.Success();
+}, outcome => outcome.IsSuccess, cancellationToken);
+```
+
+- Callbacks run in registration order after the outermost commit, once the execution strategy has returned, so a retried attempt never runs them twice.
+- A queued callback gets `CancellationToken.None`, not the token passed to `ExecuteAsync`. The data is committed by then, so a request cancelled or timed out right after the commit still runs the side effect. Put your own timeout inside the callback if it needs one.
+- A unit that does not commit, throws or is retried drops the callbacks it queued. A nested unit that rolls back to its savepoint drops only its own.
+- With no transaction open, `OnCommittedAsync` runs the callback at once. With a transaction the runner did not start (`Database.BeginTransactionAsync` called by hand, or an ambient `TransactionScope`), it throws `InvalidOperationException`, because it cannot see that commit.
+- The callbacks are kept per `DbContext` instance, so any runner over the same context sees them.
+- When callbacks throw, the rest still run and the runner throws an `AggregateException` of the failures. The transaction is already committed at that point.
+
+`BaseDbContext` can publish its after-save domain events this way. Override `DeferDomainEventPublishingUntilCommit` to return `true` (with `DispatchDomainEventsOnSaveChanges` enabled): inside a runner unit the events go to `IDomainEventPublisher` after the commit and are dropped on rollback. Outside a runner unit they are published right after the save, as before. Events stored in an `IDomainEventOutbox` are never deferred, since the outbox row has to be written in the transaction. `DomainEventInterceptor` does not defer.
+
+### Migrate on startup
+
+`MigrateDatabaseAsync<TContext>()` (namespace `CSharpEssentials.EntityFrameworkCore.Migrations`) applies the pending migrations from a new service scope. Call it before the host starts serving. It is opt-in: nothing migrates unless you call it.
+
+```csharp
+WebApplication app = builder.Build();
+await app.Services.MigrateDatabaseAsync<AppDbContext>(app.Lifetime.ApplicationStopping);
+app.Run();
+```
+
+When several instances start together, register an `IDatabaseMigrationLock` over your infrastructure (a PostgreSQL advisory lock, `sp_getapplock`, a Redis lock). The migration runs while that lock is held, and the handle it returns releases the lock on dispose. The package ships no implementation, so it takes no driver dependency.
+
+```csharp
+public sealed class PostgresMigrationLock : IDatabaseMigrationLock
+{
+    public async ValueTask<IAsyncDisposable> AcquireAsync(DbContext context, CancellationToken cancellationToken)
+    {
+        await context.Database.OpenConnectionAsync(cancellationToken);
+        await context.Database.ExecuteSqlRawAsync("SELECT pg_advisory_lock(72707)", cancellationToken);
+        return new Release(context);
+    }
+
+    private sealed class Release(DbContext context) : IAsyncDisposable
+    {
+        public async ValueTask DisposeAsync()
+        {
+            await context.Database.ExecuteSqlRawAsync("SELECT pg_advisory_unlock(72707)");
+            await context.Database.CloseConnectionAsync();
+        }
+    }
+}
+
+builder.Services.AddSingleton<IDatabaseMigrationLock, PostgresMigrationLock>();
+```
+
+If `AcquireAsync` returns `null`, `MigrateDatabaseAsync` throws `InvalidOperationException` before it migrates.
+
+The package has no `IStartupTask` or `AddMigrateOnStartup<TContext>()` registration. A hosted service would need `Microsoft.Extensions.Hosting.Abstractions`, a dependency this package does not take, and the one awaited call above runs before the host serves, which a hosted service does not guarantee.
+
+EF Core 9 and later also take a database lock inside `MigrateAsync` on most providers. The hook is for EF Core 8 and for work you want serialized together with the migration.
+
+For a readiness probe that fails while migrations are pending, see [CSharpEssentials.EntityFrameworkCore.HealthChecks](/libraries/entityframeworkcore-healthchecks).
+
+### Outbox
+
+`EfCoreDomainEventOutbox` stores after-save domain events as `OutboxMessage` rows in the context that raised them. The rows are written by the same `SaveChanges` as the entities, so the events exist exactly when the data does. It works with `DispatchDomainEventsOnSaveChanges` and with `DomainEventInterceptor`.
+
+```csharp
+public sealed record OrderPlaced(Guid OrderId) : DomainEvent;
+
+[JsonSerializable(typeof(OrderPlaced))]
+internal sealed partial class AppJsonContext : JsonSerializerContext;
+
+// OnModelCreating
+modelBuilder.AddOutboxMessages(options => options.Schema = "messaging");
+
+// Startup
+services.AddEfCoreOutbox(types => types
+    .Add("orders.placed", AppJsonContext.Default.OrderPlaced));
+```
+
+- Each row keeps the event's `EventId` as its `Id` and its `OccurredAt` when the event implements `IIdentifiedDomainEvent` (the `DomainEvent` base record does). Other events get a new version 7 id and the current time of the registered `TimeProvider`.
+- `Type` is the name you registered, not the CLR name, so you can rename or move event classes. Only registered types are written or read back. Saving an event of another type throws `InvalidOperationException`, writes nothing and puts the events back on their entities.
+- `JsonOutboxMessageSerializer` serializes with the registered `JsonTypeInfo`. Register every type with source-generated metadata (`AppJsonContext.Default.X`) for trimming and Native AOT. `Add<TEvent>(name, options?)` uses reflection and is marked `RequiresUnreferencedCode`.
+- To use another format, register your own `IOutboxMessageSerializer` before `AddEfCoreOutbox`.
+- `AddOutboxMessages` maps the table (`OutboxMessages` by default, with `TableName` and `Schema` options), the primary key and an index on (`ProcessedAt`, `DeadLetteredAt`, `NextAttemptAt`). Add a migration after calling it.
+- A custom `IDomainEventOutbox` receives the saving context in `StoreAsync(context, events, ct)`. It may add rows to it but must not call `SaveChanges`.
+
+#### Relaying the outbox
+
+`IOutboxProcessor.ProcessBatchAsync` claims a batch of due rows, deserializes each one and passes it to your `IOutboxMessageHandler`. Call it from a loop or a job, or add `CSharpEssentials.EntityFrameworkCore.Hosting` and call `AddOutboxProcessorHostedService()`.
+
+```csharp
+public sealed class BrokerOutboxHandler(IBus bus) : IOutboxMessageHandler
+{
+    public Task HandleAsync(OutboxMessage message, IDomainEvent domainEvent, CancellationToken cancellationToken) =>
+        bus.PublishAsync(domainEvent, messageId: message.Id, cancellationToken);
+}
+
+services.AddScoped<IOutboxMessageHandler, BrokerOutboxHandler>();
+services.AddOutboxProcessor<AppDbContext>(options =>
+{
+    options.BatchSize = 100;
+    options.MaxAttempts = 8;
+});
+```
+
+- Delivery is at least once. A crash or a lost completion delivers the same message again, so dedupe downstream on `OutboxMessage.Id`.
+- A claim sets `ClaimToken`, adds one to `Attempts` and moves `NextAttemptAt` to the end of the lease (`LeaseDuration`, 5 minutes). If a processor stops mid-batch, its rows are claimed again once the lease ends. Completion, retry and dead-letter updates check the claim token, so a processor whose lease ended cannot overwrite a newer claim.
+- A handler that throws, or a type name that is not registered, records `Error` (exception type and message, at most `MaxErrorLength` characters) and schedules a retry. The delay is `RetryDelay` or `OutboxRetryBackoff.Compute`: `RetryBaseDelay` (5 s) doubled per attempt, capped at `RetryMaxDelay` (10 min), with jitter in the upper half when `UseJitter` is on (the default).
+- On attempt `MaxAttempts` (10) a failure sets `DeadLetteredAt` instead, and the row is never claimed again. A row whose lease ended after its last attempt is dead-lettered without calling the handler. Dead-lettered rows keep `Error`; query them to inspect or replay (clear `DeadLetteredAt`, reset `Attempts`).
+- The lease is checked before each message. When it has ended mid-batch (a slow handler, a long batch), the messages not yet handled are released: they become due at once, their claim does not count as an attempt, and the next claim delivers them. Keep `LeaseDuration` longer than a batch takes so this stays rare.
+- Handlers are resolved in a scope per message. A database error or cancellation is thrown from `ProcessBatchAsync`; a handler error never is.
+
+The default claimer, `ConditionalUpdateOutboxMessageClaimer`, works on any relational provider. It reads the ids of the oldest due rows, then claims them with one conditional `UPDATE` that repeats the due condition, so two processors never claim the same row. With many processors on a busy table they compete for the same candidates. Then switch to a provider statement that skips locked rows:
+
+```csharp
+services.AddOutboxProcessor<AppDbContext>(options =>
+    options.Claimer = new SqlOutboxMessageClaimer(OutboxClaimDialect.PostgreSql));
+```
+
+`OutboxClaimSql.Build(context, dialect)` writes the statement from the mapped table and column names. These are the statements for the default mapping:
+
+```sql
+-- OutboxClaimDialect.PostgreSql
+UPDATE "OutboxMessages" SET "ClaimToken" = {0}, "NextAttemptAt" = {1}, "Attempts" = "Attempts" + 1
+WHERE "Id" IN (SELECT "Id" FROM "OutboxMessages"
+               WHERE "ProcessedAt" IS NULL AND "DeadLetteredAt" IS NULL AND "NextAttemptAt" <= {2}
+               ORDER BY "OccurredAt", "Id" LIMIT {3} FOR UPDATE SKIP LOCKED)
+RETURNING *
+
+-- OutboxClaimDialect.SqlServer (identifiers in [brackets] on SQL Server)
+WITH claimed AS (SELECT TOP ({3}) * FROM [OutboxMessages] WITH (UPDLOCK, READPAST, ROWLOCK)
+                 WHERE [ProcessedAt] IS NULL AND [DeadLetteredAt] IS NULL AND [NextAttemptAt] <= {2}
+                 ORDER BY [OccurredAt], [Id])
+UPDATE claimed SET [ClaimToken] = {0}, [NextAttemptAt] = {1}, [Attempts] = [Attempts] + 1 OUTPUT inserted.*
+```
+
+`OutboxClaimDialect.Sqlite` is the PostgreSQL form without `FOR UPDATE SKIP LOCKED`. For another database, pass your own statement to `new SqlOutboxMessageClaimer(sql)`. It gets the `FromSqlRaw` placeholders `{0}` claim token, `{1}` lease end, `{2}` now and `{3}` batch size, and must return every column of the claimed rows. The SQLite statement and the default claimer run against SQLite in the test suite. The PostgreSQL and SQL Server statements are checked as text only, and no provider package is referenced.
+
+The processor never deletes rows. Processed rows stay in the table until you remove them with `PurgeProcessedOutboxMessagesAsync`, which deletes in one statement the rows processed before a UTC cutoff and returns the count. Pending and dead-lettered rows are kept. Run it from a job:
+
+```csharp
+await using AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
+AppDbContext context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+await context.PurgeProcessedOutboxMessagesAsync(DateTime.UtcNow.AddDays(-7), stoppingToken);
+```
 
 ### Idempotency records
 

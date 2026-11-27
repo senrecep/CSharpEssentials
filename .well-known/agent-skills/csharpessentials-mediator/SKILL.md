@@ -115,7 +115,7 @@ No marker interface is needed: once the behavior is registered it applies to any
 ### Error shape
 
 `Error.Exception(ex)` produces an error with:
-- `ErrorType`: `Failure`
+- `ErrorType`: `Unexpected`
 - `Code`: exception type name (e.g. `"InvalidOperationException"`)
 - `Description`: exception message
 
@@ -193,7 +193,7 @@ services.AddEfCoreTransactionRunner<AppDbContext>(); // CSharpEssentials.EntityF
 
 ## LockBehavior (ILockedRequest)
 
-Runs one handler at a time per key. The in-process default serializes within one process only; register a distributed `IResourceLock` for several instances.
+Runs one handler at a time per key. The in-process default serializes within one process only; register a distributed `IResourceLock` for several instances: `services.AddRelationalResourceLock<AppDbContext>(ResourceLockSqlDialect.PostgreSql)` from `CSharpEssentials.EntityFrameworkCore.Locking` (or `.SqlServer`, or your own SQL; no provider package needed). For tests, `CSharpEssentials.Mediator.Testing` has `ResourceLockContractTests` (derive and implement `CreateLock()`) and `RecordingResourceLock` (records `Acquisitions`, `Releases`, `HeldKeys`).
 
 ```csharp
 public record CapturePaymentCommand(Guid OrderId) : ICommand<Result>, ILockedRequest

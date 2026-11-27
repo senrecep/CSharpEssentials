@@ -54,10 +54,21 @@ public class DateTimeProviderTests
     }
 
     [Fact]
-    public void TimeZone_ShouldReturnLocalTimeZone()
+    public void TimeZone_ShouldReturnTheLocalTimeZoneOfTheTimeProvider()
     {
         FakeTimeProvider fakeTimeProvider = new();
+        TimeZoneInfo istanbul = TimeZones.Find("Europe/Istanbul");
+        fakeTimeProvider.SetLocalTimeZone(istanbul);
+
         DateTimeProvider provider = new(fakeTimeProvider);
+
+        provider.TimeZone.Should().Be(istanbul);
+    }
+
+    [Fact]
+    public void TimeZone_WithSystemTimeProvider_ShouldReturnLocalTimeZone()
+    {
+        DateTimeProvider provider = new(TimeProvider.System);
 
         provider.TimeZone.Should().Be(TimeZoneInfo.Local);
     }
@@ -156,7 +167,7 @@ public class DateTimeProviderTests
         FakeTimeProvider fakeTimeProvider = new();
         var provider = new DateTimeProvider(fakeTimeProvider);
 
-        provider.TimeZone.Should().Be(TimeZoneInfo.Local);
+        provider.TimeZone.Should().Be(fakeTimeProvider.LocalTimeZone);
         provider.TimeZoneUtc.Should().Be(TimeZoneInfo.Utc);
         provider.UtcNow.Should().Be(fakeTimeProvider.GetUtcNow());
         provider.UtcNowDateTime.Should().Be(fakeTimeProvider.GetUtcNow().UtcDateTime);
@@ -171,6 +182,26 @@ public class DateTimeProviderTests
 
         provider.UtcNowDate.Should().Be(new DateOnly(2024, 6, 14));
         provider.UtcNowTime.Should().Be(new TimeOnly(22, 0));
+    }
+
+    [Fact]
+    public void UtcNowDateAndTime_Should_DeriveFromUtcNowDateTime_When_ImplementationOmitsThem()
+    {
+        IDateTimeProvider provider = new MinimalDateTimeProvider(new DateTime(2024, 6, 15, 12, 30, 45, DateTimeKind.Utc));
+
+        DateOnly date = provider.UtcNowDate;
+        TimeOnly time = provider.UtcNowTime;
+
+        date.Should().Be(new DateOnly(2024, 6, 15));
+        time.Should().Be(new TimeOnly(12, 30, 45));
+    }
+
+    private sealed class MinimalDateTimeProvider(DateTime utcNow) : IDateTimeProvider
+    {
+        public TimeZoneInfo TimeZone => TimeZoneInfo.Utc;
+        public TimeZoneInfo TimeZoneUtc => TimeZoneInfo.Utc;
+        public DateTime UtcNowDateTime => utcNow;
+        public DateTimeOffset UtcNow => new(utcNow);
     }
 
     private sealed class OffsetTimeProvider(DateTimeOffset now) : TimeProvider

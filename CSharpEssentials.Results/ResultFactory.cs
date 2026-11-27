@@ -9,7 +9,7 @@ public readonly partial record struct Result
     /// Creates a new successful result.
     /// </summary>
     /// <returns></returns>
-    public static Result Success() => default;
+    public static Result Success() => new(false);
 
     /// <summary>
     /// Creates a new failure result.

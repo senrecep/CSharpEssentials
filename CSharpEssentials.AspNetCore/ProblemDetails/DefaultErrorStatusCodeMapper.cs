@@ -59,6 +59,15 @@ public class DefaultErrorStatusCodeMapper : IErrorStatusCodeMapper
     }
 
     /// <inheritdoc />
+    /// <remarks>
+    /// The status of the kind that <see cref="ErrorKindAttribute"/> declares, through <see cref="GetStatusCode(Error)"/>. The
+    /// codes this mapper maps by code (<see cref="ConditionalRequestErrors.PreconditionFailed"/> and the
+    /// <see cref="IdempotencyErrorCodes"/>) are not declared: the conditional request and idempotency conventions declare
+    /// those responses, and a typed error should not reuse those codes.
+    /// </remarks>
+    public virtual IEnumerable<int> GetDeclaredStatusCodes(Type errorType) => HttpResultMetadata.DeclaredStatusCodes(this, errorType);
+
+    /// <inheritdoc />
     public virtual string? GetTitle(Error primaryError, int statusCode)
     {
         if (statusCode == primaryError.Type.ToHttpStatusCode())

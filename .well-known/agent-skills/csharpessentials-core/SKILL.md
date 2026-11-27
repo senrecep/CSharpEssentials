@@ -32,6 +32,8 @@ Also `ToTitleCase`, `ToTrainCase`, `ToUnderscoreCamelCase`. Each takes an option
 ```csharp
 Guid id = Guider.NewGuid();                 // version 7, time-sortable, every target
 Guid ordered = Guider.NewMonotonicGuid();   // version 7, strictly increasing within the process
+Guid stamped = Guider.NewGuid(timeProvider); // version 7 with the provider's time; NewGuid(DateTimeOffset) on every target
+Guid named = Guider.NewGuidV5(GuidNamespaces.Url, url); // version 5 (SHA-1, name-based), deterministic
 Guid sqlKey = Guider.NewSqlServerGuid();    // version 8, sequential in SQL Server uniqueidentifier order
 
 string shortId = id.ToStringFromGuid();     // 22-char RFC 4648 base64url, no padding
@@ -84,6 +86,7 @@ int status = HttpCodes.NotFound;                 // 404
 - `ForEach(action)` on `IEnumerable<T>` is lazy: the action runs while the result is enumerated. On a `List<T>` the built-in `List<T>.ForEach` wins.
 - `ExplicitCast<T>()`, `MsToDateTime()` (Unix milliseconds, `Kind = Utc`) and `GetTypeGroup<TGroup, TType>(group = 100)` are small conversion helpers.
 - `ITransactionRunner` (namespace `CSharpEssentials.Transactions`) runs work in a transaction and commits when `shouldCommit` returns `true`; `EfCoreTransactionRunner<TDbContext>` implements it and `TransactionBehavior` in `CSharpEssentials.Mediator` consumes it.
+- `ITransactionCallbacks.OnCommittedAsync(callback, ct)` (same namespace) queues a callback for after the outermost commit and drops it on rollback; `EfCoreTransactionRunner<TDbContext>` implements it.
 - On .NET 10+, `using CSharpEssentials;` adds the extension properties `IEnumerable<T>.IsEmpty` and `string.IsPalindrome`.
 
 ## Guidance

@@ -43,6 +43,9 @@
           "libraries/endpoints",
           "libraries/entity",
           "libraries/entityframeworkcore",
+          "libraries/entityframeworkcore-healthchecks",
+          "libraries/entityframeworkcore-hosting",
+          "libraries/entityframeworkcore-locking",
           "libraries/enums",
           "libraries/errors-exceptions",
           "libraries/errors",
@@ -53,9 +56,11 @@
           "libraries/json",
           "libraries/maybe",
           "libraries/mediator",
+          "libraries/mediator-testing",
           "libraries/requestresponselogging",
           "libraries/resilience",
           "libraries/results",
+          "libraries/results-testing",
           "libraries/rules",
           "libraries/these",
           "libraries/time",
@@ -132,7 +137,8 @@
           "migration/v5-to-v6",
           "migration/v6-async-naming",
           "migration/v6-optional-route-parameters",
-          "migration/v6-to-v7-idempotency"
+          "migration/v6-to-v7-idempotency",
+          "migration/v8-to-v9"
         ]
       },
       {

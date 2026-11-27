@@ -55,7 +55,7 @@ The samples build the policy inline for brevity. A policy is immutable, so in re
 
 | Method | Parameters (defaults) | Notes |
 |--------|-----------------------|-------|
-| `WithRetry` | `maxAttempts` (3), `delay` (1 s), `exponentialBackoff` (`true`) | `maxAttempts` counts retries after the first attempt, so the operation runs at most `maxAttempts + 1` times. With `exponentialBackoff` the delay doubles after each retry |
+| `WithRetry` | `maxAttempts` (3), `delay` (1 s), `exponentialBackoff` (`true`), `useJitter` (`false`), `maxDelay` (none) | `maxAttempts` counts retries after the first attempt, so the operation runs at most `maxAttempts + 1` times. With `exponentialBackoff` the delay doubles after each retry. `useJitter` spreads each delay randomly so callers that failed together do not retry in lockstep, and `maxDelay` caps every delay after backoff and jitter. `RetryOptions` has the same settings as `UseJitter` and `MaxDelay` |
 | `WithTimeout` | `timeout` | Polly accepts 1 second to 1 day; any other value throws `ValidationException` when the policy is built |
 | `WithCircuitBreaker` | `minimumThroughput` (10), `samplingDuration` (1 min), `breakDuration` (30 s), `failureRatio` (0.5) | Counts the same failures as the retry strategy |
 | `WithFallback` | `Func<CancellationToken, Task<T>>` or `Func<CancellationToken, Task<Result<T>>>` | `ResiliencePolicy<T>` only; runs after the other strategies are exhausted |
@@ -81,7 +81,7 @@ The records default to the same values as the method parameters, plus `TimeoutOp
 
 Both policies retry exceptions and failed `Result` / `Result<T>` values, and the circuit breaker counts the same failures. The non-generic `ResiliencePolicy` checks any return value that implements `IResultBase`; other return values count only when the delegate throws.
 
-Errors of type `Unauthorized`, `Forbidden`, `NotFound` and `Validation` are not retried, because running the operation again gives the same answer. Every other failed result (`Failure`, `Unexpected`, `Conflict` and so on) is treated as transient. When the retries run out, the last failed result is returned.
+Errors of type `Unauthorized`, `Forbidden`, `NotFound`, `Validation` and `Domain` are not retried, because running the operation again gives the same answer. Every other failed result (`Failure`, `Unexpected`, `Conflict` and so on) is treated as transient. When the retries run out, the last failed result is returned.
 
 ```csharp
 Result<Order> order = await ResiliencePolicy
@@ -102,7 +102,7 @@ Func<CancellationToken, Task<User>> getUserWithToken = ct => _db.GetUser(id, ct)
 Result<User> userWithToken = await getUserWithToken.ExecuteAsync(cancellationToken);
 ```
 
-`RetryIfFailed` retries a `Func<CancellationToken, Task<Result<T>>>` or `Func<CancellationToken, Task<Result>>` with the same classification, parameters and defaults as `WithRetry`:
+`RetryIfFailed` retries a `Func<CancellationToken, Task<Result<T>>>` or `Func<CancellationToken, Task<Result>>` with the same classification as `WithRetry` and its `maxAttempts`, `delay`, `exponentialBackoff`, `useJitter` and `maxDelay` parameters and defaults:
 
 ```csharp
 Func<CancellationToken, Task<Result<User>>> operation = ct => _db.TryGetUser(id, ct);
@@ -115,7 +115,7 @@ Result<User> classified = await operation.RetryIfFailed(
     delay: TimeSpan.FromSeconds(1));
 ```
 
-Both forms reuse a cached pipeline, keyed by `(maxAttempts, delay, exponentialBackoff)` and by whether a predicate is used, up to 64 entries per result type. The predicate form passes the delegate through a pooled `ResilienceContext`, so it does not allocate per call.
+Both forms reuse a cached pipeline, keyed by `(maxAttempts, delay, exponentialBackoff, useJitter, maxDelay)` and by whether a predicate is used, up to 64 entries per result type. The predicate form passes the delegate through a pooled `ResilienceContext`, so it does not allocate per call.
 
 `shouldRetry` replaces the default classification. An exception thrown by the operation is converted to the error that would be returned for it (`ErrorType.Unexpected`) and passed to the predicate too, so an exception the predicate rejects is not retried. The predicate can run more than once for the same attempt, so keep it pure and cheap. If it throws, retrying stops and the exception is returned as an `Unexpected` error.
 

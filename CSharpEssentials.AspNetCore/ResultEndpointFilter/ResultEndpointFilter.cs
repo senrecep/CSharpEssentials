@@ -6,10 +6,16 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CSharpEssentials.AspNetCore;
 
 /// <summary>
-/// Converts <c>Result</c>/<c>Result&lt;T&gt;</c> return values: success → 200, failure → <see cref="IResultErrorMapper"/>
-/// when registered, otherwise a problem response (<see cref="Extensions.ToProblemResult(Error[], ErrorMetadata?, int?)"/>).
+/// Converts <c>Result</c>, <c>Result&lt;T&gt;</c> and <c>Result&lt;T, E1..E3&gt;</c> return values: success → 200, failure →
+/// <see cref="IResultErrorMapper"/> when registered, otherwise a problem response
+/// (<see cref="Extensions.ToProblemResult(Error[], ErrorMetadata?, int?)"/>). A typed error goes through the same
+/// conversion as <c>ToResult()</c>, and a <see langword="default"/> typed result becomes a 500 problem.
 /// The mapper is resolved from <see cref="HttpContext.RequestServices"/> on each request, so it can have any lifetime.
 /// </summary>
+/// <remarks>
+/// The filter only changes the response. The endpoint metadata still describes the handler's return type, so the OpenAPI
+/// document shows a 200 of the result type. Return <c>ToHttpResult()</c> from the handler to describe the error responses.
+/// </remarks>
 public sealed class ResultEndpointFilter : IEndpointFilter
 {
     public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)

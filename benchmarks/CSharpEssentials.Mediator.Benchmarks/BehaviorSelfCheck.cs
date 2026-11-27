@@ -27,6 +27,9 @@ public static class BehaviorSelfCheck
     /// <summary>Runs every behavior suite's setup for every parameter value, then its cleanup.</summary>
     public static void VerifyAll()
     {
+        foreach (bool succeed in new[] { true, false })
+            new ResultBaseCheckBenchmarks { Succeed = succeed }.Setup();
+
         foreach (ValidatorGroups groups in Enum.GetValues<ValidatorGroups>())
         {
             foreach (CustomerInput input in Enum.GetValues<CustomerInput>())

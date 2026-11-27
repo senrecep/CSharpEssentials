@@ -146,17 +146,17 @@ public static class EnumValidators
             : (PlainEnum<TEnum>.ToRaw(value) & ~PlainEnum<TEnum>.Mask) == 0;
 
     private static Error Invalid<TEnum>(TEnum value, string propertyName, string rule, string? message) where TEnum : struct, Enum =>
-        Error.Validation($"{propertyName}.{rule}", message ?? CreateError(value, propertyName).Message);
+        Error.Validation($"{propertyName}.{rule}", message ?? CreateError(value, propertyName).Message, FieldMetadata.Create(propertyName));
 
     private static Error NotAllowed<TEnum>(TEnum value, TEnum[] allowed, string propertyName, string? message) where TEnum : struct, Enum
     {
         string code = $"{propertyName}.IsOneOf";
         if (message is not null)
-            return Error.Validation(code, message);
+            return Error.Validation(code, message, FieldMetadata.Create(propertyName));
         string[] allowedValues = new string[allowed.Length];
         for (int i = 0; i < allowed.Length; i++)
             allowedValues[i] = Text(allowed[i]);
-        return Error.Validation(code, new EnumValueError(typeof(TEnum), Text(value), allowedValues, propertyName).Message);
+        return Error.Validation(code, new EnumValueError(typeof(TEnum), Text(value), allowedValues, propertyName).Message, FieldMetadata.Create(propertyName));
     }
 
     private static EnumValueError CreateError<TEnum>(TEnum value, string propertyName) where TEnum : struct, Enum =>

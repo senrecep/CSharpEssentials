@@ -5,6 +5,12 @@ public sealed record RetryOptions
     public int MaxAttempts { get; init; } = 3;
     public TimeSpan Delay { get; init; } = TimeSpan.FromSeconds(1);
     public bool ExponentialBackoff { get; init; } = true;
+
+    /// <summary>Spreads each delay randomly around its value so many callers that failed together do not retry in lockstep.</summary>
+    public bool UseJitter { get; init; }
+
+    /// <summary>The longest delay between attempts, after backoff and jitter; <see langword="null"/> leaves the delay uncapped.</summary>
+    public TimeSpan? MaxDelay { get; init; }
 }
 
 public sealed record TimeoutOptions

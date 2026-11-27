@@ -9,14 +9,14 @@ public readonly partial record struct Result<TValue>
     public Result<TValue> ElseDo(Action<Error[]> onFailure)
     {
         if (IsFailure)
-            onFailure(Errors);
+            onFailure(InitializedErrors);
         return this;
     }
 
     public Result<TValue> ElseDoFirst(Action<Error> onFirstFailure)
     {
         if (IsFailure)
-            onFirstFailure(FirstError);
+            onFirstFailure(InitializedErrors[0]);
         return this;
     }
 
@@ -24,7 +24,7 @@ public readonly partial record struct Result<TValue>
     public async Task<Result<TValue>> ElseDoAsync(Func<Error[], Task> onFailure, CancellationToken cancellationToken = default)
     {
         if (IsFailure)
-            await onFailure(Errors).WithCancellation(cancellationToken).ConfigureAwait(false);
+            await onFailure(InitializedErrors).WithCancellation(cancellationToken).ConfigureAwait(false);
         return this;
     }
 
@@ -32,7 +32,7 @@ public readonly partial record struct Result<TValue>
     public async Task<Result<TValue>> ElseDoFirstAsync(Func<Error, Task> onFirstFailure, CancellationToken cancellationToken = default)
     {
         if (IsFailure)
-            await onFirstFailure(FirstError).WithCancellation(cancellationToken).ConfigureAwait(false);
+            await onFirstFailure(InitializedErrors[0]).WithCancellation(cancellationToken).ConfigureAwait(false);
         return this;
     }
 
@@ -40,14 +40,14 @@ public readonly partial record struct Result<TValue>
     public async ValueTask<Result<TValue>> ElseDoAsync(Func<Error[], ValueTask> onFailure, CancellationToken cancellationToken = default)
     {
         if (IsFailure)
-            await onFailure(Errors).WithCancellation(cancellationToken).ConfigureAwait(false);
+            await onFailure(InitializedErrors).WithCancellation(cancellationToken).ConfigureAwait(false);
         return this;
     }
 
     public async ValueTask<Result<TValue>> ElseDoFirstAsync(Func<Error, ValueTask> onFirstFailure, CancellationToken cancellationToken = default)
     {
         if (IsFailure)
-            await onFirstFailure(FirstError).WithCancellation(cancellationToken).ConfigureAwait(false);
+            await onFirstFailure(InitializedErrors[0]).WithCancellation(cancellationToken).ConfigureAwait(false);
         return this;
     }
 #endif

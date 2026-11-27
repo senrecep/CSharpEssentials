@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 
 using CSharpEssentials.Errors;
@@ -16,7 +17,7 @@ namespace CSharpEssentials.Mediator;
 /// Runs an <see cref="IIdempotentRequest"/> at most once per key and caller through <see cref="IIdempotencyExecutor"/>,
 /// and replays the stored response to a retry. The record namespace is the full name of <typeparamref name="TRequest"/>.
 /// <list type="bullet">
-/// <item><description>A missing or invalid key, an unresolved scope with <see cref="UnscopedKeyBehavior.Reject"/>, a key still in flight and a key reused with another request return a failed <c>Result</c> with an <see cref="IdempotencyErrorCodes"/> code. A response type that is not a <c>Result</c> throws <see cref="EnhancedValidationException"/> instead.</description></item>
+/// <item><description>A missing or invalid key, an unresolved scope with <see cref="UnscopedKeyBehavior.Reject"/>, a key still in flight and a key reused with another request return a failed <c>Result</c> with an <see cref="IdempotencyErrorCodes"/> code. A response type that is not a <c>Result</c> or <c>Result&lt;T&gt;</c>, typed <c>Result&lt;T, E1..E3&gt;</c> included, throws <see cref="EnhancedValidationException"/> instead.</description></item>
 /// <item><description>A successful response is stored. A failed <c>Result</c> of an <see cref="ITransactionalRequest"/> releases the key, because its transaction rolled back. Any other failed <c>Result</c> is stored when <see cref="IdempotencyBehaviorOptions.StoreFailures"/> is on: for the failure retention when its first error is <see cref="ErrorType.Unexpected"/>, else as long as a success.</description></item>
 /// <item><description>An exception thrown by the handler propagates and keeps the key in flight until its lease expires.</description></item>
 /// <item><description>In <see cref="IdempotencyMode.Off"/> the behavior only calls the next step. In <see cref="IdempotencyMode.Observe"/> it never blocks a request: what it would reject is logged and the request runs, and a scope or fingerprint that cannot be resolved runs the request without idempotency instead of throwing.</description></item>
@@ -302,9 +303,13 @@ public sealed partial class IdempotencyBehavior<TRequest, TResponse> : IPipeline
 
         public IdempotencyResultHandling Classify(TResponse result)
         {
+#if NET10_0_OR_GREATER
             if (result is not IResultBase { IsFailure: true } failure)
+#else
+            if (!ResponseFailure.IsFailure(result) || result is not IResultBase failure)
+#endif
                 return IdempotencyResultHandling.Store;
-            if (releaseFailures)
+            if (releaseFailures || result is IUnion { Value: Exception })
                 return IdempotencyResultHandling.Release;
             return failure.FirstError.Type == ErrorType.Unexpected
                 ? IdempotencyResultHandling.StoreAsFailure

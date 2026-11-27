@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.AspNetCore.Comparison.Benchmarks.TypedProblemDetailsComparison-20261126-075810</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100
+  [Host]     : .NET 11.0.0 (11.0.26.53018), X64 RyuJIT AVX2
+  DefaultJob : .NET 11.0.0 (11.0.26.53018), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method                      </th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>CSharpEssentials_TypedToHttpResult</td><td>13.00 &mu;s</td><td>0.255 &mu;s</td><td>0.283 &mu;s</td><td>1.00</td><td>0.03</td><td>0.7324</td><td>12.92 KB</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_ToProblemResult</td><td>12.49 &mu;s</td><td>0.250 &mu;s</td><td>0.307 &mu;s</td><td>0.96</td><td>0.03</td><td>0.7324</td><td>12.85 KB</td><td>0.99</td>
+</tr><tr><td>HandWritten_TypedResultsProblem</td><td>12.76 &mu;s</td><td>0.255 &mu;s</td><td>0.357 &mu;s</td><td>0.98</td><td>0.03</td><td>0.6104</td><td>11.82 KB</td><td>0.92</td>
+</tr></tbody></table>
+</body>
+</html>

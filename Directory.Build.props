@@ -2,10 +2,7 @@
 <Project>
 	<PropertyGroup>
 		<!-- Individual projects define their own TargetFrameworks -->
-		<LangVersion>preview</LangVersion>
-
-		<!-- .NET 11 Native Union Flag -->
-		<DefineConstants Condition="'$(TargetFramework)' == 'net11.0'">$(DefineConstants);CSHARP_ESSENTIALS_ENABLE_UNIONS</DefineConstants>
+		<LangVersion>15</LangVersion>
 
 		<!-- Use project references by default for development -->
 		<UseProjectReferences Condition="'$(UseProjectReferences)' == ''">true</UseProjectReferences>
@@ -14,6 +11,9 @@
 		<IsPackable>true</IsPackable>
 		<IncludeBuildOutput>true</IncludeBuildOutput>
 		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+		<!-- Pack checks that every target framework of a package exposes a compatible API. No baseline is set while the v9
+		     breaking changes land; AGENTS.md (Releasing) says how to add one. -->
+		<EnablePackageValidation>true</EnablePackageValidation>
 
 		<!-- Compiler and analysis settings -->
 		<ImplicitUsings>enable</ImplicitUsings>

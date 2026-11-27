@@ -13,7 +13,7 @@ public readonly partial record struct Result
     public Result<TOut> Map<TOut>(Func<TOut> map)
     {
         if (IsFailure)
-            return _errors;
+            return InitializedErrors;
         return map();
     }
 
@@ -26,7 +26,7 @@ public readonly partial record struct Result
     public Result<TOut> Map<TOut>(Func<Result<TOut>> map)
     {
         if (IsFailure)
-            return _errors;
+            return InitializedErrors;
         return map();
     }
 
@@ -41,7 +41,7 @@ public readonly partial record struct Result
     public Task<Result<TOut>> MapAsync<TOut>(Func<Task<TOut>> map, CancellationToken cancellationToken = default)
     {
         if (IsFailure)
-            return Result<TOut>.Failure(_errors).AsTask();
+            return Result<TOut>.Failure(InitializedErrors).AsTask();
         return MapCoreAsync(map, cancellationToken);
     }
 
@@ -62,7 +62,7 @@ public readonly partial record struct Result
     public ValueTask<Result<TOut>> MapAsync<TOut>(Func<ValueTask<TOut>> map, CancellationToken cancellationToken = default)
     {
         if (IsFailure)
-            return Result<TOut>.Failure(_errors).AsValueTask();
+            return Result<TOut>.Failure(InitializedErrors).AsValueTask();
         return MapCoreAsync(map, cancellationToken);
     }
 
@@ -102,7 +102,7 @@ public static partial class ResultExtensions
     {
         Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         if (result.IsFailure)
-            return result.ErrorsOrEmptyArray;
+            return result.InitializedErrors;
         return await map().WithCancellation(cancellationToken).ConfigureAwait(false);
     }
 
@@ -132,7 +132,7 @@ public static partial class ResultExtensions
     {
         Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         if (result.IsFailure)
-            return result.ErrorsOrEmptyArray;
+            return result.InitializedErrors;
         cancellationToken.ThrowIfCancellationRequested();
         return await map().WithCancellation(cancellationToken).ConfigureAwait(false);
     }

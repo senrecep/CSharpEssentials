@@ -30,10 +30,10 @@ The SharpGrip assembly reports `AssemblyInformationalVersion` 1.0.0 although the
 
 ## What was measured
 
-Five classes cover this package.
+Six classes cover this package.
 
 - Every class has `[MemoryDiagnoser]`.
-- These are overhead measurements, so the plain framework row is the baseline in every category, and the ratio reads as "the cost of adding X".
+- These are overhead measurements, so the plain framework row is the baseline in every category, and the ratio reads as "the cost of adding X". `TypedProblemDetailsComparison` is the exception: its baseline is the CSE typed row.
 - Each variant runs on its own Production host over `TestServer` (`WebApplication.CreateSlimBuilder` + `UseTestServer`). Production matters: the framework and Hellang add exception details in Development. Logging providers are cleared.
 - Every request reads the whole response body. Every handler increments a `HandlerCounter`, so parity can tell an executed request from a short-circuited one.
 - Each class checks parity in `[GlobalSetup]`, and `--self-check` runs the same check for every parameter value. A mismatch fails the run.
@@ -46,6 +46,7 @@ Five classes cover this package.
 | 3 | `ConditionalGetComparison` | GET /articles/7, JSON of exactly `Size` = 1 KB or 64 KB | BodyHash200/304: plain (baseline), CSE `UseBodyHashFallback` + `WithConditionalGet`, Marvin defaults. Versioned200/304: hand-written `ETag: "17"` (baseline), CSE `IVersioned` | 200: body bytes, ETag presence. 304: empty body; handler calls Marvin 0, the others 1 |
 | 4 | `ProblemDetailsComparison` | Exception (handler throws), StatusCode (empty 404), ErrorResult (404 from code) | BCL `AddProblemDetails` + `UseExceptionHandler` + `UseStatusCodePages` (baseline), CSE `AddEnhancedProblemDetails` + `GlobalExceptionHandler`, Hellang `UseProblemDetails`; ErrorResult: BCL `TypedResults.Problem` (baseline) and CSE `ToProblemResult()` | Status, `application/problem+json`, JSON `status`, handler calls 1 |
 | 5 | `ValidationFilterComparison` | POST /users, `Rules` = 1 or 3, `Outcome` = Valid or Invalid | BCL hand-written checks + `TypedResults.ValidationProblem` (baseline), CSE `WithValidation<CreateUser>`, SharpGrip `AddFluentValidationAutoValidation` | Valid: 200 `"ada"`, handler calls 1. Invalid: 400, N errors in the body, handler calls 0 |
+| 6 | `TypedProblemDetailsComparison` | GET of an endpoint that returns a 404 problem, on a host with `AddEnhancedProblemDetails` + `UseEnhancedProblemDetails` | CSE `Result<int, NotFoundError>` holding `new NotFoundError("order.notFound", "No order 42")` through `ToHttpResult()` (baseline), CSE `Error.NotFound(...).ToProblemResult()`, hand-written `TypedResults.Problem(statusCode: 404, title: "order.notFound", detail: "No order 42")` | Status 404, `application/problem+json`, JSON `status` 404, handler calls 1 |
 
 ### Inputs
 
@@ -106,6 +107,7 @@ This table comes from reading CSE source, the competitors' source and docs at th
 - BenchmarkDotNet v0.14.0, default job (full runs, not `--quick`), `[MemoryDiagnoser]` on every class. SDK 11.0.100-rc.1; runtimes .NET 8.0.30, 9.0.19, 10.0.11 and 11.0.0 (11.0.26.42628), as the report headers print them, each TFM in its own run. A range with no TFM named spans net8.0 to net11.0. Differences and multiples in the prose are computed from the means and allocations in the tables.
 - One machine, a 6-core, 12-thread x64 desktop CPU on Linux. The suites ran one after another, never in parallel.
 - The 1-minute load average was 1.60 when the `aspnetcore` suite started and 2.02 when it ended (5-minute average 1.70 to 2.65). Classes with a row above 5% CV were rerun, up to twice. On this page the reports for `ValidationFilterComparison` on net8.0, net10.0 and net11.0 and for `ConditionalGetComparison` on net9.0 come from those reruns, which ran at a 1-minute load of 1.41 to 3.94. After the reruns, three rows on this page are still above 5% CV: the net11.0 `Bcl_Inline` baselines of the validation filter for Rules=1 Valid (CV 6.4%), Rules=3 Invalid (CV 8.5%) and Rules=3 Valid (CV 5.9%). They are marked noisy in the table, and the net11.0 CSE and SharpGrip ratios against them are less certain than the means.
+- `TypedProblemDetailsComparison` ran later, on 2026-11-26 against commit c97867c8, on SDK 11.0.100 with .NET 8.0.33, 9.0.22, 10.0.15 and 11.0.0, at a 1-minute load of 1.1 to 2.7 at the start (no end value recorded). No row is above 5% CV. Its numbers are not comparable cell by cell with the other tables, which come from the earlier run.
 - Reports: `benchmarks/results/aspnetcore/{tfm}/results/*-report-github.md` (also `.csv` and `.html`), for example [net10.0](../benchmarks/results/aspnetcore/net10.0/results/).
 
 Each cell is `Mean (Ratio), Allocated`, copied from the github report of that TFM. The ratio is against the baseline row of the same category and parameter.
@@ -192,6 +194,19 @@ Each cell is `Mean (Ratio), Allocated`, copied from the github report of that TF
 - ErrorResult: `ToProblemResult()` costs 1.10 to 1.26 of `TypedResults.Problem`; its body carries `errorCodes`, `instance` and a trace id.
 - The Exception rows on net8.0 are the slowest for every library (50.37 to 58.12 μs); the same rows take 26.67 to 28.18 μs on net11.0.
 
+### Typed result problem details
+
+From the 2026-11-26 run. The ratio is against the CSE typed row.
+
+| Method | net8.0 | net9.0 | net10.0 | net11.0 |
+|---|---|---|---|---|
+| `CSharpEssentials_TypedToHttpResult` | 14.11 μs (1.00), 11.51 KB | 12.75 μs (1.00), 11.4 KB | 12.82 μs (1.00), 11.48 KB | 13.00 μs (1.00), 12.92 KB |
+| `CSharpEssentials_ToProblemResult` | 14.17 μs (1.01), 11.44 KB | 12.62 μs (0.99), 11.33 KB | 12.51 μs (0.98), 11.41 KB | 12.49 μs (0.96), 12.85 KB |
+| `HandWritten_TypedResultsProblem` | 12.31 μs (0.87), 10.39 KB | 11.17 μs (0.88), 10.28 KB | 10.84 μs (0.85), 10.33 KB | 12.76 μs (0.98), 11.82 KB |
+
+- `ToHttpResult()` on a typed result costs the same as `ToProblemResult()` on an `Error`: within error on net8.0 to net10.0 and 0.07 KB more on every TFM. On net11.0 `ToProblemResult()` is 0.51 μs faster, just outside the 0.505 μs sum of the error margins.
+- The hand-written `TypedResults.Problem` is faster on net8.0 to net10.0 (0.85 to 0.88 of the typed row) and allocates 1.10 to 1.15 KB less on every TFM. On net11.0 the time is within error. The CSE body carries `errorCodes`, `instance` and a trace id, as in the ErrorResult rows above.
+
 ### Validation filter
 
 | Method | Rules | Outcome | net8.0 | net9.0 | net10.0 | net11.0 |
@@ -222,6 +237,7 @@ Every CSE row adds cost over the plain framework request. Rows where a competito
 - ConditionalGet BodyHash304 at 64 KB, all TFMs: Marvin is 4.0 to 5.4 times faster. 14.929 against 67.197 μs (net8.0), 13.411 against 64.654 μs (net9.0), 11.743 against 63.311 μs (net10.0), 16.08 against 64.84 μs (net11.0). Marvin skips the handler; CSE runs it and hashes the body. CSE allocates less (9.58 KB against 12.51 KB on net10.0).
 - ConditionalGet BodyHash304 at 1 KB, net11.0: Marvin is faster, 16.05 against 16.86 μs. On net8.0 to net10.0 CSE is faster at 1 KB.
 - ResultFilter Success, net10.0 only: 1.19 of `TypedResults` (11.231 against 9.475 μs), where the other TFMs show 0.99 to 1.02.
+- Typed result problem details, net8.0 to net10.0: the hand-written `TypedResults.Problem` takes 0.85 to 0.88 of `ToHttpResult()` on a typed result (net10.0: 10.84 against 12.82 μs) and allocates 1.10 to 1.15 KB less on every TFM.
 - EnumBinding Invalid: 1.55 to 2.16 of the framework, which answers an empty 400; CSE writes a problem+json body with the allowed values.
 
 ---

@@ -136,6 +136,62 @@ public static class Guider
     public static Guid NewGuid() => GuidV7.NewGuid();
 
     /// <summary>
+    /// Creates a new RFC 9562 version 7 GUID whose 48-bit timestamp is <paramref name="timestamp"/> in Unix milliseconds, so an ID
+    /// made from a fake clock carries the time the test set. The other 74 bits are random.
+    /// </summary>
+    /// <remarks>
+    /// The random bits come from <see cref="Guid.NewGuid"/> on every call, not from the pool of <see cref="NewGuid()"/>, and the call
+    /// leaves the state of <see cref="NewGuid()"/>, <see cref="NewMonotonicGuid"/> and <see cref="NewSqlServerGuid"/> alone. IDs with the
+    /// same timestamp have no set order.
+    /// </remarks>
+    /// <param name="timestamp">The creation time; its offset is ignored.</param>
+    /// <returns>A version 7 GUID with the layout of <c>Guid.CreateVersion7(timestamp)</c>.</returns>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="timestamp"/> is before the Unix epoch.</exception>
+    public static Guid NewGuid(DateTimeOffset timestamp) => GuidV7.NewGuid(timestamp);
+
+#if NET8_0_OR_GREATER
+    /// <summary>
+    /// Creates a new RFC 9562 version 7 GUID stamped with <see cref="TimeProvider.GetUtcNow"/> of <paramref name="timeProvider"/>:
+    /// <see cref="NewGuid(DateTimeOffset)"/> with the provider's current time. With a fake provider the timestamp is deterministic.
+    /// </summary>
+    /// <remarks>Not in the netstandard builds, which have no <see cref="TimeProvider"/>; call <see cref="NewGuid(DateTimeOffset)"/> with <c>GetUtcNow()</c> there.</remarks>
+    /// <param name="timeProvider">The clock to read.</param>
+    /// <returns>A version 7 GUID.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="timeProvider"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">The provider returns a time before the Unix epoch.</exception>
+    public static Guid NewGuid(TimeProvider timeProvider)
+    {
+        ArgumentNullException.ThrowIfNull(timeProvider);
+        return GuidV7.NewGuid(timeProvider.GetUtcNow());
+    }
+#endif
+
+    /// <summary>
+    /// Creates the RFC 9562 version 5 (name-based, SHA-1) GUID of the UTF-8 bytes of <paramref name="name"/> in
+    /// <paramref name="namespaceId"/>. The same namespace and name always give the same GUID, on every target and in every process.
+    /// </summary>
+    /// <remarks>
+    /// SHA-1 is what RFC 9562 defines for version 5; the GUID names something and is not a secret or a security token.
+    /// <see cref="GuidNamespaces"/> holds the namespaces the RFC defines; any GUID works as a namespace of your own.
+    /// </remarks>
+    /// <param name="namespaceId">The namespace, for example <see cref="GuidNamespaces.Url"/>.</param>
+    /// <param name="name">The name, encoded as UTF-8 without a byte order mark.</param>
+    /// <returns>A version 5 GUID.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="name"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="name"/> is not well-formed UTF-16 (it contains a lone surrogate).</exception>
+    public static Guid NewGuidV5(Guid namespaceId, string name) =>
+        GuidV5.Create(namespaceId, name ?? throw new ArgumentNullException(nameof(name)));
+
+    /// <summary>
+    /// Creates the RFC 9562 version 5 (name-based, SHA-1) GUID of the bytes of <paramref name="name"/> in <paramref name="namespaceId"/>,
+    /// for names that are not text or are already encoded.
+    /// </summary>
+    /// <param name="namespaceId">The namespace, for example <see cref="GuidNamespaces.Oid"/>.</param>
+    /// <param name="name">The name bytes, hashed as given.</param>
+    /// <returns>A version 5 GUID.</returns>
+    public static Guid NewGuidV5(Guid namespaceId, ReadOnlySpan<byte> name) => GuidV5.Create(namespaceId, name);
+
+    /// <summary>
     /// Creates a new RFC 9562 version 7 GUID that is strictly greater than every GUID this method returned before in the same process (per loaded copy of the assembly).
     /// The 12 bits after the version hold the time inside the millisecond and the first 6 bits of <c>rand_b</c> hold a counter,
     /// so IDs created in the same millisecond also sort in creation order.

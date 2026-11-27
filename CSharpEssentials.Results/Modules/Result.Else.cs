@@ -20,7 +20,7 @@ public readonly partial record struct Result
         if (IsSuccess)
             return this;
 
-        return onFailure(Errors);
+        return onFailure(InitializedErrors);
     }
 
     /// <summary>
@@ -33,7 +33,7 @@ public readonly partial record struct Result
         if (IsSuccess)
             return this;
 
-        return From(onFailure(Errors));
+        return From(onFailure(InitializedErrors));
     }
 
     /// <summary>
@@ -61,7 +61,7 @@ public readonly partial record struct Result
     {
         if (IsSuccess)
             return this;
-        Error result = await onFailure(Errors).WithCancellation(cancellationToken).ConfigureAwait(false);
+        Error result = await onFailure(InitializedErrors).WithCancellation(cancellationToken).ConfigureAwait(false);
         return result;
     }
     /// <summary>
@@ -76,7 +76,7 @@ public readonly partial record struct Result
         if (IsSuccess)
             return this;
 
-        IEnumerable<Error> errors = await onFailure(Errors).WithCancellation(cancellationToken).ConfigureAwait(false);
+        IEnumerable<Error> errors = await onFailure(InitializedErrors).WithCancellation(cancellationToken).ConfigureAwait(false);
         return errors.ToResult();
     }
 
@@ -106,7 +106,7 @@ public readonly partial record struct Result
     {
         if (IsSuccess)
             return this;
-        Error result = await onFailure(Errors).WithCancellation(cancellationToken).ConfigureAwait(false);
+        Error result = await onFailure(InitializedErrors).WithCancellation(cancellationToken).ConfigureAwait(false);
         return result;
     }
 
@@ -120,7 +120,7 @@ public readonly partial record struct Result
     {
         if (IsSuccess)
             return this;
-        IEnumerable<Error> errors = await onFailure(Errors).WithCancellation(cancellationToken).ConfigureAwait(false);
+        IEnumerable<Error> errors = await onFailure(InitializedErrors).WithCancellation(cancellationToken).ConfigureAwait(false);
         return errors.ToResult();
     }
 

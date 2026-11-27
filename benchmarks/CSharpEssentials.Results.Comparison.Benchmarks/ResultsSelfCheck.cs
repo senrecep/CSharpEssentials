@@ -8,6 +8,11 @@ public static class ResultsSelfCheck
         new ErrorFactoryComparison().Setup();
         new ErrorToStringComparison().Setup();
         new ErrorJsonComparison().Setup();
+        new TypedCreateComparison().Setup();
+        foreach (string kind in new[] { TypedInputs.Success, TypedInputs.NotFound, TypedInputs.Validation })
+            new TypedMatchComparison { Case = kind }.Setup();
+        foreach (string kind in new[] { TypedInputs.Success, TypedInputs.NotFound })
+            new TypedJsonComparison { Case = kind }.Setup();
         foreach (bool flag in flags)
         {
             new CreateComparison { Succeed = flag }.Setup();
@@ -21,10 +26,12 @@ public static class ResultsSelfCheck
             new ErrorEqualityComparison { WithMetadata = flag }.Setup();
             new ErrorExceptionComparison { Thrown = flag }.Setup();
             new TryComparison { Succeed = flag }.Setup();
+            new TypedBindChainComparison { Succeed = flag }.Setup();
             foreach (bool yield in flags)
             {
                 new AsyncPipelineComparison { Succeed = flag, Yield = yield }.Setup();
                 new TryAsyncComparison { Succeed = flag, Yield = yield }.Setup();
+                new TypedAsyncBindComparison { Succeed = flag, Yield = yield }.Setup();
             }
 
             foreach (int n in new[] { 10, 100 })

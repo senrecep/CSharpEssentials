@@ -134,22 +134,43 @@ public readonly record struct Error : IError
         new(code, description, ErrorType.Forbidden, metadata);
 
     /// <summary>
-    /// Creates an <see cref="Error"/> from an exception. The code is the exception type name, the description is its message,
-    /// and the type defaults to <see cref="ErrorType.Failure"/>.
+    /// Creates an <see cref="Error"/> of type <see cref="ErrorType.Domain"/> from a code and description: a business
+    /// rule rejected the operation. It maps to HTTP 422, and the description reaches the client.
     /// </summary>
+    /// <param name="code">The unique error code.</param>
+    /// <param name="description">The error description.</param>
+    /// <param name="metadata">A dictionary which provides optional space for information.</param>
+    public static Error Domain(
+        string code = nameof(Domain),
+        string description = "A domain rule rejected the operation.",
+        ErrorMetadata? metadata = null) =>
+        new(code, description, ErrorType.Domain, metadata);
+
+    /// <summary>
+    /// Creates an <see cref="Error"/> from an exception. The code is the exception type name, the description is its message,
+    /// and the type defaults to <see cref="ErrorType.Unexpected"/>.
+    /// </summary>
+    /// <remarks>
+    /// The default <see cref="ErrorType.Unexpected"/> maps to HTTP 500, and the AspNetCore problem details hide a 5xx
+    /// description unless <c>ExposeExceptionDetails</c> is on. Pass <see cref="ErrorType.Validation"/> for an exception the client caused.
+    /// </remarks>
     /// <param name="exception"></param>
     /// <param name="type"></param>
     /// <param name="metadata"></param>
     /// <returns></returns>
     public static Error Exception(
         Exception exception,
-        ErrorType type = ErrorType.Failure,
+        ErrorType type = ErrorType.Unexpected,
         ErrorMetadata? metadata = null) =>
         new(exception.GetType().Name, exception.Message, type, ErrorMetadata.CreateWithExceptionDetailed(exception).Combine(metadata));
     /// <summary>
     /// Creates an <see cref="Error"/> from a code and an exception. The description is the exception message,
-    /// and the type defaults to <see cref="ErrorType.Failure"/>.
+    /// and the type defaults to <see cref="ErrorType.Unexpected"/>.
     /// </summary>
+    /// <remarks>
+    /// The default <see cref="ErrorType.Unexpected"/> maps to HTTP 500, and the AspNetCore problem details hide a 5xx
+    /// description unless <c>ExposeExceptionDetails</c> is on. Pass <see cref="ErrorType.Validation"/> for an exception the client caused.
+    /// </remarks>
     /// <param name="code"></param>
     /// <param name="exception"></param>
     /// <param name="type"></param>
@@ -158,14 +179,18 @@ public readonly record struct Error : IError
     public static Error Exception(
         string code,
         Exception exception,
-        ErrorType type = ErrorType.Failure,
+        ErrorType type = ErrorType.Unexpected,
         ErrorMetadata? metadata = null) =>
             new(code, exception.Message, type, ErrorMetadata.CreateWithExceptionDetailed(exception).Combine(metadata));
 
     /// <summary>
     /// Creates an <see cref="Error"/> from a code, a description and an exception.
-    /// The type defaults to <see cref="ErrorType.Failure"/>.
+    /// The type defaults to <see cref="ErrorType.Unexpected"/>.
     /// </summary>
+    /// <remarks>
+    /// The default <see cref="ErrorType.Unexpected"/> maps to HTTP 500, and the AspNetCore problem details hide a 5xx
+    /// description unless <c>ExposeExceptionDetails</c> is on. Pass <see cref="ErrorType.Validation"/> for an exception the client caused.
+    /// </remarks>
     /// <param name="code"></param>
     /// <param name="description"></param>
     /// <param name="exception"></param>
@@ -176,7 +201,7 @@ public readonly record struct Error : IError
         string code,
         string description,
         Exception exception,
-        ErrorType type = ErrorType.Failure,
+        ErrorType type = ErrorType.Unexpected,
         ErrorMetadata? metadata = null) =>
             new(code, description, type, ErrorMetadata.CreateWithExceptionDetailed(exception).Combine(metadata));
 
@@ -195,6 +220,20 @@ public readonly record struct Error : IError
     public static readonly Error False = Validation(
         code: nameof(False),
         description: "A false error has occurred.");
+
+    internal Error WithMetadata(ErrorMetadata? metadata) => new(Code, Description, Type, metadata);
+
+    /// <summary>
+    /// Creates an <see cref="Error"/> of any <see cref="ErrorType"/>, including <see cref="ErrorType.Unknown"/>.
+    /// Use it to bridge an <see cref="IError"/> (for example a struct error type) to <see cref="Error"/>.
+    /// </summary>
+    /// <param name="code">The unique error code.</param>
+    /// <param name="description">The error description.</param>
+    /// <param name="type">The error type.</param>
+    /// <param name="metadata">A dictionary which provides optional space for information.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="code"/> or <paramref name="description"/> is null.</exception>
+    public static Error Create(string code, string description, ErrorType type, ErrorMetadata? metadata = null) =>
+        new(code, description, type, metadata);
 
     /// <summary>
     /// Implicitly converts a single <see cref="Error"/> to an <see cref="Error"/> array.

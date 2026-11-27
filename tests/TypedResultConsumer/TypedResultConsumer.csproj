@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Outside the solution. Builds one file from Cases/ per run with the real SDK, so scripts/check-typed-consumer.py can assert
+       the diagnostics a consumer sees: a clean build for full coverage, for the untyped async lambdas of TypedAsyncChain and for the query syntax of TypedQuerySyntax, CS8509, CS0457, CS0029 and
+       CS0161 for the broken cases, and the packed CSE5001 and CSE5002 analyzer warnings.
+       The Typed* cases use the shipped Result<T, E1..E3> from CSharpEssentials.Results, the others the inline R in Union.cs.
+       net10.0 with LangVersion 15 takes the package's internal UnionAttribute and IUnion polyfill, net11.0 the runtime types.
+       Build: dotnet build tests/TypedResultConsumer -f net10.0 -p:FixtureCase=MissingArm -p:CseVersion=<packed> -->
+  <PropertyGroup>
+    <TargetFrameworks>net11.0;net10.0</TargetFrameworks>
+    <LangVersion>15</LangVersion>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CSharpEssentials.Errors" />
+    <PackageReference Include="CSharpEssentials.Results" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Cases/**" />
+    <Compile Include="Cases/$(FixtureCase).cs" />
+  </ItemGroup>
+
+</Project>

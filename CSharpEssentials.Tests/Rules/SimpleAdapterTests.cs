@@ -78,7 +78,7 @@ public class SimpleAdapterTests
         Func<TestContext, Result> rule = _ => throw new InvalidOperationException("Boom");
         Result result = RuleEngine.Evaluate(rule, new TestContext());
         result.IsFailure.Should().BeTrue();
-        result.FirstError.Type.Should().Be(ErrorType.Failure);
+        result.FirstError.Type.Should().Be(ErrorType.Unexpected);
     }
 
     [Fact]
@@ -165,7 +165,7 @@ public class SimpleAdapterTests
         IRule<TestContext> rule = new ThrowingRule();
         Result result = RuleEngine.Evaluate(rule, new TestContext());
         result.IsFailure.Should().BeTrue();
-        result.FirstError.Type.Should().Be(ErrorType.Failure);
+        result.FirstError.Type.Should().Be(ErrorType.Unexpected);
     }
 
     [Fact]

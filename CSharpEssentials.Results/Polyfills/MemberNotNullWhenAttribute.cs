@@ -1,8 +1,8 @@
 #if !NET5_0_OR_GREATER
 namespace System.Diagnostics.CodeAnalysis;
 
-[AttributeUsage(AttributeTargets.Property | AttributeTargets.Parameter | AttributeTargets.ReturnValue, AllowMultiple = true, Inherited = false)]
-public sealed class MemberNotNullWhenAttribute : Attribute
+[AttributeUsage(AttributeTargets.Method | AttributeTargets.Property, AllowMultiple = true, Inherited = false)]
+internal sealed class MemberNotNullWhenAttribute : Attribute
 {
     public MemberNotNullWhenAttribute(bool returnValue, string member)
     {

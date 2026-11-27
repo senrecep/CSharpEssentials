@@ -2,14 +2,14 @@
 
 ## What
 
-CSharpEssentials is a modular .NET NuGet ecosystem (27 packages) that bridges OOP and functional programming in C#. Core patterns: Result/Maybe monads, discriminated unions (Any<T1,T2,...>), a composable Rules engine, DDD base classes (EntityBase), EF Core interceptors and pagination, ASP.NET Core utilities, idempotency, source-generated Minimal API endpoints (CSharpEssentials.Endpoints) and attribute-based DI registration (CSharpEssentials.DependencyInjection).
+CSharpEssentials is a modular .NET NuGet ecosystem (32 packages) that bridges OOP and functional programming in C#. Core patterns: Result/Maybe monads, discriminated unions (Any<T1,T2,...>), a composable Rules engine, DDD base classes (EntityBase), EF Core interceptors and pagination, ASP.NET Core utilities, idempotency, source-generated Minimal API endpoints (CSharpEssentials.Endpoints) and attribute-based DI registration (CSharpEssentials.DependencyInjection).
 
 Target frameworks, per project file:
 
 - Most packages: net11.0, net10.0, net9.0 and netstandard2.1. Core, Clone and Enums add netstandard2.0.
 - DependencyInjection: net11.0 to net8.0 plus netstandard2.1.
-- AspNetCore, AspNetCore.Swashbuckle, Endpoints, RequestResponseLogging and Idempotency.Testing: net11.0 to net8.0, no netstandard.
-- EntityFrameworkCore: net10.0, net9.0 and net8.0 only (no net11.0), each pinned to its EF Core major.
+- AspNetCore, AspNetCore.Swashbuckle, Endpoints, RequestResponseLogging, Idempotency.Testing and Mediator.Testing: net11.0 to net8.0, no netstandard.
+- EntityFrameworkCore, EntityFrameworkCore.HealthChecks, EntityFrameworkCore.Hosting and EntityFrameworkCore.Locking: net10.0, net9.0 and net8.0 only (no net11.0), each pinned to its EF Core major.
 - AspNetCore.OpenApi: net10.0 only.
 
 Current version: 8.0.0 <!-- x-release-please-version -->
@@ -24,23 +24,24 @@ Current version: 8.0.0 <!-- x-release-please-version -->
 
 ## How
 
-- Solution: `CSharpEssentials.slnx`. The SDK is pinned in `global.json` (an 11.0 prerelease, `rollForward: latestFeature`).
+- Solution: `CSharpEssentials.slnx`. The SDK is pinned in `global.json` (11.0.100, `rollForward: latestFeature`).
 - Build: `dotnet build`
 - Test: `dotnet test`
 - Pack: `dotnet pack`
 - Publish: `./build-and-publish-nugets.sh` (CI runs it on release; see Releasing)
 - Docs site: `docs7/` is generated from README.MD, `docs/`, the package Readmes, BENCHMARKS.md files and the example READMEs. After editing any of them run `python3 scripts/docs7.py`; CI fails when `docs7/` is out of date. Never edit `docs7/` by hand.
+- Typed results: the combinators of `Result<T, E1..E3>` (`CSharpEssentials.Results/Modules/ResultTE1*.cs`) and their tests (`tests/CSharpEssentials.Results.Typed.Tests/Typed/Emitted/`) are written by `python3 scripts/generate-typed-results.py`. Edit the script, not the files, and rerun it; CI fails when they differ. The layout, conversions, `Match`, `Switch` and `ToResult` stay hand-written in `ResultTE1.cs`, `ResultTE1E2.cs` and `ResultTE1E2E3.cs`.
 - First-time setup: `git config core.hooksPath .githooks` (activates the pre-commit hook that checks and fixes the test and package count badges in README.MD)
 - Naming: PascalCase types, camelCase locals, `_camelCase` private fields
 - File layout: one public type per file, filename matches type name
-- Tests live in `CSharpEssentials.Tests/` (net9.0, needs Docker for the PostgreSQL tests) and in the projects under `tests/`: the EF Core and OpenApi tests (net10.0), `CSharpEssentials.Enums.Net8.Tests` (net8.0, binds the netstandard2.1 asset of Enums), `CSharpEssentials.Core.NetStandard.Tests` (the netstandard2.1 asset of Core), `CSharpEssentials.Compat.CSharp12` (compile-only, `LangVersion` 12) and the fixture projects.
-- Endpoints, DependencyInjection, EntityFrameworkCore, Enums and Json keep their source generators and analyzers in `<Package>.Generators/` and code fixes in `<Package>.CodeFixes/` (netstandard2.0, not packable, Roslyn pinned to 4.8.0 in `build/Generators.props`). `build/PackGenerator.targets` packs both into the package under `analyzers/dotnet/cs`.
+- Tests live in `CSharpEssentials.Tests/` (net9.0, needs Docker for the PostgreSQL tests) and in the projects under `tests/`: the EF Core and OpenApi tests (net10.0), `CSharpEssentials.Enums.Net8.Tests` (net8.0, binds the netstandard2.1 asset of Enums), `CSharpEssentials.Core.NetStandard.Tests` (the netstandard2.1 asset of Core), `CSharpEssentials.Results.Typed.Tests` (net11.0, net10.0 and net9.0; Roslyn 5.12.0 compile-diagnostics harness and CsCheck property tests for the typed results) with `CSharpEssentials.Results.Typed.NetStandard.Tests` (the same sources against the netstandard2.1 assets of Results, Errors and the CSharpEssentials packages they depend on), `CSharpEssentials.Compat.CSharp12` (compile-only, `LangVersion` 12) and the fixture projects. `CSharpEssentials.Tests.Fixtures.TypedHttpRdg` compiles the typed HTTP endpoints of `CSharpEssentials.Tests.Fixtures.TypedHttp` with `EnableRequestDelegateGenerator`, so the OpenApi tests compare both.
+- Endpoints, DependencyInjection, EntityFrameworkCore, Enums, Json and Results keep their source generators and analyzers in `<Package>.Generators/` and code fixes in `<Package>.CodeFixes/` (netstandard2.0, not packable, Roslyn pinned to 4.8.0 in `build/Generators.props`). `build/PackGenerator.targets` packs both into the package under `analyzers/dotnet/cs`.
 
-Directory.Build.props applies to every project: `LangVersion` preview, `Nullable` enable, `TreatWarningsAsErrors` and `CodeAnalysisTreatWarningsAsErrors`, `EnforceCodeStyleInBuild`, `AnalysisLevel` latest with `AnalysisMode` All, `NoWarn` 1591 only, SonarAnalyzer.CSharp and SourceLink, and the `CSHARP_ESSENTIALS_ENABLE_UNIONS` define on net11.0.
+Directory.Build.props applies to every project: `LangVersion` 15, `Nullable` enable, `TreatWarningsAsErrors` and `CodeAnalysisTreatWarningsAsErrors`, `EnforceCodeStyleInBuild`, `AnalysisLevel` latest with `AnalysisMode` All, `NoWarn` 1591 only, SonarAnalyzer.CSharp and SourceLink.
 
 Directory.Build.targets gives a packable project's references to other CSharpEssentials projects `PrivateAssets="contentfiles;build"` by default, so the Enums generator and analyzers reach consumers of any package that depends on Enums. It also packs `.well-known/agent-skills/<name>/SKILL.md` into each package at `skills/<name>/SKILL.md`.
 
-CI (`.github/workflows/build.yml`) restores, builds and tests in Release; builds or tests the examples that stay outside the solution (Enums end to end, and the Redis and PostgreSQL idempotency examples, which need Docker); packs to a local feed; checks that every agent skill is packed; runs `tests/PackageConsumer` against six packages; and publishes `examples/Examples.Endpoints` with Native AOT. `codeql.yml` runs CodeQL on pushes and pull requests to `main` and weekly.
+CI (`.github/workflows/build.yml`) regenerates the typed result combinators and fails on a diff; restores, builds and tests in Release; builds or tests the examples that stay outside the solution (Enums end to end, and the Redis and PostgreSQL idempotency examples, which need Docker); packs to a local feed; checks that every agent skill is packed; runs `tests/PackageConsumer` against six packages; builds `tests/TypedResultConsumer` with the real SDK through `scripts/check-typed-consumer.py` and checks the C# diagnostics of each case; publishes `examples/Examples.Endpoints` with Native AOT; and publishes and runs `benchmarks/aot-probe` (`run-aot-probe.sh`), which fails on any IL warning and checks the typed result JSON converter under Native AOT. `codeql.yml` runs CodeQL on pushes and pull requests to `main` and weekly.
 
 ## Releasing
 
@@ -54,6 +55,12 @@ Releases are automated with [release-please](https://github.com/googleapis/relea
 
 `<Version>` in `Directory.Build.props` is the only version source. Internal package pins (`[$(Version)]`), `AssemblyVersion` and `FileVersion` derive from it.
 
+`dotnet pack` runs package validation (`EnablePackageValidation` in `Directory.Build.props`). It checks that the target frameworks of each package expose compatible APIs. No package has a `CompatibilitySuppressions.xml`: every framework asset exposes the API of the assets below it, so a library built against a lower asset still loads on a higher one. Fix a validation error with an overload or a default interface member, not a suppression. There is no baseline version yet, because 9.0 breaks the 8.x API on purpose. After 9.0.0 is on NuGet, add a baseline so later releases are checked against it:
+
+1. Set `<PackageValidationBaselineVersion>9.0.0</PackageValidationBaselineVersion>` in `Directory.Build.props`.
+2. A package first published after that version has nothing to compare with: set `<PackageValidationBaselineVersion></PackageValidationBaselineVersion>` in its project file until it ships.
+3. Run `dotnet pack CSharpEssentials.slnx -c Release`. For a break that is intended, rerun it with `-p:ApiCompatGenerateSuppressionFile=true`, review the regenerated `CompatibilitySuppressions.xml` files, and record the break in the migration guide.
+
 ## Third-party dependencies
 
 - Don't reference a package the code does not use. Remove it instead of hiding it.
@@ -61,6 +68,7 @@ Releases are automated with [release-please](https://github.com/googleapis/relea
 - If its types appear in the public API, keep it visible and treat its major version as part of our API.
 - Keep version ranges as wide as the code allows. Add an upper bound only where the next major is known to break us, such as the EF Core major per target framework, and say why in a comment.
 - Hiding compile assets does not change version resolution. NuGet still picks one version of the package for the whole app.
+- `CSharpEssentials.Tests/Packaging/PackageDependencyAllowListTests.cs` lists every package and project each source project may reference, and fails when a project file adds or drops one. A new dependency means updating that list on purpose. Library packages take no new third-party dependency: infrastructure plugs in through an abstraction and an adapter, the way Redis plugs into Idempotency.
 
 ## Don't
 

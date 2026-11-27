@@ -5,13 +5,18 @@ using CSharpEssentials.ResultPattern.Interfaces;
 
 namespace CSharpEssentials.ResultPattern;
 
-public readonly partial record struct Result : IResult, IFailureFactory<Result>
+/// <summary>
+/// A result that is either a success or a failure carrying one or more errors.
+/// <see langword="default"/>(<see cref="Result"/>) is uninitialized and fails closed: it reports a failure with the
+/// <c>Result.Default</c> error, and combinators that would read its errors throw <see cref="InvalidOperationException"/>.
+/// </summary>
+public readonly partial record struct Result : IResult, IFailureFactory<Result>, IFailureProbe<Result>
 {
     private readonly Error[]? _errors = null;
 
     [JsonConstructor]
     [System.Diagnostics.CodeAnalysis.SuppressMessage("CodeQuality", "IDE0051:Remove unused private members", Justification = "Used by System.Text.Json")]
-    private Result(bool isFailure, Error[]? errorsOrEmptyArray = null) => _errors = isFailure ? ResultLogic.ValidateDeserializedFailureErrors(errorsOrEmptyArray) : null;
+    private Result(bool isFailure, Error[]? errorsOrEmptyArray = null) => _errors = isFailure ? ResultLogic.ValidateDeserializedFailureErrors(errorsOrEmptyArray) : [];
 
     private Result(IEnumerable<Error> errors)
     {
@@ -30,27 +35,36 @@ public readonly partial record struct Result : IResult, IFailureFactory<Result>
     }
 
 
-    [MemberNotNullWhen(true, nameof(_errors))]
-    public readonly bool IsFailure => _errors is not null;
+    /// <summary>
+    /// <c>true</c> for a failure and for <see langword="default"/>(<see cref="Result"/>).
+    /// </summary>
+    public readonly bool IsFailure => !IsSuccess;
 
-    [MemberNotNullWhen(false, nameof(_errors))]
-    public readonly bool IsSuccess => _errors is null;
+    bool IFailureProbe<Result>.IsFailureOf(in Result value) => value.IsFailure;
+
+    /// <summary>
+    /// <c>true</c> only for a result created as a success.
+    /// </summary>
+    [MemberNotNullWhen(true, nameof(_errors))]
+    public readonly bool IsSuccess => _errors is { Length: 0 };
     [JsonPropertyName("errors")]
-    public readonly Error[] ErrorsOrEmptyArray => IsFailure ? _errors : [];
+    public readonly Error[] ErrorsOrEmptyArray => _errors ?? ResultLogic.DefaultErrors;
     [JsonIgnore]
     public readonly Error[] Errors
     {
         get
         {
-            if (IsFailure)
-                return _errors;
-            return Error.NoErrors;
+            if (IsSuccess)
+                return Error.NoErrors;
+            return _errors ?? ResultLogic.DefaultErrors;
         }
     }
     [JsonIgnore]
-    public readonly Error FirstError => IsFailure ? _errors[0] : Error.NoFirstError;
+    public readonly Error FirstError => IsSuccess ? Error.NoFirstError : ErrorsOrEmptyArray[0];
     [JsonIgnore]
-    public readonly Error LastError => IsFailure ? _errors[_errors.Length - 1] : Error.NoLastError;
+    public readonly Error LastError => IsSuccess ? Error.NoLastError : ErrorsOrEmptyArray[^1];
+
+    internal Error[] InitializedErrors => ResultLogic.InitializedErrors(_errors);
 
 
     public override string ToString()

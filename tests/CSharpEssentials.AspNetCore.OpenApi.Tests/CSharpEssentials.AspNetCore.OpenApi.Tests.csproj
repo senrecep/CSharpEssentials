@@ -27,6 +27,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\CSharpEssentials.AspNetCore.OpenApi\CSharpEssentials.AspNetCore.OpenApi.csproj" />
     <ProjectReference Include="..\CSharpEssentials.Tests.Fixtures.OpenApiSample\CSharpEssentials.Tests.Fixtures.OpenApiSample.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.Tests.Fixtures.TypedHttp\CSharpEssentials.Tests.Fixtures.TypedHttp.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.Tests.Fixtures.TypedHttpRdg\CSharpEssentials.Tests.Fixtures.TypedHttpRdg.csproj" />
   </ItemGroup>
 
   <ItemGroup>

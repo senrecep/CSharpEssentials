@@ -12,6 +12,8 @@ namespace CSharpEssentials.Tests.Results;
 public sealed class SynchronizationContextCaptureTests
 {
     private static readonly Error TestError = Error.Failure("TEST", "Test error");
+    private static readonly NotFoundError Missing = new("TEST.Missing", "Missing.");
+    private static readonly ValidationError Invalid = new("TEST.Invalid", "Invalid.");
 
     public static TheoryData<string> ChainNames() => new(Chains.Keys);
 
@@ -65,6 +67,16 @@ public sealed class SynchronizationContextCaptureTests
         ["Maybe.WhereAsync(completed source)"] = () => Task.FromResult(Maybe<int>.From(1)).WhereAsync(v => DelayedValue(v > 0)),
         ["Maybe.ExecuteAsync(completed source)"] = () => Task.FromResult(Maybe<int>.From(1)).ExecuteAsync(_ => Task.Delay(5)),
         ["Maybe.OrAsync(completed source)"] = () => Task.FromResult(Maybe<int>.None).OrAsync(() => DelayedValue(3)),
+        ["Typed.BindAsync"] = () => TypedSource(1).BindAsync(v => TypedSource(v + 1)),
+        ["Typed.BindAsync(instance)"] = () => new Result<int, NotFoundError>(1).BindAsync(v => TypedSource(v + 1)),
+        ["Typed.BindAsync(ValueTask source)"] = () => new ValueTask<Result<int, NotFoundError>>(TypedSource(1)).BindAsync(v => new ValueTask<Result<int, NotFoundError>>(TypedSource(v + 1))).AsTask(),
+        ["Typed.BindWidenAsync"] = () => TypedSource(1).BindWidenAsync(v => DelayedValue(new Result<int, ValidationError>(v))),
+        ["Typed.MapAsync(Task handler)"] = () => TypedSource(1).MapAsync(v => DelayedValue(v + 1)),
+        ["Typed.MapAsync(sync handler)"] = () => TypedSource(1).MapAsync(v => v + 1),
+        ["Typed.EnsureAsync"] = () => TypedSource(1).EnsureAsync(v => DelayedValue(v > 0), Missing),
+        ["Typed.FailIfAsync(added slot)"] = () => TypedSource(1).FailIfAsync(v => DelayedValue(v < 0), Invalid),
+        ["Typed.MapErrorAsync"] = () => TypedFailure().MapErrorAsync((NotFoundError _) => DelayedValue(Invalid)),
+        ["Typed.CompensateAsync"] = () => TypedFailure().CompensateAsync((NotFoundError _) => TypedSource(3)),
     };
 
     [Theory]
@@ -139,6 +151,18 @@ public sealed class SynchronizationContextCaptureTests
     {
         await Task.Delay(5).ConfigureAwait(false);
         return TestError;
+    }
+
+    private static async Task<Result<int, NotFoundError>> TypedSource(int value)
+    {
+        await Task.Delay(5).ConfigureAwait(false);
+        return value;
+    }
+
+    private static async Task<Result<int, NotFoundError>> TypedFailure()
+    {
+        await Task.Delay(5).ConfigureAwait(false);
+        return Missing;
     }
 
     private static async Task<Maybe<int>> MaybeSource(int? value)

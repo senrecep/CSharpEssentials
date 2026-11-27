@@ -6,7 +6,12 @@ using CSharpEssentials.ResultPattern.Interfaces;
 
 namespace CSharpEssentials.ResultPattern;
 
-public readonly partial record struct Result<TValue> : IResult<TValue>, IFailureFactory<Result<TValue>>, IValueResult
+/// <summary>
+/// A result that is either a success carrying a value or a failure carrying one or more errors.
+/// <see langword="default"/>(<see cref="Result{TValue}"/>) is uninitialized and fails closed: it reports a failure with the
+/// <c>Result.Default</c> error, and combinators that would read its errors throw <see cref="InvalidOperationException"/>.
+/// </summary>
+public readonly partial record struct Result<TValue> : IResult<TValue>, IFailureFactory<Result<TValue>>, IFailureProbe<Result<TValue>>, IValueResult
 {
     private readonly Error[]? _errors = null;
     private readonly TValue? _value = default;
@@ -15,7 +20,7 @@ public readonly partial record struct Result<TValue> : IResult<TValue>, IFailure
     private Result(bool isSuccess, TValue? value = default, Error[]? errorsOrEmptyArray = null)
     {
         _value = isSuccess ? value : default;
-        _errors = !isSuccess ? ResultLogic.ValidateDeserializedFailureErrors(errorsOrEmptyArray) : null;
+        _errors = !isSuccess ? ResultLogic.ValidateDeserializedFailureErrors(errorsOrEmptyArray) : [];
     }
     private Result(TValue value)
     {
@@ -26,6 +31,7 @@ public readonly partial record struct Result<TValue> : IResult<TValue>, IFailure
             throw new ArgumentNullException(nameof(value));
 #endif
         _value = value;
+        _errors = [];
     }
 
     private Result(IEnumerable<Error> errors)
@@ -44,35 +50,42 @@ public readonly partial record struct Result<TValue> : IResult<TValue>, IFailure
         _errors = errorArray;
     }
 
-    [MemberNotNullWhen(true, nameof(Errors))]
-    [MemberNotNullWhen(true, nameof(_errors))]
+    /// <summary>
+    /// <c>true</c> for a failure and for <see langword="default"/>(<see cref="Result{TValue}"/>).
+    /// </summary>
     [MemberNotNullWhen(false, nameof(Value))]
     [MemberNotNullWhen(false, nameof(_value))]
-    public readonly bool IsFailure => _errors is not null;
+    public readonly bool IsFailure => !IsSuccess;
 
-    [MemberNotNullWhen(false, nameof(Errors))]
-    [MemberNotNullWhen(false, nameof(_errors))]
+    bool IFailureProbe<Result<TValue>>.IsFailureOf(in Result<TValue> value) => value.IsFailure;
+
+    /// <summary>
+    /// <c>true</c> only for a result created from a value.
+    /// </summary>
     [MemberNotNullWhen(true, nameof(Value))]
     [MemberNotNullWhen(true, nameof(_value))]
-    public readonly bool IsSuccess => _errors is null;
+    [MemberNotNullWhen(true, nameof(_errors))]
+    public readonly bool IsSuccess => _errors is { Length: 0 };
     public readonly TValue Value => IsSuccess ? _value : default!;
     readonly object? IValueResult.BoxedValue => Value;
     [JsonPropertyName("errors")]
-    public readonly Error[] ErrorsOrEmptyArray => IsFailure ? _errors : [];
+    public readonly Error[] ErrorsOrEmptyArray => _errors ?? ResultLogic.DefaultErrors;
     [JsonIgnore]
     public readonly Error[] Errors
     {
         get
         {
-            if (IsFailure)
-                return _errors;
-            return Error.NoErrors;
+            if (IsSuccess)
+                return Error.NoErrors;
+            return _errors ?? ResultLogic.DefaultErrors;
         }
     }
     [JsonIgnore]
-    public readonly Error FirstError => IsFailure ? _errors[0] : Error.NoFirstError;
+    public readonly Error FirstError => IsSuccess ? Error.NoFirstError : ErrorsOrEmptyArray[0];
     [JsonIgnore]
-    public readonly Error LastError => IsFailure ? _errors[^1] : Error.NoLastError;
+    public readonly Error LastError => IsSuccess ? Error.NoLastError : ErrorsOrEmptyArray[^1];
+
+    internal Error[] InitializedErrors => ResultLogic.InitializedErrors(_errors);
 
     /// <summary>
     /// Converts a result to a result with no value.

@@ -24,7 +24,7 @@ public class HttpStatusCodeMapperTests
     [InlineData(HttpStatusCode.RequestEntityTooLarge, ErrorType.Validation)]
     [InlineData(HttpStatusCode.RequestUriTooLong, ErrorType.Validation)]
     [InlineData(HttpStatusCode.UnsupportedMediaType, ErrorType.Validation)]
-    [InlineData(HttpStatusCode.UnprocessableEntity, ErrorType.Validation)]
+    [InlineData(HttpStatusCode.UnprocessableEntity, ErrorType.Domain)]
     [InlineData(HttpStatusCode.TooManyRequests, ErrorType.Conflict)]
     [InlineData(HttpStatusCode.InternalServerError, ErrorType.Unexpected)]
     [InlineData(HttpStatusCode.OK, ErrorType.Failure)]

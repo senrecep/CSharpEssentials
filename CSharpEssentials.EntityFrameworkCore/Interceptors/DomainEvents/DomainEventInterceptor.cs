@@ -1,5 +1,6 @@
 using CSharpEssentials.Entity;
 using CSharpEssentials.Entity.Interfaces;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -14,9 +15,9 @@ namespace CSharpEssentials.EntityFrameworkCore.Interceptors;
 ///   <item><see cref="DomainEventTiming.BeforeSave"/>: published first. A failure aborts the save and puts the
 ///   <see cref="DomainEventTiming.AfterSave"/> events back on their entities, so a retry dispatches them.</item>
 ///   <item><see cref="DomainEventTiming.AfterSave"/>: dispatched next, still inside <c>SavingChanges</c>, i.e. before
-///   the changes are written. With an <see cref="IDomainEventOutbox"/> that adds rows to the same context, the outbox
-///   entries are saved atomically with the entities. When <see cref="IDomainEventOutbox.StoreAsync"/> throws, the
-///   save is aborted and the events are put back on their entities, since none of them has been published. When the
+///   the changes are written. The <see cref="IDomainEventOutbox"/> gets the saving context, so the rows it adds are
+///   saved atomically with the entities. When <see cref="IDomainEventOutbox.StoreAsync"/> throws, the rows it added are
+///   detached, the save is aborted and the events are put back on their entities, since none of them has been published. When the
 ///   <see cref="IDomainEventPublisher"/> throws instead, the events stay cleared: some may already be published, and a
 ///   retry would publish them twice. For dispatch after a successful save use
 ///   <c>BaseDbContext.DispatchDomainEventsOnSaveChanges</c>.</item>
@@ -58,7 +59,7 @@ public sealed partial class DomainEventInterceptor(
         InterceptionResult<int> returnValue = base.SavingChanges(eventData, result);
 
         if (afterSave.Length > 0)
-            DispatchAfterSaveEventsAsync(collected, afterSave, CancellationToken.None).GetAwaiter().GetResult();
+            DispatchAfterSaveEventsAsync(eventData.Context, collected, afterSave, CancellationToken.None).GetAwaiter().GetResult();
 
         return returnValue;
     }
@@ -90,13 +91,13 @@ public sealed partial class DomainEventInterceptor(
         InterceptionResult<int> returnValue = await base.SavingChangesAsync(eventData, result, cancellationToken).ConfigureAwait(false);
 
         if (afterSave.Length > 0)
-            await DispatchAfterSaveEventsAsync(collected, afterSave, cancellationToken).ConfigureAwait(false);
+            await DispatchAfterSaveEventsAsync(eventData.Context, collected, afterSave, cancellationToken).ConfigureAwait(false);
 
         return returnValue;
     }
 
     private async Task DispatchAfterSaveEventsAsync(
-        List<(IDomainEventHolder Entity, IDomainEvent[] Events)> collected, IDomainEvent[] events,
+        DbContext context, List<(IDomainEventHolder Entity, IDomainEvent[] Events)> collected, IDomainEvent[] events,
         CancellationToken cancellationToken)
     {
         using IServiceScope scope = serviceScopeFactory.CreateScope();
@@ -107,7 +108,7 @@ public sealed partial class DomainEventInterceptor(
             LogStoringDomainEvents(events.Length);
             try
             {
-                await outbox.StoreAsync(events, cancellationToken).ConfigureAwait(false);
+                await DomainEventCollector.StoreInOutboxAsync(outbox, context, events, cancellationToken).ConfigureAwait(false);
             }
             catch
             {

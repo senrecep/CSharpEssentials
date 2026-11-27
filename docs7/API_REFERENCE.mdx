@@ -46,22 +46,30 @@ Reference for every package in the CSharpEssentials ecosystem. Failures are retu
 
 | Method | Creates | HTTP mapping | When to use |
 |--------|---------|-------------|-------------|
-| `Error.Failure(code, desc)` | General failure | 500 | Domain logic failures |
+| `Error.Failure(code, desc)` | General failure | 500 | Server-side failures |
 | `Error.Validation(code, desc)` | Validation error | 400 | Input validation failures |
 | `Error.NotFound(code, desc)` | Not found error | 404 | Missing resources |
 | `Error.Unauthorized(code, desc)` | Auth error | 401 | Authentication failures |
 | `Error.Forbidden(code, desc)` | Permission error | 403 | Authorization failures |
 | `Error.Conflict(code, desc)` | Conflict error | 409 | Resource conflicts (duplicate, version mismatch) |
+| `Error.Domain(code, desc)` | Domain rule error | 422 | A business rule rejected a well-formed request |
 | `Error.Unexpected(code, desc)` | System error | 500 | Unexpected/infrastructure failures |
 | `Error.Exception(ex)` | From exception | 500 | Bridging exception-based code into the error world |
+| `Error.Create(code, desc, type)` | Any `ErrorType` | By type | Bridging another `IError`, or `ErrorType.Unknown` |
 
-All factory methods accept an optional `ErrorMetadata? metadata` parameter for attaching arbitrary key-value data. `code` and `description` have defaults (the factory name and a generic message), so `Error.NotFound()` is valid. `Error.Exception` has three overloads, `(exception, type = Failure, metadata)`, `(code, exception, type, metadata)` and `(code, description, exception, type, metadata)`. Without a `code` it is the exception type name; the metadata gets `exceptionType`, `exceptionMessage`, `exceptionStackTrace` and, when present, `innerException`.
+All factory methods accept an optional `ErrorMetadata? metadata` parameter for attaching arbitrary key-value data. `code` and `description` have defaults (the factory name and a generic message), so `Error.NotFound()` is valid. `Error.Exception` has three overloads, `(exception, type = Unexpected, metadata)`, `(code, exception, type, metadata)` and `(code, description, exception, type, metadata)`. Without a `code` it is the exception type name; the metadata gets `exceptionType`, `exceptionMessage`, `exceptionStackTrace` and, when present, `innerException`.
 
-`ErrorType` has eight members: `Failure`, `Unexpected`, `Validation`, `Conflict`, `NotFound`, `Unauthorized`, `Forbidden` and `Unknown`. `Unknown` has no factory; the EF Core `SaveChangesAsResultAsync` uses it.
+`Failure`, `Unexpected`, `Unknown` and the default `Error.Exception` type map to 500. With the AspNetCore problem details and `ExposeExceptionDetails` off (the default), their description is replaced by `An unexpected error occurred.` in the response. Use `Domain` for a business-rule rejection the client should read.
+
+`ErrorType` has nine members: `Failure`, `Unexpected`, `Validation`, `Conflict`, `NotFound`, `Unauthorized`, `Forbidden`, `Unknown` and `Domain`. `Unknown` has no factory; the EF Core `SaveChangesAsResultAsync` uses it, and it is the `[EnumFallback]` member, so data reads map a type name or number this version does not know to `Unknown`.
 
 Equality compares `Type`, `NumericType`, `Code`, `Description` and the metadata by content. `GetHashCode` hashes the metadata as an order-independent sum of its entries (nested `ErrorMetadata` included), so equal errors hash the same whatever the insertion order.
 
 `ErrorMetadata` is a `Dictionary<string, object?>` with `CreateEmpty()`, `CreateWithStackTrace()`, `CreateWithException(ex)`, `CreateWithExceptionDetailed(ex)`, the fluent `AddMetadata(key, value)`, `AddStackTrace()`, `AddException(ex)`, `AddExceptionDetailed(ex)`, and `Combine(other)`. `IError` is the interface `Error` implements.
+
+### Typed error kinds
+
+`TypedError` (abstract record, implements `IError`) has one non-sealed kind per `ErrorType` except `Unknown`: `NotFoundError`, `ConflictError`, `ValidationError`, `UnauthorizedError`, `ForbiddenError`, `UnexpectedError`, `FailureError` and `DomainError`, each with a `(code, description, metadata = null)` constructor. Derived records keep the kind's `Type`. `ToError()` returns an `Error` with the same code, description, type and metadata instance. `[ErrorKind(ErrorType.X)]` declares the kind on a class or struct and is inherited. Equality compares runtime type, code, description, type and metadata content; see the [Errors readme](/libraries/errors#typed-error-kinds).
 
 ### Error composition
 
@@ -75,8 +83,8 @@ Equality compares `Type`, `NumericType`, `Code`, `Description` and the metadata 
 
 | Method | What it does |
 |--------|-------------|
-| `errorType.ToHttpStatusCode()` | Maps `ErrorType` to HTTP status code: `Validation` 400, `Unauthorized` 401, `Forbidden` 403, `NotFound` 404, `Conflict` 409, every other type 500 |
-| `statusCode.ToErrorType()` | Maps an `int` back to `ErrorType`: 400 `Validation`, 401 `Unauthorized`, 403 `Forbidden`, 404 `NotFound`, 409 `Conflict`, 500 `Failure`, any other code `Unexpected` |
+| `errorType.ToHttpStatusCode()` | Maps `ErrorType` to HTTP status code: `Validation` 400, `Unauthorized` 401, `Forbidden` 403, `NotFound` 404, `Conflict` 409, `Domain` 422, every other type 500 |
+| `statusCode.ToErrorType()` | Maps an `int` back to `ErrorType`: 400 `Validation`, 401 `Unauthorized`, 403 `Forbidden`, 404 `NotFound`, 409 `Conflict`, 422 `Domain`, 500 `Failure`, any other code `Unexpected` |
 | `errorType.ToIntType()` | The numeric value of the `ErrorType` (`Error.NumericType`) |
 | `error.ToResult()` | Converts an `Error` to a failed `Result` (Results package, namespace `CSharpEssentials.ResultPattern`) |
 | `error.ToResult<T>()` | Converts an `Error` to a failed `Result<T>` (same package and namespace) |
@@ -161,9 +169,9 @@ These run only on success; a failure passes through unchanged.
 
 ```csharp
 Result<OrderDto> result = GetUser(userId)
-    .Ensure(u => u.IsActive, Error.Failure("User.Inactive", "Account is deactivated"))
+    .Ensure(u => u.IsActive, Error.Forbidden("User.Inactive", "Account is deactivated"))
     .Bind(u => GetOrder(u.LatestOrderId))
-    .Ensure(o => o.Status != OrderStatus.Cancelled, Error.Failure("Order.Cancelled", "Order was cancelled"))
+    .Ensure(o => o.Status != OrderStatus.Cancelled, Error.Conflict("Order.Cancelled", "Order was cancelled"))
     .Map(o => new OrderDto(o.Id, o.Total));
 ```
 
@@ -410,6 +418,19 @@ Result<int[]> values = await tasks.SequenceAsync();
 | `value.ToResult()` / `error.ToResult<T>()` / `errors.ToResult()` | Wraps a value (`Result<T>`), an `Error` or an `Error[]`/`IEnumerable<Error>` into a result |
 | `str.TrimStart(prefix, comparison)` / `str.TrimEnd(suffix, comparison)` | `StringResultExtensions`: `Result<string>`; a null or empty input or affix gives `Error.Validation` (`InputIsEmpty`, `PrefixIsEmpty`, `SuffixIsEmpty`), a missing prefix or suffix leaves the string unchanged |
 | `ResultBaseComparer`, `ResultComparer`, `ResultComparer<T>` | `IEqualityComparer` implementations in namespace `CSharpEssentials.ResultPattern.Comparers`, exposed as `IResultBase.Comparer`, `IResult.Comparer` and `IResult<T>.Comparer`. `ResultComparer` (a `ResultBaseComparer`) compares the success state and the errors; `ResultComparer<T>` also compares the value (optionally with your own `EqualityComparer<T>`) |
+| `ITypedResult` | Public interface on `Result<T, E1..E3>` (namespace `CSharpEssentials.ResultPattern.Interfaces`): `HasValue` and `Value` of the case the result holds, readable without knowing its type arguments |
+
+#### Test assertions
+
+`CSharpEssentials.Results.Testing` (namespace `CSharpEssentials.ResultPattern.Testing`) has assertion helpers with no test framework dependency. A failed assertion throws `ResultAssertionException` with every error in the message. See the package Readme.
+
+| Member | What it does |
+|--------|-------------|
+| `ShouldBeSuccess()` | Passes on a successful `Result`; returns the value of a `Result<T>` or a typed `Result<T, E1..E3>` |
+| `ShouldBeFailure()` / `ShouldHaveError(code)` / `(type)` / `(type, code)` | Return the errors, or the first error that matches |
+| `ShouldBeFailureOf<TError>()` | Typed results only: returns the `TError` the result holds |
+| `maybe.ShouldHaveValue()` / `maybe.ShouldBeNone()` | `Maybe<T>` checks; the first returns the value |
+| `response.ShouldBeProblemAsync(status?, code?)` / `response.ShouldBeValidationProblemAsync(keys)` | Check an `HttpResponseMessage` with an `application/problem+json` body and return it as a `JsonElement` |
 
 ---
 
@@ -717,6 +738,8 @@ All methods accept an optional `CultureInfo` parameter.
 | `guid.ToStringFromGuid()` | 22-character short GUID string in RFC 4648 base64url without padding (`+` as `-`, `/` as `_`), so `System.Buffers.Text.Base64Url` decodes it too |
 | `str.ToGuidFromString()` | Reverse: decodes back to `Guid` (`string` or `ReadOnlySpan<char>`); throws `FormatException` unless the input is exactly 22 URL-safe characters. A non-canonical last character (unused low bits set) decodes to the same GUID as the canonical one |
 | `Guider.NewGuid()` | RFC 9562 version 7 GUID on every target, built in the package with random bits from a per-thread `RandomNumberGenerator` pool (AppContext switch `CSharpEssentials.Guider.DisableRandomPool` takes them from `Guid.NewGuid()` instead) |
+| `Guider.NewGuid(DateTimeOffset)`, `Guider.NewGuid(TimeProvider)` | Version 7 GUID stamped with the given time or the provider's `GetUtcNow()`; random bits from `Guid.NewGuid()`; throws `ArgumentOutOfRangeException` before the Unix epoch; the `TimeProvider` overload is not in the netstandard builds |
+| `Guider.NewGuidV5(namespaceId, name)` | RFC 9562 version 5 GUID (SHA-1 of the namespace and the name); `name` is a `string` (strict UTF-8, a lone surrogate throws `ArgumentException`) or `ReadOnlySpan<byte>`; `GuidNamespaces.Dns`, `Url`, `Oid` and `X500` are the RFC namespaces |
 | `Guider.NewMonotonicGuid()` | Version 7 GUID with the sub-millisecond time in `rand_a` and a 6-bit counter at the start of `rand_b` (262,144 IDs per ms before the timestamp runs ahead); 56 random bits; each call returns a value greater than the last one in the same process (per loaded copy of the assembly) |
 | `Guider.NewSqlServerGuid()` | Version 8 GUID for SQL Server `uniqueidentifier` order: Unix ms big-endian in bytes 10 to 15, then the sub-millisecond time and counter of `NewMonotonicGuid()` in bytes 8, 9 and 7; 56 random bits; strictly increasing in `SqlGuid` order within the process, not ordered as bytes or strings |
 | `Guider.ToStringFromGuid(guid)` / `Guider.ToGuidFromString(span)` | The static forms of the two conversions above |
@@ -727,6 +750,7 @@ All methods accept an optional `CultureInfo` parameter.
 |------|-------------|
 | `HttpCodes` | `int` constants for 2xx to 5xx status codes (`HttpCodes.Ok`, `HttpCodes.NotFound`, `HttpCodes.TooManyRequests`, ...) |
 | `ITransactionRunner` | `ValueTask<T> ExecuteAsync<T>(Func<CancellationToken, ValueTask<T>> work, Func<T, bool> shouldCommit, CancellationToken ct = default)`; implemented by `EfCoreTransactionRunner<TDbContext>` (section 10) and used by the Mediator `TransactionBehavior` |
+| `ITransactionCallbacks` | `ValueTask OnCommittedAsync(Func<CancellationToken, ValueTask> callback, CancellationToken ct = default)`: runs the callback after the outermost commit of the current unit, or now when none is open; implemented by `EfCoreTransactionRunner<TDbContext>` |
 
 ---
 
@@ -824,7 +848,7 @@ Base classes for entities with audit fields, domain events and soft deletion.
 | `SetCreatedInfo(at, by)` | method | Sets creation audit fields; throws `ArgumentOutOfRangeException` for `DateTimeOffset.MinValue` |
 | `SetUpdatedInfo(at, by)` | method | Sets update audit fields |
 
-The audit properties have private setters; use the two `Set*Info` methods (the EF Core `AuditInterceptor` calls them). Namespace `CSharpEssentials.Entity`; the interfaces (`IEntityBase`, `IEntityBase<TId>`, `ICreationAudit`, `IModificationAudit`, `IDomainEventHolder`, `IDomainEvent`, `ISoftDeletable`, `ISoftDeletableBase`, `ISoftDeletableEntityBase`, `IDeletableEntityBase`) are in `CSharpEssentials.Entity.Interfaces`.
+The audit properties have private setters; use the two `Set*Info` methods (the EF Core `AuditInterceptor` calls them). Namespace `CSharpEssentials.Entity`; the interfaces (`IEntityBase`, `IEntityBase<TId>`, `ICreationAudit`, `IModificationAudit`, `IDomainEventHolder`, `IDomainEvent`, `IIdentifiedDomainEvent`, `ISoftDeletable`, `ISoftDeletableBase`, `ISoftDeletableEntityBase`, `IDeletableEntityBase`) are in `CSharpEssentials.Entity.Interfaces`.
 
 ### EntityBase\<TId\>
 
@@ -843,6 +867,17 @@ Extends `EntityBase` with (`SoftDeletableEntityBase<TId>` adds the typed `Id`):
 | `MarkAsDeleted(at, by)` | method | Sets `IsDeleted`, `DeletedAt` and `DeletedBy` |
 | `Restore()` | method | Clears `IsDeleted`, `DeletedAt`, `DeletedBy` and `IsHardDeleted` |
 | `MarkAsHardDeleted()` | method | Sets `IsHardDeleted` |
+
+### DomainEvent
+
+`abstract record DomainEvent : IIdentifiedDomainEvent`. `IIdentifiedDomainEvent` extends the `IDomainEvent` marker with `Guid EventId` and `DateTimeOffset OccurredAt`.
+
+| Member | Description |
+|--------|-------------|
+| `DomainEvent()` | protected; stamps `OccurredAt` from `TimeProvider.System` |
+| `DomainEvent(TimeProvider)` | protected; stamps `OccurredAt` from the given clock; throws `ArgumentNullException` for `null` |
+| `EventId` | `Guid` (init); `Guider.NewGuid(OccurredAt)`, a version 7 GUID |
+| `OccurredAt` | `DateTimeOffset` (init); UTC creation time |
 
 ### Domain event timing
 
@@ -1034,7 +1069,7 @@ Result<Product> product = await ResiliencePolicy<Product>
 | `ResiliencePolicy.Create(options)` | Builds from `ResiliencePolicyOptions` |
 | `ResiliencePolicy.Create(Action<ResiliencePipelineBuilder>)` | Configures the Polly builder directly |
 | `ResiliencePolicy.FromPipeline(pipeline)` / `.ToPipeline()` | Wraps or exposes a Polly `ResiliencePipeline` |
-| `.WithRetry(maxAttempts = 3, delay, exponentialBackoff = true)` / `.WithRetry(RetryOptions)` | Adds retry strategy. `maxAttempts` counts retries after the first call, so `3` allows up to 4 executions; `delay` defaults to 1 second |
+| `.WithRetry(maxAttempts = 3, delay, exponentialBackoff = true, useJitter = false, maxDelay = null)` / `.WithRetry(RetryOptions)` | Adds retry strategy. `maxAttempts` counts retries after the first call, so `3` allows up to 4 executions; `delay` defaults to 1 second; `useJitter` randomizes each delay; `maxDelay` caps it |
 | `.WithTimeout(timeout)` / `.WithTimeout(TimeoutOptions)` | Adds timeout strategy; Polly validates the timeout range and throws `ValidationException` for a value outside it |
 | `.WithCircuitBreaker(minimumThroughput = 10, samplingDuration, breakDuration, failureRatio = 0.5)` / `.WithCircuitBreaker(CircuitBreakerOptions)` | Adds circuit breaker; `samplingDuration` defaults to 1 minute and `breakDuration` to 30 seconds |
 | `.ExecuteAsync(ct => Task)` / `.ExecuteAsync(ct => Task<Result>)` | Executes through the pipeline, returns `Result` |
@@ -1082,10 +1117,10 @@ Result<User> retried = await getUser.RetryIfFailed(
 
 | Method | What it does |
 |--------|-------------|
-| `func.RetryIfFailed(maxAttempts = 3, delay, exponentialBackoff = true, ct)` | Retries a `Func<CancellationToken, Task<Result<T>>>` or `Task<Result>` while the result is a retryable failure, at most `maxAttempts` times after the first call; returns `ValueTask<Result<T>>` / `ValueTask<Result>` |
-| `func.RetryIfFailed(shouldRetry, maxAttempts = 3, delay, exponentialBackoff = true, ct)` | Same, with a `Func<Error, bool>` deciding which failures are retried |
+| `func.RetryIfFailed(maxAttempts = 3, delay, exponentialBackoff = true, useJitter = false, maxDelay = null, ct)` | Retries a `Func<CancellationToken, Task<Result<T>>>` or `Task<Result>` while the result is a retryable failure, at most `maxAttempts` times after the first call; returns `ValueTask<Result<T>>` / `ValueTask<Result>` |
+| `func.RetryIfFailed(shouldRetry, maxAttempts = 3, delay, exponentialBackoff = true, useJitter = false, maxDelay = null, ct)` | Same, with a `Func<Error, bool>` deciding which failures are retried |
 
-`RetryIfFailed` reuses a cached Polly pipeline per (`maxAttempts`, `delay`, `exponentialBackoff`, predicate or not) combination (up to 64 per result type) instead of building one per call; the `shouldRetry` predicate travels in the execution context.
+`RetryIfFailed` reuses a cached Polly pipeline per (`maxAttempts`, `delay`, `exponentialBackoff`, `useJitter`, `maxDelay`, predicate or not) combination (up to 64 per result type) instead of building one per call; the `shouldRetry` predicate travels in the execution context.
 | `func.ExecuteAsync(ct)` | Runs a `Func<Task>`, `Func<Task<T>>`, `Func<Task<Result<T>>>` (or their `CancellationToken` forms) and returns `Result` / `Result<T>` |
 
 ### Error handling
@@ -1119,7 +1154,7 @@ Result<User> user = await ResiliencePolicy
     .ExecuteAsync(_ => _db.GetUser(id));
 ```
 
-Defaults: `RetryOptions` (`MaxAttempts` 3, `Delay` 1 s, `ExponentialBackoff` true), `TimeoutOptions` (`Timeout` 30 s), `CircuitBreakerOptions` (`MinimumThroughput` 10, `SamplingDuration` 1 min, `BreakDuration` 30 s, `FailureRatio` 0.5). A `null` section of `ResiliencePolicyOptions` adds no strategy.
+Defaults: `RetryOptions` (`MaxAttempts` 3, `Delay` 1 s, `ExponentialBackoff` true, `UseJitter` false, `MaxDelay` null), `TimeoutOptions` (`Timeout` 30 s), `CircuitBreakerOptions` (`MinimumThroughput` 10, `SamplingDuration` 1 min, `BreakDuration` 30 s, `FailureRatio` 0.5). A `null` section of `ResiliencePolicyOptions` adds no strategy.
 
 ---
 
@@ -1284,7 +1319,7 @@ Opt-in hooks; both are off by default.
 |--------|---------|-------------|
 | `protected virtual DbContextInterceptors InterceptorsFromServices` | `None` | `OnConfiguring` attaches the selected interceptors (`Audit`, `DomainEvents`, `SlowQuery`, `All`) when registered in DI; skips ones already on the options |
 | `protected virtual bool DispatchDomainEventsOnSaveChanges` | `false` | `SaveChanges`/`SaveChangesAsync` collect domain events, dispatch `BeforeSave` events before saving and `AfterSave` events after a successful save |
-| `protected virtual Task DispatchDomainEventsAsync(IReadOnlyList<IDomainEvent>, DomainEventTiming, CancellationToken)` | outbox / publisher | Override to customize dispatch. Default: `AfterSave` → `IDomainEventOutbox` if registered, else `IDomainEventPublisher`; `BeforeSave` → `IDomainEventPublisher` |
+| `protected virtual Task DispatchDomainEventsAsync(IReadOnlyList<IDomainEvent>, DomainEventTiming, CancellationToken)` | publisher | Override to customize publishing. Default: both timings → `IDomainEventPublisher`. With an `IDomainEventOutbox` registered, `AfterSave` events are stored in it before the write, in the same `SaveChanges`, and never reach this method |
 
 Overriding `OnConfiguring` without calling `base.OnConfiguring` disables interceptor attachment. Use either `DispatchDomainEventsOnSaveChanges` or `DomainEventInterceptor`, not both; events collected by the context are cleared before the interceptor runs, so they are never dispatched twice.
 
@@ -1294,7 +1329,41 @@ Overriding `OnConfiguring` without calling `base.OnConfiguring` disables interce
 |--------|-------------|
 | `ITransactionRunner` (`CSharpEssentials.Core`, namespace `CSharpEssentials.Transactions`) | `ExecuteAsync(work, shouldCommit, ct)`: runs work in a transaction, commits when `shouldCommit` is true, rolls back otherwise or on exception |
 | `EfCoreTransactionRunner<TDbContext>` | Outermost call: execution strategy + `BeginTransactionAsync`, retry re-runs the whole unit. Nested call on the same context: joins `CurrentTransaction` behind a savepoint |
-| `AddEfCoreTransactionRunner<TDbContext>()` | Registers the runner as the scoped `ITransactionRunner`, replacing an earlier one |
+| `AddEfCoreTransactionRunner<TDbContext>()` | Registers the runner as the scoped `ITransactionRunner` and `ITransactionCallbacks`, replacing earlier ones |
+| `ITransactionCallbacks.OnCommittedAsync(callback, ct)` (`CSharpEssentials.Core`) | `EfCoreTransactionRunner` queues the callback for after the outermost commit; a rollback, a retry or a rolled-back nested unit drops it. Runs it now when no transaction is open; throws `InvalidOperationException` inside a transaction the runner did not start or an ambient `TransactionScope`. Failed callbacks throw `AggregateException` after the commit |
+| `BaseDbContext.DeferDomainEventPublishingUntilCommit` | Opt-in: after-save events go to `IDomainEventPublisher` after the commit of the runner unit and are dropped on rollback. Outbox storage is not deferred |
+
+### Outbox
+
+Namespace `CSharpEssentials.EntityFrameworkCore.Outbox`.
+
+| Member | What it does |
+|--------|-------------|
+| `IDomainEventOutbox.StoreAsync(DbContext context, IReadOnlyList<IDomainEvent>, CancellationToken)` (namespace `CSharpEssentials.EntityFrameworkCore.Interceptors`) | Called before the write with the saving context; rows added to `context` are written by the same `SaveChanges`. Must not call `SaveChanges`. Rows it added are detached when it or the save throws |
+| `OutboxMessage` | `Id` (event id), `Type`, `Content`, UTC `OccurredAt`, `NextAttemptAt`, `Attempts`, `ClaimToken`, `ProcessedAt`, `DeadLetteredAt`, `Error` |
+| `modelBuilder.AddOutboxMessages(configure?)` | Maps `OutboxMessage`: key `Id`, `Type` max 256, index on (`ProcessedAt`, `DeadLetteredAt`, `NextAttemptAt`). `OutboxMessageModelOptions`: `TableName` (`OutboxMessages`), `Schema`. Throws `ArgumentException` for an empty table name |
+| `EfCoreDomainEventOutbox(serializer, timeProvider?)` | `IDomainEventOutbox` that adds one row per event to the saving context. Throws `InvalidOperationException` when the context does not map `OutboxMessage` |
+| `IOutboxMessageSerializer` | `OutboxPayload Serialize(IDomainEvent)` and `IDomainEvent Deserialize(string type, string content)` |
+| `JsonOutboxMessageSerializer(registry)` | Default serializer: System.Text.Json with the registered `JsonTypeInfo`. Unknown types throw `InvalidOperationException` |
+| `OutboxEventTypeRegistry.Add<TEvent>(name, JsonTypeInfo<TEvent>)` / `Add<TEvent>(name, JsonSerializerOptions?)` | Registers an event type under a stable name (at most 256 characters). The second overload uses reflection. Duplicate names or types throw `ArgumentException` |
+| `services.AddEfCoreOutbox(registerTypes)` | Registers the registry, `JsonOutboxMessageSerializer` (unless an `IOutboxMessageSerializer` is registered) and `EfCoreDomainEventOutbox` as the scoped `IDomainEventOutbox` |
+
+### Outbox processor
+
+| Member | What it does |
+|--------|-------------|
+| `IOutboxProcessor.ProcessBatchAsync(ct)` | Claims up to `BatchSize` due rows and dispatches them in `OccurredAt` order. When the lease ends mid-batch, the unhandled rows are released (due at once, attempt not counted). Returns the number claimed. Handler errors are recorded, never thrown; database errors and cancellation are thrown |
+| `OutboxProcessor<TContext>` | The implementation. Each batch and each message run in a scope of their own. Completion, retry and dead-letter updates are conditional on the claim token |
+| `services.AddOutboxProcessor<TContext>(configure?)` | Registers the singleton `IOutboxProcessor` and `OutboxProcessorOptions`; throws `ArgumentOutOfRangeException` for an option out of range |
+| `OutboxProcessorOptions` | `BatchSize` (50), `MaxAttempts` (10), `LeaseDuration` (5 min), `RetryBaseDelay` (5 s), `RetryMaxDelay` (10 min), `UseJitter` (true), `RetryDelay` (`Func<int, TimeSpan>?`), `MaxErrorLength` (2000), `PollingInterval` (5 s, for the hosted service; must be positive), `Claimer` (`ConditionalUpdateOutboxMessageClaimer`) |
+| `IOutboxMessageHandler.HandleAsync(OutboxMessage, IDomainEvent, ct)` | You implement it: deliver the event. Called at least once per message; throwing fails the attempt |
+| `IOutboxMessageClaimer.ClaimAsync(DbContext, OutboxClaimRequest, ct)` | Claims due rows: sets `ClaimToken`, `NextAttemptAt` = lease end, `Attempts + 1`. `OutboxClaimRequest(ClaimToken, BatchSize, Now, LeaseUntil)` |
+| `ConditionalUpdateOutboxMessageClaimer.Instance` | Provider-neutral claimer: candidate ids, then one conditional `ExecuteUpdate`, then a read-back of the candidates by primary key |
+| `context.PurgeProcessedOutboxMessagesAsync(processedBefore, ct)` | Deletes processed rows with `ProcessedAt` before the UTC cutoff in one `ExecuteDelete`; returns the count. Pending and dead-lettered rows are kept |
+| `SqlOutboxMessageClaimer(OutboxClaimDialect)` / `SqlOutboxMessageClaimer(string sql)` | Claims with one `FromSqlRaw` statement. Placeholders: `{0}` token, `{1}` lease end, `{2}` now, `{3}` batch size |
+| `OutboxClaimSql.Build(DbContext, OutboxClaimDialect)` | The statement for `PostgreSql` (`FOR UPDATE SKIP LOCKED`), `SqlServer` (`UPDLOCK, READPAST`) or `Sqlite` (`RETURNING *`), from the mapped names |
+| `OutboxRetryBackoff.Compute(attempt, baseDelay, maxDelay, useJitter)` | `baseDelay * 2^(attempt-1)` capped at `maxDelay`; with jitter, uniform in the upper half |
+| `AddOutboxProcessorHostedService()` (`CSharpEssentials.EntityFrameworkCore.Hosting`) | Registers `OutboxProcessorHostedService`, a `BackgroundService` that runs batches back to back while they are full and waits `PollingInterval` otherwise or after a failed batch |
 
 ### Idempotency records
 
@@ -1312,6 +1381,14 @@ Namespace `CSharpEssentials.EntityFrameworkCore.Idempotency`; depends on `CSharp
 
 With Mediator, use `IdempotencyPlacement.InsideTransaction` and `TransactionBehavior` over `EfCoreTransactionRunner<TContext>`: a request whose transaction rolls back leaves no record.
 
+### Migrations
+
+| Member | What it does |
+|--------|-------------|
+| `serviceProvider.MigrateDatabaseAsync<TContext>(ct)` | Namespace `CSharpEssentials.EntityFrameworkCore.Migrations`. Resolves `TContext` from a new scope and calls `Database.MigrateAsync`; inside the registered `IDatabaseMigrationLock` when there is one |
+| `IDatabaseMigrationLock.AcquireAsync(context, ct)` | Adapter hook that serializes migrations across instances; returns an `IAsyncDisposable` that releases the lock. No implementation shipped |
+| `healthChecks.AddMigrationsCheck<TContext>(name?, failureStatus?, tags?, timeout?)` | Package `CSharpEssentials.EntityFrameworkCore.HealthChecks`. Adds `DbContextMigrationsHealthCheck<TContext>`: the failure status (default `Unhealthy`) while `GetPendingMigrationsAsync` returns names (listed under the `pendingMigrations` data key), `Healthy` otherwise. Name `"{TContext}-migrations"`, tags `["ready"]` by default |
+
 ### CQRS context registration
 
 | Method | What it does |
@@ -1320,7 +1397,12 @@ With Mediator, use `IdempotencyPlacement.InsideTransaction` and `TransactionBeha
 | `AddReadDbContext<TContext>(...)` | Registers a pooled read context (no tracking), same overloads |
 | `AddCqrsDbContexts<TWriteContext, TReadContext>(...)` | Registers both read and write contexts |
 | `AddPooledDbContext<TContext>(...)` / `RegisterDbContextFactory<TContext>(...)` | Same overloads; a pooled context or an `IDbContextFactory<TContext>` without the read/write presets |
-| `ISqlConnectionFactory` / `ISqlReadOnlyConnectionFactory` | `IDbConnection Create()` abstractions for raw SQL access (no implementation shipped) |
+| `ISqlConnectionFactory` / `ISqlReadOnlyConnectionFactory` | `IDbConnection Create()` abstractions for raw SQL access |
+| `ISqlSession` | `Connection` (the context's `DbConnection`, do not dispose) and `Transaction` (the open `DbTransaction` or `null`) for SQL that joins the `DbContext` transaction |
+| `DbContextSqlSession<TDbContext>` | `ISqlSession` and `ISqlConnectionFactory` over the context; `Create()` returns the context's own connection |
+| `DbDataSourceSqlConnectionFactory(DbDataSource)` | `ISqlReadOnlyConnectionFactory`; `Create()` returns a new closed connection outside any transaction |
+| `AddDbContextSqlSession<TDbContext>()` | Registers the session as the scoped `ISqlSession` and `ISqlConnectionFactory`, replacing earlier ones |
+| `AddDbDataSourceReadOnlyConnectionFactory(dataSource?)` | Registers the singleton `ISqlReadOnlyConnectionFactory` over the given `DbDataSource` or the registered one |
 | `DbContextRegistrationOptions` | `EnableDetailedErrors`, `EnableSensitiveDataLogging`, `QueryTrackingBehavior`, `EnableAuditInterceptor` / `EnableDomainEventInterceptor` / `EnableSlowQueryInterceptor` (attached when registered in DI), `MigrationsAssembly`, `RetryOptions` (`DbContextRetryOptions`: `MaxRetryCount` 3, `MaxRetryDelay` 5 s, `AdditionalErrorCodes`), `QuerySplittingBehavior` |
 | `UseAsWriteContext()` | Configures context for write operations |
 | `UseAsReadContext()` | Configures context for read operations (no tracking) |
@@ -1336,7 +1418,8 @@ Preconfigured `System.Text.Json` options, enum and date converters, and polymorp
 |--------|-------------|
 | `EnhancedJsonSerializerOptions.DefaultOptions` | Web defaults with camelCase, case-insensitive reads, `null` properties omitted on write, cycles ignored, relaxed escaping, plus the enum conventions (`EnumConventions.Default`), `MultiFormatDateTimeConverterFactory`, `PolymorphicJsonConverterFactory` and `AddPolymorphismWithReflection()` |
 | `EnhancedJsonSerializerOptions.DefaultOptionsWithoutConverters` | The same settings without any converter |
-| `EnhancedJsonSerializerOptions.StrictOptions` | Case-sensitive property names, no trailing commas or comments, unmapped members rejected; no converters, but `AddPolymorphismWithReflection()` |
+| `EnhancedJsonSerializerOptions.StrictOptions` | Case-sensitive property names, no trailing commas or comments, unmapped members rejected, non-nullable value-type constructor parameters without a default required; no converters, but `AddPolymorphismWithReflection()` |
+| `options.RequireValueTypeConstructorParameters()` / `JsonTypeInfoModifiers.RequireValueTypeConstructorParameters` | Marks properties bound to non-nullable value-type constructor parameters without a default as required, so a missing one throws `JsonException` instead of binding as `default`; a property without a setter stays optional; the extension wraps `TypeInfoResolver` (must be set) and goes before `AddPolymorphism`; trim and AOT safe |
 | `.DefaultOptionsWithDateTimeConverter` | Options with multi-format date parsing |
 | `source.ApplyTo(target)` / `target.ApplyFrom(source)` | Copies the serializer settings and any converter type the target lacks from one `JsonSerializerOptions` to another |
 | `options.Create(configure)` | Copies options and applies a configuration delegate |
@@ -1438,7 +1521,7 @@ All problem responses (Minimal API, MVC, `GlobalExceptionHandler`, status code p
 | `IncludeSpanIds` | `false` | Writes `spanId` / `parentSpanId` |
 | `Instance` | `ProblemInstanceFormat.Path` | `MethodAndPath` (3.x), `None` |
 | `ErrorFields` | `Codes \| ValidationErrors` | `ProblemErrorFields`: `None`, `Codes`, `ValidationErrors`, `Messages`, `AllErrors`, `All` |
-| `ValidationErrorsFormat` | `List` | `Dictionary` groups descriptions by code |
+| `ValidationErrorsFormat` | `List` | `Dictionary` groups descriptions by code, `ByField` by the `field` metadata entry (`ValidationProblemDetails` shape, keys run through the naming policy of the JSON options that write the response) |
 | `TypeUriResolver` | `ProblemTypeUris.Rfc9110` | `Func<int, string?>`; `ProblemTypeUris.Rfc7231` restores 3.x |
 | `ExposeExceptionDetails` | `false` | Writes an `exception` extension; enable only in Development |
 | `UseLegacyDefaults()` | | Restores the 3.x output: `TraceparentHeader`, request id, user and span ids on, `MethodAndPath`, `ProblemErrorFields.All`, `Rfc7231` type URIs (`ValidationErrorsFormat` and `ExposeExceptionDetails` are untouched) |
@@ -1619,7 +1702,7 @@ Validation modes (`ValidationMode`): `Enforce` (default, failures stop the reque
 
 ### ExceptionHandlingBehavior
 
-Singleton behavior between `LoggingBehavior` and `CachingBehavior`. It activates when `TResponse` is `Result` or `Result<T>`; other response types pass through. The failure is `Error.Exception(ex)` (section 1): `ErrorType.Failure`, the exception type name as `Code`, the message as `Description`.
+Singleton behavior between `LoggingBehavior` and `CachingBehavior`. It activates when `TResponse` is `Result` or `Result<T>`; other response types pass through. The failure is `Error.Exception(ex)` (section 1): `ErrorType.Unexpected`, the exception type name as `Code`, the message as `Description`.
 
 ### Registration
 
@@ -1644,6 +1727,10 @@ Singleton behavior between `LoggingBehavior` and `CachingBehavior`. It activates
 |------|-------------|
 | `IResourceLock` (namespace `CSharpEssentials.Locking`) | `AcquireAsync(key, timeout, ct)` waits for the lock and returns a handle that releases it on dispose (throws `TimeoutException`); `TryAcquireAsync(key, ct)` returns `Maybe<IAsyncDisposable>.None` when the key is held |
 | `InProcessResourceLock` | Default: one `SemaphoreSlim` per key, removed when the last holder or waiter leaves. Serializes only within one process; register a distributed implementation for several instances |
+| `AddRelationalResourceLock<TContext>(dialect, configure?)` (`CSharpEssentials.EntityFrameworkCore.Locking`) | Registers `RelationalResourceLock<TContext>` as the singleton `IResourceLock`, replacing the in-process one. Each held lock owns a scope and an open connection of `TContext`; `AcquireAsync` polls every `PollInterval` (100 ms) |
+| `ResourceLockSqlDialect.PostgreSql` / `.SqlServer` / `new(tryAcquireSql, releaseSql)` | Session locks: `pg_try_advisory_lock(hashtextextended(key, 0))`, `sp_getapplock` with `@LockOwner = 'Session'`, or your SQL. Key placeholder `{0}`; try-acquire returns `Value` = 1 when taken |
+| `ResourceLockContract(lock, shortWait?, longWait?)` (`CSharpEssentials.Mediator.Testing`, namespace `CSharpEssentials.Locking.Testing`) | Contract scenarios with no test framework dependency: `ScenarioNames`, `RunAsync(name)` and one public method per scenario. A broken contract throws `ResourceLockContractException`. See the package Readme |
+| `RecordingResourceLock` (`CSharpEssentials.Mediator.Testing`) | In-process lock that records `Acquisitions`, `Releases` and `HeldKeys`; `FailWith` makes calls throw |
 | `ILockedRequest` | `LockKey` and optional `LockTimeout` (default `null`) |
 | `LockPlacement` | `OutsideTransaction` (lock held until the transaction has committed) or `InsideTransaction` (lock taken inside the transaction, for transaction-scoped locks such as `pg_advisory_xact_lock`) |
 
@@ -1723,15 +1810,17 @@ Analyzers CSE0002 to CSE0016 (CSE0011 is not used) check duplicate wire names an
 | Type or method | What it does |
 |-------------|-------------|
 | `IDateTimeProvider` | Interface: `UtcNow` (`DateTimeOffset`), `UtcNowDateTime` (`Kind` is `Utc`), `UtcNowDate`, `UtcNowTime`, `TimeZone`, `TimeZoneUtc` |
-| `DateTimeProvider(TimeProvider)` | Production implementation: reads the clock of the `TimeProvider` you pass (for example `TimeProvider.System`); `TimeZone` is `TimeZoneInfo.Local` |
-| `FakeDateTimeProvider(DateTimeOffset)` | Test clock with `Advance(TimeSpan)` and `SetTime(DateTimeOffset)`; `TimeZone` is UTC |
+| `DateTimeProvider(TimeProvider)` | Production implementation: reads the clock of the `TimeProvider` you pass (for example `TimeProvider.System`); `TimeZone` is its `LocalTimeZone` (`TimeZoneInfo.Local` for `TimeProvider.System`) |
+| `FakeDateTimeProvider(DateTimeOffset)` | Test clock with `Advance(TimeSpan)` and `SetTime(DateTimeOffset)`; `TimeZone` is UTC; not a `TimeProvider`, so for code that waits wrap `FakeTimeProvider` in `DateTimeProvider` instead |
+| `TimeZones.Find(id)` / `TimeZones.TryFind(id, out zone)` | `TimeZoneInfo` for an IANA or Windows id on any OS (converted through ICU on .NET 8+); `Find` throws `TimeZoneNotFoundException` naming the id |
+| `provider.NowIn(zone)` / `provider.TodayIn(zone)` | The provider's current time (`DateTimeOffset` with the zone's offset) and date (`DateOnly`) in `zone` |
 | `ToTimeOnly()` | Extension: `DateTime` to `TimeOnly` |
 | `ToDateOnly()` | Extension: `DateTime` to `DateOnly` |
 | `NextDayOfWeek(dayOfWeek, includeCurrent = false)` | Next given weekday for a `DateTime` or `DateOnly`; `includeCurrent` returns the date itself when it already matches |
 | `PreviousDayOfWeek(dayOfWeek, includeCurrent = false)` | Previous given weekday, same rules |
-| `birthDate.GetAge(today)` / `birthDate.GetAge(dateTimeProvider)` | Age in whole years for a `DateOnly` birth date; the provider form uses its `TimeZone`. Throws `ArgumentOutOfRangeException` when the birth date is after the reference date |
+| `birthDate.GetAge(today)` / `birthDate.GetAge(dateTimeProvider)` / `birthDate.GetAge(dateTimeProvider, zone)` | Age in whole years for a `DateOnly` birth date; the provider forms use its `TimeZone` or `zone`. Throws `ArgumentOutOfRangeException` when the birth date is after the reference date |
 
-On `netstandard2.1` the `DateOnly`/`TimeOnly` members (`UtcNowDate`, `UtcNowTime`, `ToTimeOnly`, `ToDateOnly`, the `DateOnly` overloads, `GetAge`) are not available. Register the provider yourself, for example `services.AddSingleton<IDateTimeProvider>(new DateTimeProvider(TimeProvider.System))`; the package has no registration helper.
+On `netstandard2.1` the `DateOnly`/`TimeOnly` members (`UtcNowDate`, `UtcNowTime`, `ToTimeOnly`, `ToDateOnly`, the `DateOnly` overloads, `TodayIn`, `GetAge`) are not available. Register the provider yourself, for example `services.AddSingleton<IDateTimeProvider>(new DateTimeProvider(TimeProvider.System))`; the package has no registration helper.
 
 ```csharp
 var clock = new FakeDateTimeProvider(new DateTimeOffset(2026, 10, 6, 0, 0, 0, TimeSpan.Zero));
@@ -2419,7 +2508,7 @@ Targets `netstandard2.1`, `net9.0`, `net10.0` and `net11.0`; depends only on `Mi
 | `IdempotencyScope` | Built only by its factories: `User(id)` (`user:{id}`), `Tenant(id)` (`tenant:{id}`), `Client(id)` (`client:{id}`), `UserAndTenant(userId, tenantId)` (`{n}:tenant:{tenantId}/user:{userId}`), `Custom(kind, value)` (`{kind}:{value}`; `kind` must not be empty, contain `:` or `/`, be all digits or be a reserved built-in kind: `user`, `tenant`, `client`, `global` in any casing) and `Global`. Every factory and the `IdempotencyRecordKey` constructor throw `ArgumentException` for an unpaired surrogate. `Value` is the storage form, `IsGlobal` is true for `Global` and `default`. `Tenant("user:42")` is `tenant:user:42`, never `User("42")` |
 | `IIdempotencyScopeResolver.Resolve(ClaimsPrincipal?)` | Returns `IdempotencyScope?`: `null` means unresolved, `IdempotencyScope.Global` means a deliberate global key |
 | `IdempotencyScopes` | `User` (`user:{id}`; `NameIdentifier`, then `sub`), `Tenant(claimType)` (`tenant:{id}`), `UserAndTenant(claimType)` (`{n}:tenant:{tenantId}/user:{userId}`, `{n}` is the UTF-8 byte length of the tenant part), `Client` (`client:{id}`; `client_id`, then `azp`), `Custom(kind, Func<ClaimsPrincipal?, string?>)` (`{kind}:{value}`, same `kind` rules as `IdempotencyScope.Custom`), `Global` (`global`). Claim resolvers need an authenticated principal. Constants `SubjectClaimType` (`sub`), `ClientIdClaimType` (`client_id`), `AuthorizedPartyClaimType` (`azp`) |
-| `IdempotencyKeys` | `For(operation, params ids)`, `FromMessage(messageId, consumer)` (= `For("message", consumer, messageId)`), `ToUuidV5(operation, params ids)` (RFC 9562, namespace `UuidNamespace` = `9c8fbd17-da5f-4f32-a4bf-651721368d5e`), `IsValid(key, maxLength = 255)`. Keys that are not printable ASCII or exceed 255 characters become `h:` + base64url SHA-256; a lone surrogate throws `ArgumentException`. The format is pinned by `tests/vectors/idempotency-key-vectors.json` |
+| `IdempotencyKeys` | `For(operation, params ids)`, `FromMessage(messageId, consumer)` (= `For("message", consumer, messageId)`), `ToUuidV5(operation, params ids)` (RFC 9562 through `Guider.NewGuidV5`, namespace `UuidNamespace` = `9c8fbd17-da5f-4f32-a4bf-651721368d5e`), `IsValid(key, maxLength = 255)`. Keys that are not printable ASCII or exceed 255 characters become `h:` + base64url SHA-256; a lone surrogate throws `ArgumentException`. The format is pinned by `tests/vectors/idempotency-key-vectors.json` |
 | `IdempotencyErrorCodes` | `KeyMissing`, `KeyInvalid`, `InFlight`, `KeyReused`, `ScopeRequired`, `UnscopedKeySkipped` |
 | `IIdempotencyExecutor.ExecuteAsync<TResult>(key, fingerprint, options, operation, codec, ct)` | Returns `IdempotencyExecution<TResult>` (`Status`, `Value`, `HasValue`). `IdempotencyExecutionStatus`: `Executed`, `Replayed`, `InFlight`, `KeyReused`. A cancellation before the operation starts releases the key; an exception from the operation is rethrown and keeps the key in flight until the lease expires; a result that cannot be stored keeps it in flight and is still returned. `IdempotencyExecutor` is the public implementation |
 | `IIdempotencyResultCodec<TResult>` / `IdempotencyResultCodec.Create(serialize, deserialize, classify?)` | `Serialize`, `Deserialize`, `Classify` → `IdempotencyResultHandling`: `Store` (for `Retention`), `StoreAsFailure` (for `FailureRetention`), `Release` |

@@ -86,12 +86,21 @@ public class ResultEnsureTests
     [Fact]
     public void ResultT_EnsureNotNull_WithSuccess_Null_ShouldReturnFailure()
     {
-        var result = default(Result<string>);
+        Result<string> result = NullSuccessResult.Of<string>();
 
         Result<string> ensured = result.EnsureNotNull(TestError);
 
         ensured.IsFailure.Should().BeTrue();
         ensured.FirstError.Should().Be(TestError);
+    }
+
+    [Fact]
+    public void ResultT_EnsureNotNull_WithDefault_ShouldKeepDefaultFailure()
+    {
+        Result<string> ensured = default(Result<string>).EnsureNotNull(TestError);
+
+        ensured.IsFailure.Should().BeTrue();
+        ensured.FirstError.Code.Should().Be("Result.Default");
     }
 
     [Fact]
@@ -118,7 +127,7 @@ public class ResultEnsureTests
     [Fact]
     public void ResultT_EnsureNotNull_ErrorFactory_WithSuccess_Null_ShouldReturnFailure()
     {
-        var result = default(Result<string>);
+        Result<string> result = NullSuccessResult.Of<string>();
 
         Result<string> ensured = result.EnsureNotNull(v => Error.Validation("Factory", v ?? "null"));
 

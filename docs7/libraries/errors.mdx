@@ -24,13 +24,14 @@ using CSharpEssentials.Errors;
 Error notFound = Error.NotFound("User.NotFound", "User was not found.");
 Error validation = Error.Validation("Email.Invalid", "Email format is invalid.");
 Error conflict = Error.Conflict("User.Duplicate", "User already exists.");
-Error failure = Error.Failure("Payment.Failed", "Payment was rejected.");
+Error domain = Error.Domain("Payment.Declined", "The card was declined.");
+Error failure = Error.Failure("Payment.GatewayDown", "The payment gateway did not respond.");
 Error forbidden = Error.Forbidden("Order.Forbidden", "You cannot cancel this order.");
 Error unauthorized = Error.Unauthorized("Token.Expired", "The token has expired.");
 Error unexpected = Error.Unexpected("Db.Down", "The database is unreachable.");
 ```
 
-The factories cover every `ErrorType` except `Unknown`. Each takes `code`, `description` and an optional `ErrorMetadata`, and all three have defaults: `Error.NotFound()` has the code `NotFound` and the description `A 'Not Found' error has occurred.` An `Error` exposes `Code`, `Description`, `Type`, `NumericType` (the `int` value of `Type`) and `Metadata` (`null` when none was given). It implements `IError`, and two errors are equal when type, code, description and metadata entries are equal. Metadata is compared by key, so entry order does not affect equality or `GetHashCode`.
+`Failure`, `Unexpected` and `Unknown` map to HTTP 500. The AspNetCore problem details hide the description of a 5xx error unless `ExposeExceptionDetails` is on, so use `Domain` (422) for a business-rule rejection the client should read. The factories cover every `ErrorType` except `Unknown`; `Error.Create(code, description, type, metadata = null)` takes any `ErrorType`, so it can turn any `IError` into an `Error`. Each takes `code`, `description` and an optional `ErrorMetadata`, and all three have defaults: `Error.NotFound()` has the code `NotFound` and the description `A 'Not Found' error has occurred.` An `Error` exposes `Code`, `Description`, `Type`, `NumericType` (the `int` value of `Type`) and `Metadata` (`null` when none was given). It implements `IError`, and two errors are equal when type, code, description and metadata entries are equal. Metadata is compared by key, so entry order does not affect equality or `GetHashCode`.
 
 ### Error metadata
 
@@ -67,7 +68,7 @@ catch (Exception ex)
 }
 ```
 
-`Error.Exception(ex)` uses the exception type name as the code, the exception message as the description and `ErrorType.Failure`. The metadata carries `exceptionType`, `exceptionStackTrace` (`null` when the exception was never thrown), `exceptionMessage` and, when there is one, a nested `innerException`. Overloads take an explicit `code`, an explicit `code` and `description`, an `ErrorType` and extra `ErrorMetadata`:
+`Error.Exception(ex)` uses the exception type name as the code, the exception message as the description and `ErrorType.Unexpected` (before 9.0 it was `ErrorType.Failure`). The metadata carries `exceptionType`, `exceptionStackTrace` (`null` when the exception was never thrown), `exceptionMessage` and, when there is one, a nested `innerException`. Overloads take an explicit `code`, an explicit `code` and `description`, an `ErrorType` and extra `ErrorMetadata`:
 
 ```csharp
 Error custom = Error.Exception("Orders.SaveFailed", "The order could not be saved.", ex, ErrorType.Unexpected);
@@ -99,13 +100,16 @@ ErrorType type = 401.ToErrorType();                      // Unauthorized
 | `Forbidden` | 403 |
 | `NotFound` | 404 |
 | `Conflict` | 409 |
+| `Domain` | 422 |
 | `Failure`, `Unexpected`, `Unknown` | 500 |
 
-`ToErrorType` is the reverse for 400, 401, 403, 404, 409 and 500 (`Failure`); every other status code gives `Unexpected`.
+`ToErrorType` is the reverse for 400, 401, 403, 404, 409, 422 (`Domain`) and 500 (`Failure`); every other status code gives `Unexpected`.
+
+`Unknown` is the `[EnumFallback]` member of `ErrorType`: a data read (JSON with the `CSharpEssentials.Json` enum conventions, a cached or stored payload) maps a type name or number it does not know, such as a member added by a later version, to `Unknown`, which maps to 500. Request input through the AspNetCore enum conventions rejects `Unknown`. 8.x has no fallback member, so 8.x readers reject `Domain`; see the [8.x to 9.0 migration guide](/migration/v8-to-v9).
 
 ### Domain-specific error hierarchies
 
-`Error` is a `readonly record struct` and cannot be subclassed. Group static factories in one class per aggregate or bounded context instead:
+`Error` is a `readonly record struct` and cannot be subclassed. Group static factories in one class per aggregate or bounded context instead (or use the typed kinds in the next section):
 
 ```csharp
 using CSharpEssentials.Errors;
@@ -131,7 +135,7 @@ public static class OrderErrors
         Error.Validation("Order.EmptyCart", "Cannot place an order with an empty cart.");
 
     public static Error InsufficientFunds(decimal required, decimal available) =>
-        Error.Failure(
+        Error.Domain(
             "Order.InsufficientFunds",
             $"Payment requires {required:C} but only {available:C} is available.",
             new ErrorMetadata().AddMetadata("Required", required).AddMetadata("Available", available));
@@ -162,6 +166,136 @@ public Result PlaceOrder(Cart cart, decimal balance)
 
     return Result.Success();
 }
+```
+
+### Typed error kinds
+
+`TypedError` is an abstract record that implements `IError`. Each `ErrorType` except `Unknown` has a kind that derives from it:
+
+| Kind | `Type` |
+|---|---|
+| `ValidationError` | `Validation` |
+| `UnauthorizedError` | `Unauthorized` |
+| `ForbiddenError` | `Forbidden` |
+| `NotFoundError` | `NotFound` |
+| `ConflictError` | `Conflict` |
+| `DomainError` | `Domain` |
+| `FailureError` | `Failure` |
+| `UnexpectedError` | `Unexpected` |
+
+The CLR type carries the kind, so code can match on the type instead of reading `Type`. The kinds are not sealed: derive a record from one to give an error its own type. The derived type keeps the kind's `Type` (the override is sealed). The constructor rejects a null `code` or `description`, and so does a `with` expression.
+
+Write a catalog per aggregate with predefined instances, a `Codes` class of constants, and a nested type for any error that callers must tell apart by type:
+
+```csharp
+using CSharpEssentials.Errors;
+
+public static class UserErrors
+{
+    public static class Codes
+    {
+        public const string NotFound = "User.NotFound";
+        public const string Deleted = "User.Deleted";
+        public const string Locked = "User.Locked";
+    }
+
+    public static readonly NotFoundError NotFound = new(Codes.NotFound, "User not found.");
+    public static readonly NotFoundError Deleted = new(Codes.Deleted, "User was deleted.");
+
+    public static NotFoundError NotFoundById(Guid id) => new(Codes.NotFound, $"User {id} not found.");
+
+    public sealed record Locked(Guid Id) : ConflictError(Codes.Locked, "User is locked.");
+}
+```
+
+SonarAnalyzer reports S3218 on `Codes.NotFound` because it shares a name with the `NotFound` field. The shadowing is harmless here; move the constants to a separate `UserErrorCodes` class if your build treats that rule as an error.
+
+A static field cannot be a pattern, so match predefined instances on their constant code. Put the bare kind after the code arms:
+
+```csharp
+string message = error switch
+{
+    NotFoundError { Code: UserErrors.Codes.Deleted } => "User was deleted.",
+    NotFoundError => "User not found.",
+    UserErrors.Locked locked => $"User {locked.Id} is locked.",
+    _ => error.Description,
+};
+```
+
+`ValidationError.Field` reads the `field` metadata entry (`ErrorMetadata.FieldKey`), the property path that CSharpEssentials.Validation stores on each failure. Build the typed error from a validation failure with its metadata to keep it: `new ValidationError(error.Code, error.Description, error.Metadata).Field` is `Address.City`. `ErrorMetadata.GetField()` returns the same value from any metadata, including a string read back from JSON. `Field` is not serialized; the entry stays in `Metadata`.
+
+`ToError()` turns a typed error into an `Error` with the same code, description and type, and the same `ErrorMetadata` instance, so it feeds today's `Result` and the AspNetCore problem details:
+
+```csharp
+Result<User> result = UserErrors.NotFoundById(id).ToError();
+```
+
+`[ErrorKind(ErrorType.X)]` declares the kind on the type itself, so tools can read it without an instance. Every built-in kind has it and derived types inherit it. Do not redeclare it with a different kind on a derived error: `Type` stays the base kind's, so the attribute would disagree with the runtime type. The CSE5005 analyzer reports that mismatch, and a `Type` property that returns another constant kind; it ships with the `CSharpEssentials.Results` package, so a project that references only `CSharpEssentials.Errors` does not get it. The attribute also works on a struct that implements `IError`:
+
+```csharp
+[ErrorKind(ErrorType.Conflict)]
+public readonly record struct OrderLocked(int OrderId) : IError
+{
+    public string Code => "Order.Locked";
+    public string Description => $"Order {OrderId} is locked.";
+    public ErrorType Type => ErrorType.Conflict;
+    public int NumericType => (int)Type;
+    public ErrorMetadata? Metadata => null;
+}
+```
+
+A struct error is boxed whenever it is used as `IError`, so prefer the class kinds. Bridge it with `Error.Create(e.Code, e.Description, e.Type, e.Metadata)`. Nothing stops `default(OrderLocked)`, and a struct that stores its code in a field returns a null `Code` from `default`, which breaks the `IError` contract.
+
+Equality:
+
+- Two typed errors are equal when the runtime type, code, description and type match and the metadata has the same content (compared like `Error` compares it).
+- A derived error never equals its base kind, even with the same code and description.
+- Equality does not survive serialization when metadata holds values: System.Text.Json reads them back as `JsonElement`. Code and type do survive.
+- Tell errors apart by `Code`, not by comparing values across kinds or after a round trip.
+
+Predefined instances share one `ErrorMetadata` dictionary, which is mutable. Do not add metadata to a shared instance; create a new error with its own metadata instead.
+
+### Moving a catalog to typed kinds
+
+A catalog of `Error` fields does not feed a typed result. `Error` has no conversion to a kind, because its kind is only known at run time, so returning `UserErrors.AlreadyExists` from the [catalog above](#domain-specific-error-hierarchies) into a `ConflictError` slot of `Result<T, E1..E3>` reports CS0029. Rewrite each catalog once:
+
+1. Change the field or return type from `Error` to the kind.
+2. Construct the kind instead of calling the `Error` factory.
+3. Add a `Codes` class with the codes as constants, so callers can match on them.
+
+```csharp
+// Before
+public static class UserErrors
+{
+    public static readonly Error AlreadyExists =
+        Error.Conflict("User.AlreadyExists", "A user with that email already exists.");
+
+    public static Error InvalidAge(int age) =>
+        Error.Validation("User.InvalidAge", $"Age {age} is not allowed; must be 18 or older.");
+}
+
+// After
+public static class UserErrors
+{
+    public static class Codes
+    {
+        public const string AlreadyExists = "User.AlreadyExists";
+        public const string InvalidAge = "User.InvalidAge";
+    }
+
+    public static readonly ConflictError AlreadyExists =
+        new(Codes.AlreadyExists, "A user with that email already exists.");
+
+    public static ValidationError InvalidAge(int age) =>
+        new(Codes.InvalidAge, $"Age {age} is not allowed; must be 18 or older.");
+}
+```
+
+The codes, descriptions and HTTP statuses stay the same. Code written for `Result<T>` needs `ToError()` where it used a catalog entry as an `Error`: a kind has no implicit conversion to `Error` or `Result<T>` (CS0029), and comparing a kind with an `Error` through `==` does not compile (CS0019). Compare codes instead.
+
+```csharp
+Result<User> legacy = UserErrors.AlreadyExists.ToError();
+Result<User, ConflictError> typed = UserErrors.AlreadyExists;
 ```
 
 ## Upgrading to 8.0

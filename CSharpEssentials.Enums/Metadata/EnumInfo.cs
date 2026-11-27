@@ -187,6 +187,19 @@ public sealed class EnumInfo<TEnum> : IEnumInfo, IBoxedEnumFormatter where TEnum
     /// </summary>
     public bool TryParseWire(CharText text, out TEnum value) => TryParseCore(text, EnumReadMode.Data, null, out value);
 
+#if !NETSTANDARD2_0
+    /// <inheritdoc cref="TryParse(ReadOnlySpan{char}, EnumReadMode, EnumConventions, out TEnum, out EnumValueError?)"/>
+    public bool TryParse(string? text, EnumReadMode mode, EnumConventions conventions, out TEnum value, [NotNullWhen(false)] out EnumValueError? error) =>
+        TryParse(text.AsSpan(), mode, conventions, out value, out error);
+
+    /// <inheritdoc cref="TryParse(ReadOnlySpan{char}, EnumReadMode, EnumConventions, out TEnum)"/>
+    public bool TryParse(string? text, EnumReadMode mode, EnumConventions conventions, out TEnum value) =>
+        TryParse(text.AsSpan(), mode, conventions, out value);
+
+    /// <inheritdoc cref="TryParseWire(ReadOnlySpan{char}, out TEnum)"/>
+    public bool TryParseWire(string? text, out TEnum value) => TryParseWire(text.AsSpan(), out value);
+#endif
+
     private bool TryParseCore(CharText text, EnumReadMode mode, EnumConventions? conventions, out TEnum value)
     {
         bool input = mode == EnumReadMode.Input;

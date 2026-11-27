@@ -24,7 +24,7 @@ public readonly partial struct ResiliencePolicy
 
         if (options.Retry is not null)
         {
-            policy = policy.WithRetry(options.Retry.MaxAttempts, options.Retry.Delay, options.Retry.ExponentialBackoff);
+            policy = policy.WithRetry(options.Retry);
         }
 
         if (options.CircuitBreaker is not null)

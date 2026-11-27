@@ -82,11 +82,14 @@ public static class NestedValidators
         string prefix = chain.PropertyName + ".";
         foreach (Error error in errors)
         {
-            chain.AppendToContext(error with
-            {
-                Code = prefix + error.Code,
-                Description = PrefixDescription(error, prefix)
-            });
+            string? field = error.Metadata?.GetField();
+            chain.AppendToContext(FieldMetadata.Replace(
+                error with
+                {
+                    Code = prefix + error.Code,
+                    Description = PrefixDescription(error, prefix)
+                },
+                field is null ? chain.PropertyName : prefix + field));
         }
         chain.MarkFailed();
     }

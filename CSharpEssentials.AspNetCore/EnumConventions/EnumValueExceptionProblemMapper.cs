@@ -19,8 +19,9 @@ internal sealed class EnumValueExceptionProblemMapper(EnumConventionsRegistratio
             if (current is EnumValueJsonException enumException)
             {
                 EnumValueError error = enumException.Error;
-                string key = error.Path is { } path && path.StartsWith("$.", StringComparison.Ordinal) ? path[2..] : error.Path ?? "$";
-                problem = new ExceptionProblem(StatusCodes.Status400BadRequest, Errors: [registration.CreateError(error, key)]);
+                problem = new ExceptionProblem(
+                    StatusCodes.Status400BadRequest,
+                    Errors: [registration.CreateError(error, BindingExceptionProblemMapper.ToKey(error.Path))]);
                 return true;
             }
         }

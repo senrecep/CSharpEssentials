@@ -10,6 +10,9 @@
   <Project Path="CSharpEssentials.DependencyInjection.Generators/CSharpEssentials.DependencyInjection.Generators.csproj" />
   <Project Path="CSharpEssentials.Entity/CSharpEssentials.Entity.csproj" />
   <Project Path="CSharpEssentials.EntityFrameworkCore/CSharpEssentials.EntityFrameworkCore.csproj" />
+  <Project Path="CSharpEssentials.EntityFrameworkCore.HealthChecks/CSharpEssentials.EntityFrameworkCore.HealthChecks.csproj" />
+  <Project Path="CSharpEssentials.EntityFrameworkCore.Hosting/CSharpEssentials.EntityFrameworkCore.Hosting.csproj" />
+  <Project Path="CSharpEssentials.EntityFrameworkCore.Locking/CSharpEssentials.EntityFrameworkCore.Locking.csproj" />
   <Project Path="CSharpEssentials.EntityFrameworkCore.CodeFixes/CSharpEssentials.EntityFrameworkCore.CodeFixes.csproj" />
   <Project Path="CSharpEssentials.EntityFrameworkCore.Generators/CSharpEssentials.EntityFrameworkCore.Generators.csproj" />
   <Project Path="CSharpEssentials.Endpoints/CSharpEssentials.Endpoints.csproj" />
@@ -29,9 +32,12 @@
 
   <Project Path="CSharpEssentials.Maybe/CSharpEssentials.Maybe.csproj" />
   <Project Path="CSharpEssentials.Mediator/CSharpEssentials.Mediator.csproj" />
+  <Project Path="CSharpEssentials.Mediator.Testing/CSharpEssentials.Mediator.Testing.csproj" />
   <Project Path="CSharpEssentials.RequestResponseLogging/CSharpEssentials.RequestResponseLogging.csproj" />
   <Project Path="CSharpEssentials.Resilience/CSharpEssentials.Resilience.csproj" />
   <Project Path="CSharpEssentials.Results/CSharpEssentials.Results.csproj" />
+  <Project Path="CSharpEssentials.Results.Testing/CSharpEssentials.Results.Testing.csproj" />
+  <Project Path="CSharpEssentials.Results.Generators/CSharpEssentials.Results.Generators.csproj" />
   <Project Path="CSharpEssentials.Rules/CSharpEssentials.Rules.csproj" />
   <Project Path="CSharpEssentials.Tests/CSharpEssentials.Tests.csproj" />
   <Project Path="CSharpEssentials.These/CSharpEssentials.These.csproj" />
@@ -46,6 +52,8 @@
   <Project Path="tests/CSharpEssentials.Tests.Fixtures.JsonCore/CSharpEssentials.Tests.Fixtures.JsonCore.csproj" />
   <Project Path="tests/CSharpEssentials.Tests.Fixtures.JsonEvents/CSharpEssentials.Tests.Fixtures.JsonEvents.csproj" />
   <Project Path="tests/CSharpEssentials.Tests.Fixtures.OpenApiSample/CSharpEssentials.Tests.Fixtures.OpenApiSample.csproj" />
+  <Project Path="tests/CSharpEssentials.Tests.Fixtures.TypedHttp/CSharpEssentials.Tests.Fixtures.TypedHttp.csproj" />
+  <Project Path="tests/CSharpEssentials.Tests.Fixtures.TypedHttpRdg/CSharpEssentials.Tests.Fixtures.TypedHttpRdg.csproj" />
   <Project Path="tests/CSharpEssentials.AspNetCore.OpenApi.Tests/CSharpEssentials.AspNetCore.OpenApi.Tests.csproj" />
   <Project Path="tests/CSharpEssentials.EntityFrameworkCore.Tests/CSharpEssentials.EntityFrameworkCore.Tests.csproj" />
   <Project Path="tests/CSharpEssentials.Compat.CSharp12/CSharpEssentials.Compat.CSharp12.csproj" />
@@ -83,6 +91,8 @@
   <Project Path="benchmarks/CSharpEssentials.Generators.Benchmarks/CSharpEssentials.Generators.Benchmarks.csproj" />
   <Project Path="benchmarks/CSharpEssentials.Http.Comparison.Benchmarks/CSharpEssentials.Http.Comparison.Benchmarks.csproj" />
   <Project Path="tests/CSharpEssentials.Core.NetStandard.Tests/CSharpEssentials.Core.NetStandard.Tests.csproj" />
+  <Project Path="tests/CSharpEssentials.Results.Typed.Tests/CSharpEssentials.Results.Typed.Tests.csproj" />
+  <Project Path="tests/CSharpEssentials.Results.Typed.NetStandard.Tests/CSharpEssentials.Results.Typed.NetStandard.Tests.csproj" />
   <Project Path="benchmarks/CSharpEssentials.Core.Benchmarks/CSharpEssentials.Core.Benchmarks.csproj" />
   <Project Path="benchmarks/CSharpEssentials.Idempotency.Benchmarks/CSharpEssentials.Idempotency.Benchmarks.csproj" />
   <Project Path="benchmarks/CSharpEssentials.Json.Comparison.Benchmarks/CSharpEssentials.Json.Comparison.Benchmarks.csproj" />

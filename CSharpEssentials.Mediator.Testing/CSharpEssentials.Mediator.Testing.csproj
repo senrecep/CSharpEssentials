@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net11.0;net10.0;net9.0;net8.0</TargetFrameworks>
+    <PackageId>CSharpEssentials.Mediator.Testing</PackageId>
+    <Title>CSharp Essentials Mediator Testing</Title>
+    <Product>CSharp Essentials Mediator Testing</Product>
+    <Description>Contract scenarios for IResourceLock implementations of CSharpEssentials.Mediator that run from any test framework, and
+      RecordingResourceLock, a public in-process fake that records every acquire and release for LockBehavior tests.</Description>
+    <PackageTags>Mediator,Locking,Testing,ContractTests,CSharpEssentials</PackageTags>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageReadmeFile>Readme.MD</PackageReadmeFile>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <DebugType>portable</DebugType>
+    <IsTestProject>false</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\icon.png" Pack="true" PackagePath="\" />
+    <None Include="Readme.MD" Pack="true" PackagePath="\" />
+    <None Include="..\LICENCE" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CSharpEssentials.Mediator"
+      Condition="'$(UseProjectReferences)' != 'true'" />
+
+    <ProjectReference Include="..\CSharpEssentials.Mediator\CSharpEssentials.Mediator.csproj"
+      Condition="'$(UseProjectReferences)' == 'true'" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,62 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Runs the CSharpEssentials.Results.Typed.Tests sources against the netstandard2.1 assets of Results and Errors, the ones
+       .NET 8 apps get: the compile harness then checks snippets against NETStandard.Library.Ref with the internal union polyfill. -->
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <CodeAnalysisTreatWarningsAsErrors>false</CodeAnalysisTreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
+    <DefineConstants>$(DefineConstants);TYPED_NETSTANDARD_ASSET</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="CsCheck" />
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" VersionOverride="5.12.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" VersionOverride="5.12.0" ExcludeAssets="all" />
+    <!-- The netstandard2.1 assets pull System.Memory and System.Threading.Tasks.Extensions at the central floors; Roslyn 5.12.0 needs 4.6.3. -->
+    <PackageReference Include="System.Memory" VersionOverride="4.6.3" ExcludeAssets="all" />
+    <PackageReference Include="System.Threading.Tasks.Extensions" VersionOverride="4.6.3" ExcludeAssets="all" />
+  </ItemGroup>
+
+  <!-- SetTargetFramework only reaches direct references, so Core, Enums and Json are listed too: without them their net9.0
+       assets would land next to the netstandard2.1 Errors and Results. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\CSharpEssentials.Core\CSharpEssentials.Core.csproj"
+                      SetTargetFramework="TargetFramework=netstandard2.1"
+                      SkipGetTargetFrameworkProperties="true" />
+    <ProjectReference Include="..\..\CSharpEssentials.Enums\CSharpEssentials.Enums.csproj"
+                      SetTargetFramework="TargetFramework=netstandard2.1"
+                      SkipGetTargetFrameworkProperties="true" />
+    <ProjectReference Include="..\..\CSharpEssentials.Json\CSharpEssentials.Json.csproj"
+                      SetTargetFramework="TargetFramework=netstandard2.1"
+                      SkipGetTargetFrameworkProperties="true" />
+    <ProjectReference Include="..\..\CSharpEssentials.Errors\CSharpEssentials.Errors.csproj"
+                      SetTargetFramework="TargetFramework=netstandard2.1"
+                      SkipGetTargetFrameworkProperties="true" />
+    <ProjectReference Include="..\..\CSharpEssentials.Results\CSharpEssentials.Results.csproj"
+                      SetTargetFramework="TargetFramework=netstandard2.1"
+                      SkipGetTargetFrameworkProperties="true" />
+    <ProjectReference Include="..\..\CSharpEssentials.Maybe\CSharpEssentials.Maybe.csproj"
+                      SetTargetFramework="TargetFramework=netstandard2.1"
+                      SkipGetTargetFrameworkProperties="true" />
+  </ItemGroup>
+
+  <!-- The Mediator and replay tests need the net9.0 Mediator asset, which would bring a second (net9.0) Results next to the netstandard2.1 one. -->
+  <ItemGroup>
+    <Compile Include="..\CSharpEssentials.Results.Typed.Tests\**\*.cs"
+             Exclude="..\CSharpEssentials.Results.Typed.Tests\bin\**;..\CSharpEssentials.Results.Typed.Tests\obj\**;..\CSharpEssentials.Results.Typed.Tests\Typed\TypedResultMediatorTests.cs;..\CSharpEssentials.Results.Typed.Tests\Typed\TypedResultReplayTests.cs"
+             LinkBase="Shared" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>

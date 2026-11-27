@@ -29,4 +29,8 @@
     <PackageReference Include="Polly.Core" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="CSharpEssentials.Tests" />
+  </ItemGroup>
+
 </Project>

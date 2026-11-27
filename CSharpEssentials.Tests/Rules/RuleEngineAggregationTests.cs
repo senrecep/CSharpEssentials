@@ -238,10 +238,18 @@ public class RuleEngineAggregationTests
     public void EmptyCustomOr_ShouldReturnWrappedEvaluateError(bool viaEvaluateAsync)
     {
         Result result = Run(new EmptyOrRule(), new Ctx(), viaEvaluateAsync);
-        Result<int> generic = Run(new EmptyOrRuleT(), new Ctx(), viaEvaluateAsync);
 
         result.FirstError.Code.Should().Be("RuleEngine.Evaluate.OrRule");
-        generic.FirstError.Code.Should().Be("RuleEngine.Evaluate.OrRule");
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void EmptyCustomGenericOr_ShouldReturnEmptyRuleArrayError(bool viaEvaluateAsync)
+    {
+        Result<int> result = Run(new EmptyOrRuleT(), new Ctx(), viaEvaluateAsync);
+
+        result.Errors.Should().ContainSingle().Which.Code.Should().Be("EMPTY_RULE_ARRAY");
     }
 
     [Theory]

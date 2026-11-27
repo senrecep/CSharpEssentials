@@ -11,7 +11,8 @@ public static class ValidationEndpointFilterExtensions
 {
     /// <summary>
     /// Validates the handler argument of type <typeparamref name="T"/> with the registered <see cref="IValidator{T}"/>
-    /// services and returns a problem response when validation fails.
+    /// services and returns a problem response when validation fails. The endpoint declares that <c>400</c> problem response
+    /// unless it already declares a <c>400</c>.
     /// </summary>
     /// <typeparam name="T">The argument type to validate.</typeparam>
     /// <param name="builder">The route handler builder.</param>
@@ -24,6 +25,7 @@ public static class ValidationEndpointFilterExtensions
         ArgumentNullException.ThrowIfNull(builder);
 
         ValidationEndpointFilter<T> filter = new();
+        builder.Add(static endpoint => HttpResultMetadata.AddProblem(endpoint, StatusCodes.Status400BadRequest));
         return builder.AddEndpointFilterFactory((factoryContext, next) =>
         {
             bool hasArgument = factoryContext.MethodInfo.GetParameters().Any(static parameter =>

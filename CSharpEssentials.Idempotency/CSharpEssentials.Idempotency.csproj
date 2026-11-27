@@ -31,6 +31,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="CSharpEssentials.Core" Condition="'$(UseProjectReferences)' != 'true'" />
+    <ProjectReference Include="..\CSharpEssentials.Core\CSharpEssentials.Core.csproj" Condition="'$(UseProjectReferences)' == 'true'" />
     <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />

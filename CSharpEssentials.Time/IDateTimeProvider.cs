@@ -9,7 +9,16 @@ public interface IDateTimeProvider
     DateTimeOffset UtcNow { get; }
 
 #if NET6_0_OR_GREATER
-    DateOnly UtcNowDate { get; }
-    TimeOnly UtcNowTime { get; }
+    /// <summary>
+    /// The UTC date of <see cref="UtcNowDateTime"/>. The default body keeps an implementation compiled against the
+    /// netstandard2.1 asset, which has no such member, loadable on .NET 9 and later.
+    /// </summary>
+    DateOnly UtcNowDate => DateOnly.FromDateTime(UtcNowDateTime);
+
+    /// <summary>
+    /// The UTC time of day of <see cref="UtcNowDateTime"/>. The default body keeps an implementation compiled against the
+    /// netstandard2.1 asset, which has no such member, loadable on .NET 9 and later.
+    /// </summary>
+    TimeOnly UtcNowTime => TimeOnly.FromDateTime(UtcNowDateTime);
 #endif
 }

@@ -6,12 +6,12 @@
 
 [![Build](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml/badge.svg)](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml)
 
-[![Tests](https://img.shields.io/badge/tests-5398%20passing-brightgreen)](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml)
+[![Tests](https://img.shields.io/badge/tests-7015%20passing-brightgreen)](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml)
 [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials)
 [![Downloads](https://img.shields.io/nuget/dt/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/senrecep/CSharpEssentials/blob/main/LICENCE)
 [![.NET](https://img.shields.io/badge/.NET-8%20%7C%209%20%7C%2010%20%7C%2011%20%7C%20ns2.0%20%7C%20ns2.1-512BD4)](https://dotnet.microsoft.com)
-[![Packages](https://img.shields.io/badge/packages-27-blue)](https://www.nuget.org/profiles/recepsen)
+[![Packages](https://img.shields.io/badge/packages-32-blue)](https://www.nuget.org/profiles/recepsen)
 
 CSharpEssentials is a modular .NET NuGet ecosystem that bridges object-oriented and functional programming in C#.
 
@@ -20,8 +20,8 @@ CSharpEssentials is a modular .NET NuGet ecosystem that bridges object-oriented 
 | Package | Description | Docs | NuGet |
 |---------|-------------|------|-------|
 | `CSharpEssentials` | Meta-package: Results, Errors, Maybe, Any, These, Rules, Core, Enums, Entity, Clone, Json, Http, Time | [Docs](examples/Examples.Main/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials) |
-| `CSharpEssentials.Results` | `Result<T>`: railway-oriented error handling without exceptions | [Docs](examples/Examples.Results/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Results.svg)](https://www.nuget.org/packages/CSharpEssentials.Results) |
-| `CSharpEssentials.Errors` | Structured `Error` values with type, code, description, metadata | [Docs](examples/Examples.Errors/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Errors.svg)](https://www.nuget.org/packages/CSharpEssentials.Errors) |
+| `CSharpEssentials.Results` | `Result<T>`: railway-oriented error handling without exceptions; `Result<T, E1..E3>` with the error types in the signature for exhaustive matching (C# 15) | [Docs](examples/Examples.Results/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Results.svg)](https://www.nuget.org/packages/CSharpEssentials.Results) |
+| `CSharpEssentials.Errors` | Structured `Error` values with type, code, description, metadata; `TypedError` kinds (`NotFoundError`, `ConflictError`, ...) for typed results | [Docs](examples/Examples.Errors/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Errors.svg)](https://www.nuget.org/packages/CSharpEssentials.Errors) |
 | `CSharpEssentials.Maybe` | `Maybe<T>`: explicit optionals, no null reference exceptions | [Docs](examples/Examples.Maybe/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Maybe.svg)](https://www.nuget.org/packages/CSharpEssentials.Maybe) |
 | `CSharpEssentials.Any` | `Any<T1,T2,...>`: type-safe discriminated unions | [Docs](examples/Examples.Any/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Any.svg)](https://www.nuget.org/packages/CSharpEssentials.Any) |
 | `CSharpEssentials.These` | `These<TError,TValue>`: 3-state union with Left, Right, Both (error + value simultaneously) | [Docs](CSharpEssentials.These/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.These.svg)](https://www.nuget.org/packages/CSharpEssentials.These) |
@@ -29,8 +29,13 @@ CSharpEssentials is a modular .NET NuGet ecosystem that bridges object-oriented 
 | `CSharpEssentials.Enums` | `[StringEnum]` source generator, AOT-safe enum to string and back | [Docs](CSharpEssentials.Enums/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Enums.svg)](https://www.nuget.org/packages/CSharpEssentials.Enums) |
 | `CSharpEssentials.Rules` | Composable rule engine with `.And()/.Or()/.Linear()/.Next()` | [Docs](examples/Examples.Rules/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Rules.svg)](https://www.nuget.org/packages/CSharpEssentials.Rules) |
 | `CSharpEssentials.Mediator` | CQRS pipeline behaviors for the Mediator source generator: validation, logging, exception handling, caching, locking, transactions, idempotency | [Docs](CSharpEssentials.Mediator/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Mediator.svg)](https://www.nuget.org/packages/CSharpEssentials.Mediator) |
+| `CSharpEssentials.Mediator.Testing` | Contract scenarios for `IResourceLock` implementations, for any test framework, and `RecordingResourceLock`, a recording fake | [Docs](CSharpEssentials.Mediator.Testing/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Mediator.Testing.svg)](https://www.nuget.org/packages/CSharpEssentials.Mediator.Testing) |
+| `CSharpEssentials.Results.Testing` | Assertion helpers for `Result`, `Result<T>`, typed results, `Maybe<T>` and problem details responses, for any test framework | [Docs](CSharpEssentials.Results.Testing/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Results.Testing.svg)](https://www.nuget.org/packages/CSharpEssentials.Results.Testing) |
 | `CSharpEssentials.Entity` | `EntityBase<TId>`, soft deletion, domain events | [Docs](examples/Examples.Entity/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Entity.svg)](https://www.nuget.org/packages/CSharpEssentials.Entity) |
 | `CSharpEssentials.EntityFrameworkCore` | EF Core interceptors (audit, events, slow queries), offset and keyset pagination, enum storage | [Docs](examples/Examples.EntityFrameworkCore/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.EntityFrameworkCore.svg)](https://www.nuget.org/packages/CSharpEssentials.EntityFrameworkCore) |
+| `CSharpEssentials.EntityFrameworkCore.HealthChecks` | Readiness health check that fails while a `DbContext` has pending migrations | [Docs](CSharpEssentials.EntityFrameworkCore.HealthChecks/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.EntityFrameworkCore.HealthChecks.svg)](https://www.nuget.org/packages/CSharpEssentials.EntityFrameworkCore.HealthChecks) |
+| `CSharpEssentials.EntityFrameworkCore.Hosting` | Hosted service that drains the EF Core outbox through `IOutboxProcessor` | [Docs](CSharpEssentials.EntityFrameworkCore.Hosting/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.EntityFrameworkCore.Hosting.svg)](https://www.nuget.org/packages/CSharpEssentials.EntityFrameworkCore.Hosting) |
+| `CSharpEssentials.EntityFrameworkCore.Locking` | Distributed `IResourceLock` for Mediator over an EF Core connection: PostgreSQL advisory locks, SQL Server `sp_getapplock` or your own SQL | [Docs](CSharpEssentials.EntityFrameworkCore.Locking/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.EntityFrameworkCore.Locking.svg)](https://www.nuget.org/packages/CSharpEssentials.EntityFrameworkCore.Locking) |
 | `CSharpEssentials.AspNetCore` | `GlobalExceptionHandler`, `ResultEndpointFilter`, enum binding, API versioning, `Idempotency-Key` middleware, ETag and `If-Match` | [Docs](examples/Examples.AspNetCore/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.AspNetCore.svg)](https://www.nuget.org/packages/CSharpEssentials.AspNetCore) |
 | `CSharpEssentials.AspNetCore.OpenApi` | Enum convention schemas for `Microsoft.AspNetCore.OpenApi` (net10.0+, Microsoft.OpenApi 2.x); one OpenAPI package per host | [Docs](CSharpEssentials.AspNetCore.OpenApi/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.AspNetCore.OpenApi.svg)](https://www.nuget.org/packages/CSharpEssentials.AspNetCore.OpenApi) |
 | `CSharpEssentials.AspNetCore.Swashbuckle` | Swagger versioning, schema ids, security schemes and enum convention schemas for Swashbuckle 10 (net8.0+, Microsoft.OpenApi 2.x); one OpenAPI package per host | [Docs](CSharpEssentials.AspNetCore.Swashbuckle/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.AspNetCore.Swashbuckle.svg)](https://www.nuget.org/packages/CSharpEssentials.AspNetCore.Swashbuckle) |
@@ -49,7 +54,7 @@ CSharpEssentials is a modular .NET NuGet ecosystem that bridges object-oriented 
 
 ## Documentation
 
-The [API reference](docs/API_REFERENCE.md) covers 26 of the 27 packages with method tables, code examples and cross-cutting patterns. `CSharpEssentials.Idempotency.Testing` is documented in its own Readme.
+The [API reference](docs/API_REFERENCE.md) covers 29 of the 32 packages with method tables, code examples and cross-cutting patterns. `CSharpEssentials.Idempotency.Testing`, `CSharpEssentials.Mediator.Testing` and `CSharpEssentials.Results.Testing` are documented in their own Readmes.
 
 ## Installation
 

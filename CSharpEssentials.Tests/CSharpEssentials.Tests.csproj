@@ -76,6 +76,16 @@
     </ItemGroup>
   </Target>
 
+  <Target Name="CopyResultsAnalyzerForTests" BeforeTargets="AssignTargetPaths" DependsOnTargets="ResolveProjectReferences">
+    <ItemGroup>
+      <None Include="@(Analyzer)"
+            Condition="'%(Filename)%(Extension)' == 'CSharpEssentials.Results.Generators.dll'"
+            Link="Analyzers\CSharpEssentials.Results.Generators.dll"
+            CopyToOutputDirectory="PreserveNewest"
+            Visible="false" />
+    </ItemGroup>
+  </Target>
+
   <Target Name="CopyEntityFrameworkCoreAnalyzerForTests" BeforeTargets="AssignTargetPaths" DependsOnTargets="ResolveProjectReferences">
     <ItemGroup>
       <None Include="@(Analyzer)"
@@ -96,6 +106,11 @@
     <ProjectReference Include="..\CSharpEssentials.AspNetCore\CSharpEssentials.AspNetCore.csproj" />
     <ProjectReference Include="..\CSharpEssentials.Idempotency\CSharpEssentials.Idempotency.csproj" />
     <ProjectReference Include="..\CSharpEssentials.Idempotency.Testing\CSharpEssentials.Idempotency.Testing.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.EntityFrameworkCore.HealthChecks\CSharpEssentials.EntityFrameworkCore.HealthChecks.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.EntityFrameworkCore.Hosting\CSharpEssentials.EntityFrameworkCore.Hosting.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.EntityFrameworkCore.Locking\CSharpEssentials.EntityFrameworkCore.Locking.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.Mediator.Testing\CSharpEssentials.Mediator.Testing.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.Results.Testing\CSharpEssentials.Results.Testing.csproj" />
     <ProjectReference Include="..\CSharpEssentials.AspNetCore.Swashbuckle\CSharpEssentials.AspNetCore.Swashbuckle.csproj" />
     <ProjectReference Include="..\CSharpEssentials.Endpoints\CSharpEssentials.Endpoints.csproj" />
     <ProjectReference Include="..\CSharpEssentials.Endpoints.Generators\CSharpEssentials.Endpoints.Generators.csproj"
@@ -109,6 +124,9 @@
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\CSharpEssentials.Json.CodeFixes\CSharpEssentials.Json.CodeFixes.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.Results.Generators\CSharpEssentials.Results.Generators.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\tests\CSharpEssentials.Tests.Fixtures.JsonCore\CSharpEssentials.Tests.Fixtures.JsonCore.csproj" />
     <ProjectReference Include="..\tests\CSharpEssentials.Tests.Fixtures.JsonEvents\CSharpEssentials.Tests.Fixtures.JsonEvents.csproj" />
     <ProjectReference Include="..\tests\CSharpEssentials.Tests.Fixtures.OpenApiSample\CSharpEssentials.Tests.Fixtures.OpenApiSample.csproj" />

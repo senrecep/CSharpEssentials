@@ -5,7 +5,7 @@ namespace CSharpEssentials.Core.Benchmarks;
 
 /// <summary>
 /// One GUID per call on one thread. On net8.0 <see cref="Guider"/> runs its netstandard2.1 asset; on every target
-/// <see cref="Guider.NewGuid"/> builds the version 7 layout from a per-thread pool of random bytes.
+/// <see cref="Guider.NewGuid()"/> builds the version 7 layout from a per-thread pool of random bytes.
 /// </summary>
 [MemoryDiagnoser]
 public class GuidBenchmarks

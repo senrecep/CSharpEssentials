@@ -1,0 +1,55 @@
+# CSharpEssentials.EntityFrameworkCore.Locking
+
+A distributed `IResourceLock` for the `LockBehavior` of `CSharpEssentials.Mediator`. The lock is held by a database session, so requests with the same `LockKey` run one at a time across every instance of the application, not only within one process.
+
+It runs plain SQL through EF Core on the connection of a `DbContext` you already have, so it references no database provider package. PostgreSQL and SQL Server statements are built in; any other database works with two statements of your own.
+
+It is a separate package because it depends on both `CSharpEssentials.EntityFrameworkCore` and `CSharpEssentials.Mediator`.
+
+## Install
+
+```bash
+dotnet add package CSharpEssentials.EntityFrameworkCore.Locking
+```
+
+Targets net10.0, net9.0 and net8.0, each on the EF Core major of `CSharpEssentials.EntityFrameworkCore`.
+
+## Usage
+
+```csharp
+using CSharpEssentials.EntityFrameworkCore.Locking;
+
+builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
+builder.Services.AddMediatorLockBehavior();                // LockPlacement.OutsideTransaction
+builder.Services.AddRelationalResourceLock<AppDbContext>(ResourceLockSqlDialect.PostgreSql);
+```
+
+`AddRelationalResourceLock` replaces the `InProcessResourceLock` that `AddMediatorLockBehavior` registers, in either call order.
+
+| Member | What it does |
+|--------|-------------|
+| `AddRelationalResourceLock<TContext>(dialect, configure?)` | Registers `RelationalResourceLock<TContext>` as the singleton `IResourceLock`. `RelationalResourceLockOptions.PollInterval` (100 ms) sets how often a waiting `AcquireAsync` tries again |
+| `ResourceLockSqlDialect.PostgreSql` | `pg_try_advisory_lock` / `pg_advisory_unlock` on `hashtextextended(key, 0)` (PostgreSQL 11 or later). Keys with the same 64-bit hash share a lock |
+| `ResourceLockSqlDialect.SqlServer` | `sp_getapplock` with `@LockOwner = 'Session'` and `@LockTimeout = 0`, and `sp_releaseapplock`. Keys are resource names of at most 255 characters |
+| `new ResourceLockSqlDialect(tryAcquireSql, releaseSql)` | Your own statements. The key is the `{0}` placeholder. `tryAcquireSql` must not wait and must return one row with an integer column `Value` that is 1 when the lock was taken (0 or no row otherwise) |
+
+## How it works
+
+- Each acquire creates a service scope, resolves `TContext`, opens its connection and runs the try-acquire statement through `SqlQueryRaw<int>`. When the lock is taken, the handle keeps that scope and connection. Disposing the handle runs the release statement and closes the connection. When the lock is not taken, the connection is closed at once.
+- `AcquireAsync` polls the try-acquire statement every `PollInterval` until it gets the lock, the timeout passes (`TimeoutException`) or the token is cancelled. Waiters are not served in arrival order.
+- The lock uses its own connection, separate from the request's context and transactions. Keep `LockPlacement.OutsideTransaction` (the default).
+- The lock belongs to the database session. If the connection drops, the database releases the lock while the handle is still held, and another instance can take it.
+- Each held lock uses one pooled connection. Size the pool for the number of locks held at the same time.
+- The lock is not reentrant: acquiring a key you already hold waits for yourself.
+- When an acquire fails or is cancelled after its statement was sent, the release statement runs once and its error is ignored, because the lock may have been taken. So `releaseSql` must release only a lock held by the same connection and do nothing when that connection holds none. The PostgreSQL and SQL Server statements behave this way.
+- When the release of a held lock throws, the connection is still closed and the error is thrown from `DisposeAsync`, so `LockBehavior` reports it. A pooled connection keeps its session, and so the lock, until the pool reuses or drops it, which can take minutes. If a failed release must not block other instances that long, give the lock context a connection string with pooling off, or one whose provider resets the session when the connection goes back to the pool.
+
+The PostgreSQL and SQL Server statements are checked as text in the test suite. The lock itself runs the `ResourceLockContract` scenarios of `CSharpEssentials.Mediator.Testing` against SQLite, with a table-based dialect:
+
+```csharp
+new ResourceLockSqlDialect(
+    "INSERT INTO \"locks\" (\"Key\") VALUES ({0}) ON CONFLICT DO NOTHING RETURNING 1 AS \"Value\"",
+    "DELETE FROM \"locks\" WHERE \"Key\" = {0}");
+```
+
+A table-based lock like this one is not released when a process dies, and its release deletes the row whoever holds it, so use it only for tests.

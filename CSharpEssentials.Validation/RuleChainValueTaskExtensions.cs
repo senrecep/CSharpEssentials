@@ -24,7 +24,7 @@ public static class RuleChainValueTaskExtensions
         CancellationToken ct = default)
     {
         if (!chain.HasFailed && !await predicate(chain.Value, ct).ConfigureAwait(false))
-            chain.AddError(Error.Validation(errorCode, errorMessage));
+            chain.AddError(errorCode, errorMessage);
         return chain;
     }
 }

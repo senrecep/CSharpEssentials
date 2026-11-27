@@ -26,12 +26,13 @@ public class GlobalExceptionHandlerIntegrationTests
 
     [Theory]
     [MemberData(nameof(Hosts))]
-    public async Task TryHandleAsync_Should_UseBadHttpRequestStatusAndDetail_When_BadHttpRequestIsThrown(HostKind kind)
+    public async Task TryHandleAsync_Should_UseBadHttpRequestStatusAndFixedDetail_When_BadHttpRequestIsThrown(HostKind kind)
     {
         ProblemResponse response = await ThrowAsync(kind, "badrequest");
 
         response.StatusCode.Should().Be(413);
-        response.Json["detail"]!.GetValue<string>().Should().Be("Request body too large");
+        response.Json["detail"]!.GetValue<string>().Should().Be("The request body is too large.");
+        response.Body.Should().NotContain("Request body too large");
     }
 
     [Theory]

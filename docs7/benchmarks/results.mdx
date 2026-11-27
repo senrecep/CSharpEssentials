@@ -2,23 +2,23 @@
 title: "CSharpEssentials.Results: Performance benchmarks"
 ---
 
-Compared with CSharpFunctionalExtensions 3.7.0, ErrorOr 2.1.1 and FluentResults 4.0.0 · BenchmarkDotNet v0.14.0 · 6-core, 12-thread x64 desktop CPU · .NET 8 / 9 / 10 / 11
+Compared with CSharpFunctionalExtensions 3.7.0, ErrorOr 2.1.1 and FluentResults 4.0.0 (typed results also with OneOf 3.0.271 and Dunet 1.16.2) · BenchmarkDotNet v0.14.0 · 6-core, 12-thread x64 desktop CPU · .NET 8 / 9 / 10 / 11
 
-Two suites. The comparison suite (`results-comparison`) measures CSE against the three libraries; its Result and Maybe classes are below, the `Error` classes are in [CSharpEssentials.Errors/BENCHMARKS.md](/benchmarks/errors), and the Maybe collection helpers are in [CSharpEssentials.Maybe/BENCHMARKS.md](/benchmarks/maybe). The async overload suite (`results-pattern`) measures CSE's own async overloads against hand-written code, in [Async overload matrix](#async-overload-matrix-results-pattern-suite).
+Two suites. The comparison suite (`results-comparison`) measures CSE against the three libraries; its Result and Maybe classes are below, the `Error` classes are in [CSharpEssentials.Errors/BENCHMARKS.md](/benchmarks/errors), and the Maybe collection helpers are in [CSharpEssentials.Maybe/BENCHMARKS.md](/benchmarks/maybe). The async overload suite (`results-pattern`) measures CSE's own async overloads against hand-written code, in [Async overload matrix](#async-overload-matrix-results-pattern-suite). The typed results (`Result<T, E1>` to `Result<T, E1, E2, E3>`) have their own classes in both suites, in [Typed results](#typed-results).
 
 ---
 
 ## What was measured
 
-Twelve Result and Maybe classes in `benchmarks/CSharpEssentials.Results.Comparison.Benchmarks/`: the nine scenarios in the table below, plus `SequenceComparison`, `TryComparison` and `TryAsyncComparison` in [Sequence, CombineAll, Try and TryAsync](#sequence-combineall-try-and-tryasync). Every class uses `[MemoryDiagnoser]`, CSE as the baseline, and a `[Params]` switch for the success and failure path. A `[GlobalSetup]` parity check runs every library on the same input and refuses to start if the outcomes differ (success value, or error count and first message).
+Twelve Result and Maybe classes in `benchmarks/CSharpEssentials.Results.Comparison.Benchmarks/`: the nine scenarios in the table below, plus `SequenceComparison`, `TryComparison` and `TryAsyncComparison` in [Sequence, CombineAll, Try and TryAsync](#sequence-combineall-try-and-tryasync). The five typed-result classes in the same project are described in [Typed results](#typed-results). Every class uses `[MemoryDiagnoser]`, CSE as the baseline, and a `[Params]` switch for the success and failure path. A `[GlobalSetup]` parity check runs every library on the same input and refuses to start if the outcomes differ (success value, or error count and first message).
 
 | # | Class | Operation | Columns |
 |---|---|---|---|
 | 1 | `CreateComparison` | Success from `42`, failure from a cached error, through each library's documented implicit conversion (CFE: `Result.Failure<int>(string)`, it has no string-to-result conversion) | CSE, CFE, ErrorOr, FluentResults |
 | 2 | `MapComparison` | `x => x * 2` over a result built in setup (ErrorOr: `Then(Func<T, TNext>)`) | all four |
-| 3 | `BindComparison` | `x => Ok(x + 1)` (CFE `Bind`, ErrorOr `Then`, FluentResults `Bind`) | all four |
+| 3 | `BindComparison` | `x => Ok(x + 1)` (CFE `Bind`, ErrorOr `Then`, FluentResults `Bind`) | all four, plus a CSE typed row on `Result<int, FailureError>` |
 | 4 | `EnsureComparison` | `x > 0` on 42 (passes) or -1 (fails and creates the error). ErrorOr: `FailIf` with the inverted predicate | CSE, CFE, ErrorOr. FluentResults has no Ensure; its alternatives drop the value or are a hand-written Bind |
-| 5 | `MatchComparison` | Match to an int (-1 on failure) and to a string (first error message) | all four. FluentResults has no Match; its column uses the README's `IsSuccess`/`Value`/`Errors[0].Message` idiom |
+| 5 | `MatchComparison` | Match to an int (-1 on failure) and to a string (first error message) | all four, plus a CSE typed row on `Result<int, FailureError>`. FluentResults has no Match; its column uses the README's `IsSuccess`/`Value`/`Errors[0].Message` idiom |
 | 6 | `TapComparison` | Side effect into a field, one cached delegate shared by all (ErrorOr: `ThenDo`) | CSE, CFE, ErrorOr. FluentResults has no Tap |
 | 7 | `AsyncPipelineComparison` | Five steps over a `Task` source: async Bind (x + 1) → Map (x * 2) → Ensure (x > 0) → Tap → Map (x + 1). `Succeed=false` fails at step 1. `Yield=false`: source and step complete synchronously; `Yield=true`: both complete after `Task.Yield()` | CSE, CFE, ErrorOr. FluentResults has only Bind and Map on `Task<Result<T>>` |
 | 8 | `ErrorAggregationComparison` | Three independent checks on `Order(Id, Total)`, collect every error. All-pass `Order(42, 10)`, all-fail `Order(-1, -5)` | all four, each with its documented idiom (see section 8) |
@@ -34,11 +34,13 @@ Every competitor method carries a comment with the README or source URL at the p
 | OS | Linux (kernel 7.3.0-4-cachyos) |
 | Machine load | Desktop session in the background. 1-minute load average: see [How these numbers were produced](#how-these-numbers-were-produced) |
 | Tool | BenchmarkDotNet v0.14.0, [MemoryDiagnoser], default job |
-| .NET SDK | 11.0.100-rc.1.26425.128 |
-| Runtimes tested | .NET 8.0.30 (CSE: netstandard2.1 build), .NET 9.0.19, .NET 10.0.11, .NET 11.0.0 |
+| .NET SDK | 11.0.100-rc.1.26425.128; 11.0.100 for the typed-result classes and the `BindComparison` and `MatchComparison` reruns |
+| Runtimes tested | .NET 8.0.30 (CSE: netstandard2.1 build), .NET 9.0.19, .NET 10.0.11, .NET 11.0.0; .NET 8.0.33, 9.0.22, 10.0.15 and 11.0.0 for the typed-result classes and the Bind and Match reruns |
 | CSharpFunctionalExtensions (CFE) | 3.7.0, default idiom `Result<T>` with a `string` error |
 | ErrorOr | 2.1.1 |
 | FluentResults | 4.0.0 |
+| OneOf / OneOf.Serialization.SystemTextJson | 3.0.271 / 1.1.1 (typed-result classes only) |
+| Dunet | 1.16.2 (typed-result classes only) |
 | CSharpEssentials.Results / Maybe (CSE) | The repository source, referenced as a project |
 
 ### How these numbers were produced
@@ -46,7 +48,9 @@ Every competitor method carries a comment with the README or source URL at the p
 - Full BenchmarkDotNet default-job runs (no `--quick`), on net8.0, net9.0, net10.0 and net11.0, one suite at a time on one machine.
 - Comparison suite reports: `benchmarks/results/results-comparison/{tfm}/results/`. Async overload suite reports: `benchmarks/results/results-pattern/{tfm}/results/`.
 - 1-minute load average, sampled at the start and end of each suite: 1.55 to 2.37 for the comparison suite and 1.41 to 2.65 for the async overload suite. `MaybeComparison` (all four TFMs) and `CreateComparison` and `SequenceComparison` on net11.0 were rerun because their coefficient of variation (CV) stayed high. The reruns saw 1.43 to 4.72; the 4.72 peak was at the start of the net10.0 `MaybeComparison` rerun. `AsyncPipelineComparison` was rerun after #230-#256 on SDK 11.0.100-rc.3 with .NET 8.0.33, 9.0.22, 10.0.14 and 11.0.0; the load average was not recorded for that rerun.
-- Rows whose CV stayed above 5% after two reruns are marked "noisy (CV above 5%)". In this suite they are `MaybeComparison` rows and some `CreateComparison` success rows, all near 0 ns.
+- The typed-result classes, `BindComparison` and `MatchComparison` ran again on 2026-11-26, one suite at a time, against commit c97867c8, on SDK 11.0.100 with .NET 8.0.33, 9.0.22, 10.0.15 and 11.0.0. The 1-minute load average was 1.1 to 2.7 at the start of each suite; no end value was recorded. `TypedCreateComparison` on net8.0 was rerun after a first pass above 5% CV. Section 3 and the `TypedCreateComparison` and `TypedJsonComparison` numbers come from this run; the other scenario tables come from the earlier run.
+- `TypedMatchComparison`, `TypedBindChainComparison`, `TypedAsyncBindComparison`, `MatchComparison`, `TypedMatchBenchmarks`, `TypedBindBenchmarks` and `TypedAsyncBenchmarks` ran again on 2026-11-26 and 2026-11-27 against commit 9f0eea97, after the typed Match inlining (c95c457b) and the typed async extension inlining (4ad310bb, 4a985888). Same SDK and runtimes. The 1-minute load average was 1.03 to 2.91 at the start of each suite and 1.03 to 1.34 at the end; samples taken during the runs reached 8.10 for short periods. `TypedAsyncBenchmarks` on net9.0 was rerun once, because its hand-written baseline read 63.93 ns on completed success with unchanged code; the rerun read 28.57 ns and is the one reported (load 0.97 at the start, 8.30 at the end). Section 5 and every typed table except Create and JSON use these runs. The earlier numbers are kept in [Before and after the typed inlining](#before-and-after-the-typed-inlining).
+- Rows whose CV stayed above 5% after two reruns are marked "noisy (CV above 5%)". In this suite they are `MaybeComparison` rows and some `CreateComparison` success rows, all near 0 ns. In the typed-result runs one row is above 5% and was not rerun: `TypedMatchComparison` `Dunet_Switch` Success on net9 (0.0654 ns, CV 8.4%), at timer resolution.
 - Every number is copied from the `*-report-github.md` files. A `-` in the report's Allocated column is written as `0 B` here.
 
 ---
@@ -57,11 +61,11 @@ Primary runtime: net10. A tie is a difference within the sum of the two Benchmar
 
 | Finding | Details |
 |---|---|
-| Map, Bind, Tap, Match, Ensure (pass), Create (success): 0 B for CSE, CFE and ErrorOr; FluentResults 88-344 B on net10 | net10: FluentResults Map 256 B / 58.5485 ns (success), Bind 320 B / 73.3675 ns, Create 112 B / 25.5255 ns, Match to string on failure 240 B / 75.4939 ns. CSE, CFE and ErrorOr stay under 2.9 ns. CSE, CFE and ErrorOr allocate the same bytes on every TFM; FluentResults allocates more on net8 (Map success 288 B, Bind success 352 B, Create success 120 B, Match to string on failure 304 B) |
+| Map, Bind, Tap, Match, Ensure (pass), Create (success): 0 B for CSE, CFE and ErrorOr; FluentResults 88-344 B on net10 | net10: FluentResults Map 256 B / 58.5485 ns (success), Bind 320 B / 72.3925 ns, Create 112 B / 25.5255 ns, Match to string on failure 240 B / 80.0210 ns. CSE, CFE and ErrorOr stay under 2.9 ns. CSE, CFE and ErrorOr allocate the same bytes on every TFM; FluentResults allocates more on net8 (Map success 288 B, Bind success 352 B, Create success 120 B, Match to string on failure 304 B) |
 | Create failure: CSE 56 B, ErrorOr 88 B, CFE 0 B. CSE is faster than ErrorOr on every TFM | net10: 13.6011 ns / 56 B for CSE, 20.4178 ns / 88 B for ErrorOr (ratio 1.50), 0.0002 ns / 0 B for CFE (timer resolution), 105.5643 ns / 344 B for FluentResults. On net8, net9 and net11 CSE is also faster than ErrorOr (17.6672 vs 24.3424 ns, 14.8156 vs 22.9566 ns, 9.2621 vs 15.1515 ns). CFE stores the string error in its struct and allocates nothing, so CSE loses to CFE on every TFM |
 | Ensure failure: CSE beats ErrorOr, loses to CFE | net10: 12.903 ns / 56 B for CSE, 23.776 ns / 88 B for ErrorOr (1.84), 1.807 ns / 0 B for CFE (0.14). Same order on every TFM |
-| Map, Bind, Ensure (pass): CSE and ErrorOr within 1 ns; CFE 0.78-1.41 ns slower on net10 | Map success 0.5791 / 0.6358 / 1.8174 ns (CSE / ErrorOr / CFE). On net8 and net9 CFE takes 8.9011 to 9.2949 ns for Map, Bind and Ensure pass, and 5.5893 to 7.6524 ns for Create success, against 0.1647 to 2.0426 ns for CSE on the same rows. On net10 and net11 CFE drops to about 2 ns for Map, Bind and Ensure. This looks like a runtime/JIT effect; not investigated |
-| Match: no gap above 1 ns between CSE and ErrorOr; CFE's Match to int about 1.2 ns slower | net10 Match to int: 1.2063 / 1.0570 ns (CSE success / failure), 1.1083 / 1.0181 ns (ErrorOr), 2.3368 / 2.3593 ns (CFE). CFE's Match to int takes 2.3065-2.3593 ns on every TFM. ErrorOr is ahead of CSE on Match to string on failure on net8 and net9 (0.5514 vs 1.0937 ns, 0.6149 vs 0.9161 ns), under 1 ns |
+| Map, Bind, Ensure (pass): CSE and ErrorOr within 1 ns; CFE 0.73-1.25 ns slower on net10 | Map success 0.5791 / 0.6358 / 1.8174 ns (CSE / ErrorOr / CFE). On net8 and net9 CFE takes 8.9011 to 9.2949 ns for Map, Bind and Ensure pass, and 5.5893 to 7.6524 ns for Create success, against 0.1647 to 2.386 ns for CSE on the same rows. On net10 and net11 CFE drops to about 2 ns for Map, Bind and Ensure (net11 Bind success: 3.1325 ns). This looks like a runtime/JIT effect; not investigated |
+| Match: no gap above 1 ns between CSE and ErrorOr; CFE's Match to int 0.97-1.12 ns slower than CSE on net10 | net10 Match to int: 1.2095 / 1.3235 ns (CSE success / failure), 1.0859 / 0.9881 ns (ErrorOr), 2.3277 / 2.2946 ns (CFE). CFE's Match to int takes 2.1050-2.3428 ns on every TFM. ErrorOr is ahead of CSE on Match to int on failure on every TFM (net10 0.9881 vs 1.3235 ns), under 1 ns |
 | Async pipeline, success, completed tasks: CSE fastest on every TFM, same allocation as CFE | net10: 84.00 ns / 480 B for CSE, 95.84 ns / 480 B for CFE (1.14), 103.95 ns / 560 B for ErrorOr (1.24) |
 | Async pipeline, failure at step 1: CFE allocates 56 B less; CFE faster on net8 to net10 (CSE loss) | Completed, net10: 103.31 ns / 536 B for CSE, 98.65 ns / 480 B for CFE (0.95), 123.15 ns / 648 B for ErrorOr. CFE is faster on net8 (113.7 vs 123.6 ns), net9 (109.1 vs 113.8 ns) and net10; on net11 CSE is faster (96.42 vs 98.24 ns). Yielding failure, net10: 1,586.32 ns / 960 B for CSE vs 1,558.09 ns / 879 B for CFE (CSE loss, outside error); CFE is also faster on net8 and net9, a tie on net11 |
 | Async pipeline, yielding success: CSE allocates 24 B more than CFE (CSE loss) | net10: 1,580.19 ns / 904 B for CSE, 1,594.53 ns / 880 B for CFE (within error), 1,836.72 ns / 1037 B for ErrorOr. CSE is faster on net8 (1,628.6 vs 1,656.9 ns) and net9 (1,572.1 vs 1,611.5 ns); time is a tie on net10 and net11 |
@@ -69,6 +73,7 @@ Primary runtime: net10. A tie is a difference within the sum of the two Benchmar
 | Maybe: tie with CFE | Both allocate 0 B in every operation. Every net10 mean is at most 1.1824 ns and every measurable CSE vs CFE gap on net10 is under 0.1 ns. On net9, CSE Bind on None is 1.27 ns faster (5.5385 vs 6.8108 ns). Create and GetValueOrDefault on None are at timer resolution and partly noisy |
 | Sequence and CombineAll: ErrorOr's hand-written loop is faster (CSE loss); CSE beats CFE and FluentResults | net10, N = 100, all success: `Sequence` 268.480 ns / 1640 B for CSE, 229.394 ns / 1216 B for ErrorOr (0.85), 854.432 ns / 2344 B for CFE, 2,311.158 ns / 6528 B for FluentResults. `CombineAll` allocates the least of the four on every row (0 B on success, 56 B on failure) |
 | Try and TryAsync: the exception dominates; CSE and the other libraries tie or differ by a few percent | net10 `Try` failure: 2,399.324 ns / 520 B for CSE, 2,452.483 ns / 464 B for CFE, 2,352.819 ns / 552 B for ErrorOr, 2,642.237 ns / 832 B for FluentResults. `TryAsync` failure, completed: CFE is faster than CSE on net9 to net11 (net10 5,076.65 vs 5,385.12 ns) and allocates 56 B less |
+| Typed results: a failure from a cached error allocates nothing; async `Task` bind and Bind on net8/net9 are slower than `Result<T>` (CSE loss); Match is within 1 ns of `Result<T>` except on net9 Validation | net10: assigning a cached error takes 2.6047 ns / 0 B against 14.7804 ns / 56 B for `Result<int>` and 21.5302 ns / 88 B for ErrorOr. A four-handler Match takes 1.6705-2.2075 ns against 1.2330-1.6367 ns for `Result<int>`, under the 1 ns noise threshold; net9 Validation is the one Match gap above it (3.4858 vs 1.6452 ns). `switch` takes 1.0406-1.4182 ns. Task `BindAsync` on completed tasks: 30.60 ns / 160 B against 21.95 ns / 160 B. See [Typed results](#typed-results) |
 | AOT and dependencies | Results, Errors and Maybe (and Core, Enums and Json) declare `IsAotCompatible` on their net9.0+ targets, not on netstandard2.1; none of the three competitors does. No trim or AOT publish was run. Results pulls in Errors and Json, which bring Core and Enums; CFE has no runtime dependencies. See [Feature matrix](#feature-matrix) |
 
 ### Where CSE loses
@@ -84,7 +89,8 @@ Every row where a competitor's mean is lower than CSE's by more than the two err
 - Try: ErrorOr's hand-written `try`/`catch` on failure on net10 (2,352.819 vs 2,399.324 ns) and net11 (1,318.470 vs 1,339.987 ns), and on success on net8 (6.586 vs 7.838 ns). CFE allocates 56 B less on failure on net9 to net11 (net10 464 B vs 520 B).
 - TryAsync: CFE on completed failure on net9 to net11 (net10 5,076.65 vs 5,385.12 ns) and ErrorOr on the same row (net10 5,217.23 ns). CFE allocates 56-64 B less on every failure row and up to 9 B less on yielding success; ErrorOr allocates 23-25 B less on yielding success. ErrorOr is faster on completed success on net8, net9 and net11 (net11 31.48 vs 33.61 ns).
 - `ErrorToStringComparison` `Result` row: CFE allocates 48 B against CSE's 72 B on net8 (CSE is faster: 16.03 vs 51.51 ns).
-- Measured, under 1 ns (outside error but below the noise threshold): ErrorOr on Map, Bind, Ensure pass, Match and Tap rows by 0.01-0.54 ns on some TFMs (largest: Match to string on failure on net8, 0.5514 vs 1.0937 ns); CFE on many measurable Maybe rows on net8 to net11 by 0.003-0.15 ns (rows at timer resolution excluded; largest: net9 Where Some, 0.8730 vs 1.0273 ns, and net9 Map None, 0.5743 vs 0.6797 ns); ErrorOr on `Try` success on net9 to net11 (net10 6.048 vs 7.008 ns) and `TryAsync` completed success on net10 (33.64 vs 34.40 ns).
+- Typed results, against `Result<T>` and competitors: listed in [Typed results, where the typed result loses](#where-the-typed-result-loses).
+- Measured, under 1 ns (outside error but below the noise threshold): ErrorOr on Map, Bind, Ensure pass, Match and Tap rows by 0.01-0.77 ns on some TFMs (largest: Bind on failure on net9, 0.8654 vs 1.6394 ns); CFE on many measurable Maybe rows on net8 to net11 by 0.003-0.15 ns (rows at timer resolution excluded; largest: net9 Where Some, 0.8730 vs 1.0273 ns, and net9 Map None, 0.5743 vs 0.6797 ns); ErrorOr on `Try` success on net9 to net11 (net10 6.048 vs 7.008 ns) and `TryAsync` completed success on net10 (33.64 vs 34.40 ns).
 
 ---
 
@@ -101,7 +107,7 @@ All tables: net10, mean and allocated bytes per operation. "Ratio" is the report
 | ErrorOr | 0.1551 ns | 0 B | 20.4178 ns | 88 B | 1.50 |
 | FluentResults | 25.5255 ns | 112 B | 105.5643 ns | 344 B | 7.76 |
 
-Success is free for the three struct-based libraries. On failure CSE allocates 56 B and ErrorOr 88 B (a `List<Error>`); CFE's default `Result<T>` keeps the string inline. A CFE `Result<T, E>` column with a typed error was not benchmarked.
+Success is free for the three struct-based libraries. On failure CSE allocates 56 B and ErrorOr 88 B (a `List<Error>`); CFE's default `Result<T>` keeps the string inline. This class does not have a CFE `Result<T, E>` column. The typed-result classes use CFE `Result<int, TypedError>`: it allocates 0 B on a cached error and 40 B on a new one, the same as the CSE typed result (see [Typed results](#typed-results)).
 
 ### 2. Map (`x => x * 2`)
 
@@ -118,10 +124,13 @@ CSE and ErrorOr are within 0.06 ns. FluentResults returns a new class instance o
 
 | Library | Success mean | Success alloc | Failure mean | Failure alloc |
 |---|---:|---:|---:|---:|
-| CSE | 0.5813 ns | 0 B | 0.8944 ns | 0 B |
-| CFE | 1.9860 ns | 0 B | 1.9525 ns | 0 B |
-| ErrorOr | 0.5817 ns | 0 B | 0.8771 ns | 0 B |
-| FluentResults | 73.3675 ns | 320 B | 72.7987 ns | 208 B |
+| CSE | 0.7201 ns | 0 B | 1.2449 ns | 0 B |
+| CSE typed (`Result<int, FailureError>`) | 1.1559 ns | 0 B | 1.3721 ns | 0 B |
+| CFE | 1.9689 ns | 0 B | 1.9763 ns | 0 B |
+| ErrorOr | 0.6052 ns | 0 B | 0.9622 ns | 0 B |
+| FluentResults | 72.3925 ns | 320 B | 55.1934 ns | 208 B |
+
+From the 2026-11-26 rerun. The typed row is within 0.44 ns of `Result<T>` on net10 and within 0.71 ns on net11 (1.3875 vs 0.6854 ns on failure). On net8 and net9 it takes 5.5150 to 7.489 ns against 1.1069 to 2.386 ns for `Result<T>` (CSE loss, see [Typed results](#typed-results)).
 
 ### 4. Ensure (`x > 0`)
 
@@ -138,12 +147,13 @@ The failing case turns a success into a failure, so it costs what Create failure
 
 | Library | ToInt success | ToInt failure | ToString success | ToString failure | Alloc |
 |---|---:|---:|---:|---:|---:|
-| CSE | 1.2063 ns | 1.0570 ns | 2.6708 ns | 0.7223 ns | 0 B |
-| CFE | 2.3368 ns | 2.3593 ns | 2.8218 ns | 1.5866 ns | 0 B |
-| ErrorOr | 1.1083 ns | 1.0181 ns | 2.6557 ns | 1.0124 ns | 0 B |
-| FluentResults (properties idiom) | 24.6687 ns | 21.7977 ns | 23.2173 ns | 75.4939 ns | 88-240 B |
+| CSE | 1.2095 ns | 1.3235 ns | 2.6218 ns | 1.0313 ns | 0 B |
+| CSE typed (`Result<int, FailureError>`) | 1.2280 ns | 1.8476 ns | 2.4749 ns | 1.1882 ns | 0 B |
+| CFE | 2.3277 ns | 2.2946 ns | 2.7763 ns | 1.6029 ns | 0 B |
+| ErrorOr | 1.0859 ns | 0.9881 ns | 2.6217 ns | 1.0287 ns | 0 B |
+| FluentResults (properties idiom) | 21.0285 ns | 20.9174 ns | 22.8536 ns | 80.0210 ns | 88-240 B |
 
-CFE's ToInt rows are about 1.2 ns slower than CSE and ErrorOr. The other net10 differences are under 1 ns. FluentResults allocates even when only reading properties (its `Errors` is computed with `Reasons.OfType<IError>()`).
+From the 2026-11-27 run. CFE's ToInt rows are 1.12 ns (success) and 0.97 ns (failure) slower than CSE. The other net10 differences are under 1 ns; the largest is the typed row on ToInt failure, 0.52 ns behind `Result<T>`. The typed row here has one error slot. With two or three slots Match costs 1.08 to 1.51 times the `Result<int>` Match on net10 (see [Typed results](#typed-results)). FluentResults allocates even when only reading properties (its `Errors` is computed with `Reasons.OfType<IError>()`).
 
 ### 6. Tap
 
@@ -303,7 +313,7 @@ CSE is slower than CFE and ErrorOr on completed failure on net9 to net11, and al
 
 ## Async overload matrix (results-pattern suite)
 
-`benchmarks/CSharpEssentials.Results.Benchmarks/` measures CSE's own async overloads, with no competitor columns. Each class (`Map`, `Bind`, `Ensure`, `Else`, `Match`, `Tap`, `TapError`, `Then`) calls the operation on three source shapes (a `Result<T>` instance, a `Task<Result<T>>` and a `ValueTask<Result<T>>`) with sync, `Task` and `ValueTask` handlers, against a hand-written `await` plus `if` baseline. `Succeed` picks the path; `Yield = false` uses completed tasks, `Yield = true` completes every awaitable after `Task.Yield()`. `RenamedMemberBenchmarks` checks that the obsolete pre-6.4 names cost the same as their `Async` replacements, and `TraverseBenchmarks` measures `TraverseAsync` and `SequenceAsync` over 16 or 256 items. The `Instance_ValueTask*` and `TraverseAsync_ValueTaskSelector` rows need net9.0 or later, so net8 has no such rows.
+`benchmarks/CSharpEssentials.Results.Benchmarks/` measures CSE's own async overloads, with no competitor columns. Each class (`Map`, `Bind`, `Ensure`, `Else`, `Match`, `Tap`, `TapError`, `Then`) calls the operation on three source shapes (a `Result<T>` instance, a `Task<Result<T>>` and a `ValueTask<Result<T>>`) with sync, `Task` and `ValueTask` handlers, against a hand-written `await` plus `if` baseline. `Succeed` picks the path; `Yield = false` uses completed tasks, `Yield = true` completes every awaitable after `Task.Yield()`. `RenamedMemberBenchmarks` checks that the obsolete pre-6.4 names cost the same as their `Async` replacements, and `TraverseBenchmarks` measures `TraverseAsync` and `SequenceAsync` over 16 or 256 items. The `Instance_ValueTask*` and `TraverseAsync_ValueTaskSelector` rows need net9.0 or later, so net8 has no such rows. The typed-result classes of this suite (`TypedMatchBenchmarks`, `TypedBindBenchmarks`, `TypedAsyncBenchmarks`) are in [Typed results](#typed-results).
 
 ### Bind (net10)
 
@@ -341,6 +351,214 @@ On the instance rows a failure never calls the handler and never awaits, so "Fai
 
 ---
 
+## Typed results
+
+Typed results carry their errors in slots: `Result<T, E1>`, `Result<T, E1, E2>` and `Result<T, E1, E2, E3>`. Five classes in the comparison suite and three in the async overload suite measure them. `BindComparison` and `MatchComparison` also have a typed row with one slot (sections 3 and 5). Create and JSON come from the 2026-11-26 run against c97867c8; the other classes ran again after the typed Match and async inlining (see [How these numbers were produced](#how-these-numbers-were-produced)).
+
+In the comparison classes the CSE row is `Result<int, NotFoundError, ConflictError, ValidationError>`, with the error kinds from `CSharpEssentials.Errors`. The other columns hold the same cases:
+
+- `Result<int>`: CSE's untyped result, with `Error` values that carry the same codes.
+- `Any<int, NotFoundError, ConflictError, ValidationError>` from CSharpEssentials.Any.
+- OneOf 3.0.271: `OneOf<int, NotFoundError, ConflictError, ValidationError>`.
+- Dunet 1.16.2: a generated union record, `OrderOutcome`, with one case for the value and one per error.
+- ErrorOr 2.1.1 with `Error.NotFound`, `Error.Conflict` and `Error.Validation`.
+- CFE 3.7.0: `Result<int, TypedError>`, CFE's typed-error result.
+- FluentResults 4.0.0 with one `Error` subclass per kind.
+- net11 only: a C# `union OrderUnion(int, NotFoundError, ConflictError, ValidationError)` row in `TypedCreateComparison` and in the Switch category of `TypedMatchComparison`.
+
+Every class has `[MemoryDiagnoser]`, CSE typed as the baseline and a `[GlobalSetup]` parity check.
+
+| Class | Operation | Columns |
+|---|---|---|
+| `TypedCreateComparison` | Write Ok(42), a cached `NotFoundError` (`static readonly`) or a `new ConflictError(...)` into each slot of a 1024-element array. `OperationsPerInvoke = 1024`, so the mean is per assignment | CSE typed, `Result<int>`, `Any`, OneOf, Dunet, ErrorOr, CFE, FluentResults; native union on net11 |
+| `TypedMatchComparison` | `Case` = Success, NotFound or Validation, mapped to 42, 404 or 400. Match category: each library's Match with one handler per case (`Result<int>` and ErrorOr read the first error's type; FluentResults reads `IsSuccess`, `Value` and `Errors[0]`). Switch category: a C# `switch` on the CSE value, a CSE `TryGetValue` chain, a `switch` on OneOf's `.Value`, a `switch` on Dunet's case records | Match: the eight columns of Create. Switch: CSE switch (baseline), CSE `TryGetValue`, OneOf, Dunet; native union on net11 |
+| `TypedBindChainComparison` | Map (x * 2), Bind (x + 1), Bind (fails with NotFound when x <= 0), then Match to a status. `Succeed=false` starts from NotFound | CSE typed, `Result<int>`, OneOf (`MapT0`, then `Match` to rebuild the union, since it has no Bind), ErrorOr (`Then`), CFE, FluentResults (properties at the end) |
+| `TypedAsyncBindComparison` | One `BindAsync` over a `Task` or `ValueTask` source, handler `x => x + 1`. `Yield=false`: source and handler complete synchronously. `Yield=true`: both complete after `Task.Yield()` | CSE typed `Task` (baseline) and `ValueTask`, `Result<int>` `Task` and `ValueTask`, ErrorOr `ThenAsync`, CFE `Bind`, FluentResults `Bind`, the last three on `Task` |
+| `TypedJsonComparison` | `JsonSerializer.Serialize` and `Deserialize` of a Success or NotFound value | CSE typed through its envelope converter, OneOf through OneOf.Serialization.SystemTextJson 1.1.1 (OneOf has no converter of its own), Dunet with default options |
+| `TypedMatchBenchmarks` (async suite project) | Match over `Result<int>` (baseline) and over typed results with one, two and three slots, plus a `switch` and a `TryGetValue` chain on the three-slot type. The failure holds the last slot | CSE only |
+| `TypedBindBenchmarks` (async suite project) | Map (x * 2), Bind, Bind on `Result<int>` (baseline) and on typed results with one, two and three slots, without a final Match | CSE only |
+| `TypedAsyncBenchmarks` (async suite project) | `BindAsync`, plus one `MapAsync` row (`TaskSource_MapTaskHandler`), on the three-slot type against a hand-written `await` plus `TryGetValue` baseline, with the source and handler shapes of the [async overload matrix](#async-overload-matrix-results-pattern-suite). The `Instance_*` rows return on failure without calling the handler, so they never yield on failure | CSE only |
+
+### Create (net10, per assignment)
+
+| Library | Ok | Cached error | New error |
+|---|---|---|---|
+| CSE typed | 0.5647 ns / 0 B | 2.6047 ns / 0 B | 7.8162 ns / 40 B |
+| CSE `Result<int>` | 0.3003 ns / 0 B | 14.7804 ns / 56 B | 8.9502 ns / 56 B |
+| CSE `Any` | 6.9744 ns / 24 B | 2.6037 ns / 0 B | 7.8310 ns / 40 B |
+| OneOf | 0.7431 ns / 0 B | 2.6077 ns / 0 B | 8.0987 ns / 40 B |
+| Dunet | 10.0228 ns / 24 B | 11.6612 ns / 24 B | 16.1199 ns / 64 B |
+| ErrorOr | 0.3051 ns / 0 B | 21.5302 ns / 88 B | 14.8849 ns / 88 B |
+| CFE `Result<int, TypedError>` | 0.6250 ns / 0 B | 2.6040 ns / 0 B | 8.0833 ns / 40 B |
+| FluentResults | 26.3494 ns / 112 B | 30.2794 ns / 120 B | 53.6179 ns / 272 B |
+
+- A cached error allocates nothing: the typed result stores the reference. `Result<int>` wraps the error in a new `Error[]` (56 B) and ErrorOr in a `List<Error>` (88 B). CSE typed, `Any`, OneOf and CFE tie at 2.6037 to 2.6077 ns on net10.
+- With a new error the error object (40 B) is most of the cost, so typed, `Any`, OneOf and CFE are within 0.29 ns of each other.
+- The Ok rows of CSE typed, `Result<int>`, OneOf, ErrorOr and CFE are under 1 ns, near timer resolution; `Result<int>` and ErrorOr are 0.26 ns faster than typed. `Any` boxes the int (24 B) and Dunet allocates its case record.
+- net11 native union: 2.6054 ns / 0 B with a cached error, 7.3795 ns / 40 B with a new one, and 6.6133 ns / 24 B for Ok, because the union boxes the int.
+
+### Match and switch (net10)
+
+| Row | Success | NotFound | Validation |
+|---|---|---|---|
+| CSE typed `Match` (4 handlers) | 1.6705 ns | 2.2075 ns | 1.9183 ns |
+| CSE `Result<int>` `Match` | 1.2330 ns | 1.6273 ns | 1.6367 ns |
+| CSE `Any` `Match` | 5.3604 ns | 5.3799 ns | 5.3857 ns |
+| OneOf `Match` | 1.6736 ns | 1.9135 ns | 2.2038 ns |
+| Dunet `Match` | 5.7838 ns | 5.8492 ns | 5.8558 ns |
+| ErrorOr `Match` | 1.0912 ns | 1.6300 ns | 1.6944 ns |
+| CFE `Match` | 2.3267 ns | 2.4964 ns | 3.0724 ns |
+| FluentResults (properties) | 21.2345 ns / 96 B | 76.8401 ns / 240 B | 82.5593 ns / 240 B |
+| CSE typed `switch` | 1.0406 ns | 1.4182 ns | 1.3382 ns |
+| CSE typed `TryGetValue` chain | 0.4716 ns | 0.7441 ns | 0.2554 ns |
+| OneOf `switch` on `.Value` | 5.8368 ns / 24 B | 1.9202 ns | 3.0737 ns |
+| Dunet `switch` | 0.2998 ns | 1.1594 ns | 0.8724 ns |
+
+Rows without bytes allocate 0 B. The `TryGetValue` rows and the Dunet `switch` rows on Success and Validation are under 1 ns, near timer resolution. On net9 Dunet `switch` on Success is 0.0654 ns with a CV of 8.4%, noise level.
+
+- Typed Match is inlined into the caller for two and three slots (c95c457b). Before that it was a call into shared generic code and took 3.3643 to 4.6895 ns here; the numbers before and after are in [Before and after the typed inlining](#before-and-after-the-typed-inlining).
+- It is still slower than `Result<int>` and ErrorOr on every case and TFM, but on net8, net10 and net11 by less than 1 ns, under this page's noise threshold (net10 NotFound 2.2075 against 1.6273 and 1.6300 ns). net9 Validation is the one CSE loss above it: 3.4858 ns against 1.6452 ns for `Result<int>` and 1.6443 ns for ErrorOr. On the other net9 cases typed Match takes 2.2213 to 2.2230 ns. That case gained the least from the inlining (3.9627 ns before); the reason was not investigated.
+- Against OneOf the result depends on the case: on net10 a tie on Success (1.6705 vs 1.6736 ns), 0.29 ns slower on NotFound, 0.29 ns faster on Validation. Typed Match is faster than CFE on every case and TFM, and faster than `Any` and Dunet (5.3604 to 5.8558 ns on net10).
+- The slot count still matters. In `TypedMatchBenchmarks` on net10, Match with one slot costs 1.16 (failure) and 1.02 (success) of `Result<int>`, with two slots 1.51 and 1.08, with three slots 1.48 and 1.40. Before the inlining two and three slots cost 2.18 to 3.04.
+- A `switch` on the typed result costs 1.0406 to 1.4182 ns in the comparison class, and 1.04 (failure) and 0.69 (success) of `Result<int>` Match in `TypedMatchBenchmarks`. OneOf's `switch` on `.Value` boxes the int on Success (24 B).
+- net11 native union `switch`: 0.5791 ns (Success), 0.5353 ns (NotFound), 1.3373 ns (Validation), 0 B. The first two are near timer resolution.
+
+### Bind chain and single Bind (net10)
+
+| Library | Success | Failure at the start |
+|---|---|---|
+| CSE typed | 5.818 ns | 7.563 ns |
+| CSE `Result<int>` | 5.964 ns | 5.466 ns |
+| OneOf (`MapT0` + `Match`) | 31.716 ns | 37.427 ns |
+| ErrorOr | 4.529 ns | 6.615 ns |
+| CFE `Result<int, TypedError>` | 8.124 ns | 7.393 ns |
+| FluentResults | 244.909 ns / 992 B | 310.074 ns / 1000 B |
+
+Every row except FluentResults allocates 0 B.
+
+- The chain ends in a Match, so it gained from the Match inlining: on net10 8.076 to 5.818 ns on success and 8.902 to 7.563 ns on failure, on net11 8.285 to 5.386 and 8.892 to 3.925 ns.
+- On net10 typed and `Result<int>` tie on success (5.818 vs 5.964 ns); on net8, net9 and net11 `Result<int>` is faster on success, and on net9 and net10 also on failure (CSE loss). ErrorOr is faster on both paths on every TFM. On net11 the typed failure path is faster than `Result<int>` and CFE (3.925 against 4.318 and 7.531 ns) and 0.56 ns behind ErrorOr.
+- In `TypedBindBenchmarks` (Map, Bind, Bind, no Match) on net10 the typed results take 4.038 to 4.405 ns on success against 3.603 ns for `Result<int>` (1.12 to 1.22), and 4.937 to 5.118 ns on failure against 4.002 ns (1.23 to 1.28). One to three slots differ by at most 0.37 ns. That class has no Match and its code did not change; the earlier run had 4.429 to 4.576 ns on success against 4.175 ns.
+- On net8 and net9 the same class takes 19.256 to 21.220 ns (net8) and 16.803 to 19.082 ns (net9) on success, against 5.791 and 4.881 ns for `Result<int>`, and 9.227 to 9.565 ns on failure against 7.183 and 4.364 ns. Most of that cost is in the .NET 8/9 JIT, not in the library. `Result<int, E>` is 16 bytes: the error reference, then the int value and the byte tag sharing the second return register. When a method that is not inlined returns it, such as the Bind lambda `x => (Result<int, E>)(x + 1)`, the net8/net9 JIT stores the int and the byte to the stack separately and reads them back with one 8-byte load. Store-to-load forwarding fails and each such return costs about 5 to 7 ns. Two Bind lambdas give two stalls on success; on failure the lambdas are not called. The .NET 10 JIT builds the register directly, so the gap is gone there. Only success types of 7 bytes or less are affected (`int`, `bool`, enums, `char`, `short`, `float`). With `long`, `Guid` or a reference type the struct is 24 bytes, is returned through a hidden buffer, and shows no extra cost. A net8.0 build of the library would not help, because the slow code is the caller's own lambda, and net9 already has its own build.
+
+### Async bind (net10)
+
+| Row | Success, completed | Success, yielding | Failure, completed | Failure, yielding |
+|---|---|---|---|---|
+| CSE typed, `Task` | 30.60 ns / 160 B | 1,429.14 ns / 392 B | 21.87 ns / 80 B | 842.12 ns / 271 B |
+| CSE typed, `ValueTask` | 40.39 ns / 0 B | 1,609.33 ns / 496 B | 30.92 ns / 0 B | 870.69 ns / 359 B |
+| CSE `Result<int>`, `Task` | 21.95 ns / 160 B | 1,360.64 ns / 384 B | 16.10 ns / 80 B | 817.46 ns / 263 B |
+| CSE `Result<int>`, `ValueTask` | 39.64 ns / 0 B | 1,480.88 ns / 496 B | 33.70 ns / 0 B | 850.05 ns / 358 B |
+| ErrorOr `ThenAsync` | 38.53 ns / 240 B | 1,566.83 ns / 517 B | 33.09 ns / 160 B | 845.82 ns / 343 B |
+| CFE `Bind` | 30.27 ns / 160 B | 1,429.75 ns / 408 B | 33.81 ns / 160 B | 851.19 ns / 344 B |
+| FluentResults `Bind` | 118.08 ns / 536 B | 1,736.10 ns / 768 B | 90.91 ns / 352 B | 877.14 ns / 504 B |
+
+- The `Task` and `ValueTask` `BindAsync` extensions await the step directly (4ad310bb). Before that they awaited an async instance member: two state machines and, on `Task`, a second 80 B task.
+- With completed tasks the typed `Task` bind allocates what the `Result<int>` `Task` bind allocates (160 B and 80 B) and takes 1.39 (success) and 1.36 (failure) times as long (CSE loss). On net10 it was 56.78 ns / 240 B and 51.44 ns / 160 B before.
+- It is faster than ErrorOr with completed tasks and allocates 80 B less. CFE ties on success (30.27 ns, 160 B) and is slower on failure (33.81 ns, 160 B).
+- With yielding tasks on success it allocates 392 B against 384 B for `Result<int>`, 408 B for CFE and 517 B for ErrorOr, and takes 1.05 times the `Result<int>` time.
+- The typed `ValueTask` bind allocates 0 B with completed tasks and takes 40.39 and 30.92 ns, against 39.64 and 33.70 ns for the `Result<int>` `ValueTask` bind.
+
+`TypedAsyncBenchmarks` against its hand-written `await` plus `TryGetValue` baseline, net10:
+
+| Row | Success, completed | Success, yielding | Failure, completed | Failure, yielding |
+|---|---|---|---|---|
+| Hand-written, `Task` source and handler (baseline) | 25.74 ns / 160 B | 1,364.35 ns / 328 B | 18.72 ns / 80 B | 815.29 ns / 224 B |
+| `Task` source, sync handler | 23.25 ns / 80 B | 839.20 ns / 239 B | 24.30 ns / 80 B | 817.61 ns / 239 B |
+| `Task` source, `Task` handler | 30.50 ns / 160 B | 1,403.23 ns / 360 B | 22.79 ns / 80 B | 818.10 ns / 255 B |
+| `Task` source, `Task` handler, `MapAsync` | 31.08 ns / 152 B | 1,403.69 ns / 352 B | 27.12 ns / 80 B | 843.07 ns / 255 B |
+| `ValueTask` source and handler | 49.04 ns / 0 B | 1,555.52 ns / 464 B | 38.04 ns / 0 B | 866.93 ns / 343 B |
+| Instance, `Task` handler | 37.83 ns / 160 B | 838.97 ns / 240 B | 32.48 ns / 80 B | 32.13 ns / 80 B |
+| Instance, `ValueTask` handler | 19.88 ns / 0 B | 851.97 ns / 288 B | 14.92 ns / 0 B | 15.09 ns / 0 B |
+
+- With completed tasks the `Task` source with a `Task` handler takes 1.18 (success) and 1.22 (failure) of the baseline and allocates the same bytes. The `ValueTask` source takes 1.91 and 2.03 with 0 B. With yielding tasks on success the `Task` handler row takes 1.03 of the baseline and the `ValueTask` row 1.14.
+- The `MapAsync` row is the same shape through `MapAsync`; every other async-handler extension on `Task` and `ValueTask` (Map, MapError, Ensure, FailIf, Compensate, Tap, TapIf, TapError) got the same change in 4a985888. Before it, `MapAsync` took 56.52 ns / 232 B on completed success and 50.78 ns / 160 B on completed failure on net10 (from that commit's message, not from a checked-in report).
+- A sync handler on a `Task` source is the cheapest shape: 0.90 of the baseline with completed tasks on success, 0.62 with yielding tasks (the baseline awaits twice).
+
+### JSON (net10)
+
+| Operation | Case | CSE typed | OneOf | Dunet |
+|---|---|---|---|---|
+| Serialize | Success | 195.8 ns / 80 B | 160.0 ns / 88 B | 229.2 ns / 384 B |
+| Serialize | NotFound | 419.5 ns / 304 B | 370.9 ns / 312 B | 464.2 ns / 600 B |
+| Deserialize | Success | 293.4 ns / 40 B | 314.0 ns / 168 B | 276.1 ns / 160 B |
+| Deserialize | NotFound | 1,068.5 ns / 320 B | 898.9 ns / 432 B | 789.4 ns / 912 B |
+
+- CSE allocates the least in every row on every TFM.
+- On net10 OneOf is faster on both Serialize rows (0.82 and 0.88) and on Deserialize NotFound (0.84); it wins Deserialize NotFound on every TFM. Dunet is faster on both Deserialize rows (0.94 and 0.74). Deserializing a NotFound error takes CSE 1,068.5 ns, the slowest of the three (CSE loss).
+- On net8 and net9 OneOf allocates more (Serialize Success 344 B, Deserialize NotFound 496 B), and CSE Serialize Success is faster than OneOf on net8 (247.1 vs 340.1 ns).
+
+### Cross-TFM
+
+| Row | Library | net8 | net9 | net10 | net11 |
+|---|---|---|---|---|---|
+| Create, cached error | CSE typed | 3.5903 ns / 0 B | 2.9322 ns / 0 B | 2.6047 ns / 0 B | 2.6078 ns / 0 B |
+| | CSE `Result<int>` | 18.8305 ns / 56 B | 16.5638 ns / 56 B | 14.7804 ns / 56 B | 13.4252 ns / 56 B |
+| Match, NotFound | CSE typed | 2.4911 ns | 2.2213 ns | 2.2075 ns | 1.9143 ns |
+| | CSE `Result<int>` | 1.6253 ns | 1.8612 ns | 1.6273 ns | 1.6289 ns |
+| | ErrorOr | 1.6611 ns | 2.1850 ns | 1.6300 ns | 1.6296 ns |
+| Bind (`BindComparison`, c97867c8 run), success | CSE typed, one slot | 6.032 ns | 5.7298 ns | 1.1559 ns | 1.3927 ns |
+| | CSE `Result<int>` | 1.379 ns | 1.1069 ns | 0.7201 ns | 0.7545 ns |
+| Bind chain, success | CSE typed | 16.608 ns | 19.367 ns | 5.818 ns | 5.386 ns |
+| | CSE `Result<int>` | 6.823 ns | 6.554 ns | 5.964 ns | 4.513 ns |
+| | ErrorOr | 5.598 ns | 5.116 ns | 4.529 ns | 4.809 ns |
+| | CFE | 42.768 ns / 24 B | 16.268 ns | 8.124 ns | 12.281 ns |
+| Async `Task` bind, success, completed | CSE typed | 61.78 ns / 160 B | 37.39 ns / 160 B | 30.60 ns / 160 B | 30.27 ns / 160 B |
+| | CSE `Result<int>` | 28.41 ns / 160 B | 24.98 ns / 160 B | 21.95 ns / 160 B | 21.63 ns / 160 B |
+| Async `Task` bind, success, yielding | CSE typed | 1,525.08 ns / 392 B | 1,431.80 ns / 392 B | 1,429.14 ns / 392 B | 963.26 ns / 392 B |
+| | CSE `Result<int>` | 1,407.75 ns / 384 B | 1,361.92 ns / 384 B | 1,360.64 ns / 384 B | 971.74 ns / 384 B |
+| JSON Deserialize, NotFound (c97867c8 run) | CSE typed | 1,250.8 ns / 320 B | 1,189.2 ns / 320 B | 1,068.5 ns / 320 B | 997.2 ns / 320 B |
+| | OneOf | 1,075.8 ns / 496 B | 1,009.2 ns / 496 B | 898.9 ns / 432 B | 849.1 ns / 432 B |
+
+Match, switch and Bind rows without bytes allocate 0 B.
+
+- Bind on net8 and net9 is the largest typed loss. In `BindComparison` (not rerun) the one-slot typed Bind takes 5.5150 to 7.489 ns against 1.1069 to 2.386 ns for `Result<int>`. In `TypedBindBenchmarks` the typed rows take 16.803 to 21.220 ns on success against 5.791 and 4.881 ns. The cause is the net8/net9 JIT return of a 16-byte struct, described under [Bind chain and single Bind](#bind-chain-and-single-bind-net10). On net10 and net11 the gap is at most 1.73 ns (net11 `TypedBindBenchmarks` success, 4.306 vs 2.578 ns; the earlier run had 4.023 vs 3.394 ns there, with the same code).
+- The typed bind chain on net9 takes 19.367 ns on success, against 17.561 ns in the earlier run. The other TFMs got faster with the Match inlining. The reason for the net9 change was not investigated.
+- On net8 the typed async `Task` rows with completed tasks still take about twice their net9 time (`Task` bind failure 47.93 vs 24.63 ns); `Result<int>` changes less (21.42 vs 19.05 ns).
+- The yielding rows of `TypedAsyncBindComparison` take 0.65 to 0.79 of their net10 time on net11, for every library, as in the rest of this suite.
+- Full reports: `benchmarks/results/results-comparison/{tfm}/results/` and `benchmarks/results/results-pattern/{tfm}/results/`, for example [TypedMatchComparison net10](https://github.com/senrecep/CSharpEssentials/blob/main/benchmarks/results/results-comparison/net10.0/results/CSharpEssentials.Results.Comparison.Benchmarks.TypedMatchComparison-report-github.md).
+
+### Before and after the typed inlining
+
+Before: the 2026-11-26 run against c97867c8, checked in on `bench/typed-results-runs`. After: the run against 9f0eea97. Mean, with bytes where they changed.
+
+| Change | Row | net8 | net9 | net10 | net11 |
+|---|---|---|---|---|---|
+| Match inlined for two and three slots (c95c457b) | `TypedMatchComparison` typed Match, Success | 3.3576 → 1.9175 ns | 3.3753 → 2.2230 ns | 3.3643 → 1.6705 ns | 3.3585 → 1.6470 ns |
+| | NotFound | 4.2091 → 2.4911 ns | 3.9563 → 2.2213 ns | 4.6895 → 2.2075 ns | 4.2067 → 1.9143 ns |
+| | Validation | 4.2075 → 2.4928 ns | 3.9627 → 3.4858 ns | 3.9342 → 1.9183 ns | 4.2262 → 2.2563 ns |
+| | `TypedMatchBenchmarks` three slots, failure | 4.2074 → 2.5278 ns | 4.2107 → 2.2001 ns | 4.2578 → 1.9525 ns | 4.2252 → 1.9130 ns |
+| | two slots, failure | 3.1122 → 1.9028 ns | 3.0765 → 1.6355 ns | 3.3395 → 1.9851 ns | 3.3400 → 1.9171 ns |
+| | `TypedBindChainComparison` typed, success | 17.264 → 16.608 ns | 17.561 → 19.367 ns | 8.076 → 5.818 ns | 8.285 → 5.386 ns |
+| | failure | 9.232 → 8.836 ns | 9.109 → 8.642 ns | 8.902 → 7.563 ns | 8.892 → 3.925 ns |
+| Step awaited directly in `BindAsync` (4ad310bb) | `TypedAsyncBindComparison` typed `Task`, success, completed | 117.06 ns / 240 B → 61.78 ns / 160 B | 59.33 ns / 240 B → 37.39 ns / 160 B | 56.78 ns / 240 B → 30.60 ns / 160 B | 55.78 ns / 240 B → 30.27 ns / 160 B |
+| | failure, completed | 98.85 ns / 160 B → 47.93 ns / 80 B | 52.45 ns / 160 B → 24.63 ns / 80 B | 51.44 ns / 160 B → 21.87 ns / 80 B | 50.25 ns / 160 B → 22.12 ns / 80 B |
+| | success, yielding | 1,736.70 ns / 528 B → 1,525.08 ns / 392 B | 1,665.51 ns / 527 B → 1,431.80 ns / 392 B | 1,622.01 ns / 527 B → 1,429.14 ns / 392 B | 1,088.30 ns / 525 B → 963.26 ns / 392 B |
+| | typed `ValueTask`, success, completed (0 B) | 163.18 → 118.90 ns | 104.76 → 88.64 ns | 71.69 → 40.39 ns | 70.06 → 38.02 ns |
+| | `TypedAsyncBenchmarks` `Task` source, `Task` handler, success, completed | 114.06 ns / 240 B → 61.75 ns / 160 B | 61.47 ns / 240 B → 36.99 ns / 160 B | 54.46 ns / 240 B → 30.50 ns / 160 B | 54.50 ns / 240 B → 30.27 ns / 160 B |
+| Handler awaited directly in the other async extensions (4a985888) | `TypedAsyncBenchmarks` `MapAsync`, success, completed | 90.10 ns / 232 B → 53.13 ns / 152 B | 35.76 ns / 152 B (no before) | 56.52 ns / 232 B → 31.08 ns / 152 B | 30.09 ns / 152 B (no before) |
+
+The `MapAsync` row was added in 4a985888, so its before values come from that commit's message, not from a checked-in report. Most rows outside these changes moved by less than 5%. Some moved more with unchanged code, including `Result<int>` rows that the typed rows are compared against: the net11 chain on success (5.666 to 4.513 ns), `TypedBindBenchmarks` on success on net10 (4.175 to 3.603 ns) and net11 (3.394 to 2.578 ns), and net9 `TypedMatchComparison` Match on NotFound (1.6458 to 1.8612 ns) and Validation (1.4235 to 1.6452 ns). Among the competitors: CFE's chain on net11 success (7.689 to 12.281 ns), OneOf's chain on net10 failure (30.930 to 37.427 ns) and ErrorOr's Match on net10 Success (0.8203 to 1.0912 ns). The net9 `TypedAsyncBenchmarks` sync handler on completed failure, a path 4a985888 did not touch, read 30.89 ns in the reported rerun against 24.55 ns before.
+
+### Where the typed result loses
+
+- Match: `Result<int>` and ErrorOr on every case and TFM, by less than 1 ns except net9 Validation (3.4858 ns against 1.6452 and 1.6443 ns). OneOf on some cases, by up to 0.33 ns (net9 Success 2.2230 vs 1.8925 ns), and on net9 Validation (2.2232 ns). Two- and three-slot Match costs 1.07 to 2.06 of `Result<int>` Match in `TypedMatchBenchmarks` across TFMs.
+- Bind on net8 and net9: 5.5150 to 7.489 ns against 1.1069 to 2.386 ns for `Result<int>` (`BindComparison`, c97867c8 run), and 16.803 to 21.220 ns against 4.881 to 5.791 ns on success (`TypedBindBenchmarks`).
+- Bind chain: ErrorOr on both paths on every TFM (net10 success 4.529 vs 5.818 ns). `Result<int>` on success on net8, net9 and net11 and on failure on net9 and net10 (net10 failure 5.466 vs 7.563 ns). CFE on success on net9 (16.268 vs 19.367 ns).
+- Async `Task` bind with completed tasks: 1.29 to 2.24 times the `Result<int>` time across TFMs, with the same bytes. ErrorOr is faster only on net8 (success 44.89 vs 61.78 ns). With yielding tasks on success the typed bind allocates 392 B against 384 B for `Result<int>`.
+- JSON (c97867c8 run): OneOf faster on Deserialize NotFound on every TFM (net8 1,075.8 vs 1,250.8 ns) and on Serialize on net10 and net11; Dunet faster on Deserialize on net8 to net10 (on net11 only on NotFound: 749.2 vs 997.2 ns).
+- Create Ok (c97867c8 run): `Result<int>` and ErrorOr are 0.26 ns faster on net10, near timer resolution.
+
+### Caveats
+
+- The `Result<int>` Match row reads the first error's type through one failure handler; the typed row dispatches to one of four handlers. They return the same status for every case, but the code paths differ.
+- OneOf has no Bind, so its chain rebuilds the union with `Match` at each step. FluentResults reads properties at the end because it has no Match.
+- The native union rows exist only on net11, and they are in `TypedCreateComparison` and in the Switch category only.
+- The typed classes were not profiled. The net8/net9 Bind gap is explained from the JIT's return code (see [Bind chain and single Bind](#bind-chain-and-single-bind-net10)); the net9 Match Validation case and the net9 chain slowdown are measured, not explained.
+- Load average 1.03 to 2.91 at the start of each suite and 1.03 to 1.34 at the end, with short spikes up to 8.10 seen during the runs. CV stayed at or below 2.7% in every rerun typed row above 0.1 ns. Gaps of a few percent are weak evidence even when outside error.
+
+---
+
 ## Feature matrix
 
 CSE cells come from this repository (each csproj, `Directory.Build.props`, `Readme.MD`, `ResultT.cs`, `CSharpEssentials.Errors/ErrorMetadata.cs`, the `CSharpEssentials.Json` sources). Competitor links point at the pinned tags: CFE `v3.7.0`, ErrorOr `v2.1.1` (repository now at `error-or/error-or`), FluentResults `v4.0` (no `v4.0.0` tag; commit matches the 4.0.0 nuspec). Nothing was trim-analyzed or AOT-published for this table.
@@ -352,7 +570,7 @@ CSE cells come from this repository (each csproj, `Directory.Build.props`, `Read
 | Native AOT annotated (`IsAotCompatible`) / trim warnings | Declared on the net9.0+ targets (not netstandard2.1, which net8 consumers get) for Results, Errors and Maybe, and for Core, Enums and Json, so the trim analyzer runs on them at build time. No AOT publish was run for this table | Not declared ([csproj](https://github.com/vkhorikov/CSharpFunctionalExtensions/blob/v3.7.0/CSharpFunctionalExtensions/CSharpFunctionalExtensions.csproj), [Common.Build.props](https://github.com/vkhorikov/CSharpFunctionalExtensions/blob/v3.7.0/Common.Build.props)) | Not declared ([csproj](https://github.com/error-or/error-or/blob/v2.1.1/src/ErrorOr.csproj)) | Not declared ([csproj](https://github.com/altmann/FluentResults/blob/v4.0/src/FluentResults/FluentResults.csproj)) |
 | Extra runtime dependencies | CSharpEssentials.Errors and CSharpEssentials.Json; Errors brings Core and Enums (+ System.Text.Json on netstandard2.1); Json brings Enums. Maybe adds Results and Errors | None on any TFM ([nuspec](https://api.nuget.org/v3-flatcontainer/csharpfunctionalextensions/3.7.0/csharpfunctionalextensions.nuspec)) | None on net8/net10; Microsoft.Bcl.HashCode and System.Memory on netstandard2.0 ([nuspec](https://api.nuget.org/v3-flatcontainer/erroror/2.1.1/erroror.nuspec)) | Microsoft.Extensions.Logging.Abstractions 2.1.1 and System.Threading.Tasks.Extensions 4.5.4 on every TFM ([nuspec](https://api.nuget.org/v3-flatcontainer/fluentresults/4.0.0/fluentresults.nuspec)) |
 | Base class required | No. `Result`/`Result<T>` are `readonly record struct`; errors are built with `Error` factories, no subclassing | No. Results are `readonly struct`; `Result<T, E>` takes any `E` ([ResultTE.cs](https://github.com/vkhorikov/CSharpFunctionalExtensions/blob/v3.7.0/CSharpFunctionalExtensions/Result/ResultTE.cs)) | No. `ErrorOr<T>` is a `readonly record struct`; custom kinds via `Error.Custom` ([Error.cs](https://github.com/error-or/error-or/blob/v2.1.1/src/Errors/Error.cs)) | No for results (classes). Custom errors derive from `Error` or implement `IError` ([README](https://github.com/altmann/FluentResults/blob/v4.0/README.md#designing-errors-and-success-messages)) |
-| Error type model | Typed `Error` struct: Code, Description, `ErrorType` (8 values), NumericType, `ErrorMetadata` (`Dictionary<string, object?>`) | `string` by default (several messages joined with ", "); typed `E` through `Result<T, E>` ([ResultT.cs](https://github.com/vkhorikov/CSharpFunctionalExtensions/blob/v3.7.0/CSharpFunctionalExtensions/Result/ResultT.cs)) | Typed `Error` struct: Code, Description, `ErrorType` (7 values), NumericType, `Dictionary<string, object>` metadata ([Error.cs](https://github.com/error-or/error-or/blob/v2.1.1/src/Errors/Error.cs), [ErrorType.cs](https://github.com/error-or/error-or/blob/v2.1.1/src/Errors/ErrorType.cs)) | `IError` class hierarchy with Message, metadata and nested `Reasons` ([Error.cs](https://github.com/altmann/FluentResults/blob/v4.0/src/FluentResults/Reasons/Error.cs)) |
+| Error type model | Typed `Error` struct: Code, Description, `ErrorType` (8 values), NumericType, `ErrorMetadata` (`Dictionary<string, object?>`). Typed errors through `Result<T, E1>`, `Result<T, E1, E2>` and `Result<T, E1, E2, E3>`, each a `readonly struct` (`CSharpEssentials.Results/ResultTE1.cs` to `CSharpEssentials.Results/ResultTE1E2E3.cs`) | `string` by default (several messages joined with ", "); typed `E` through `Result<T, E>` ([ResultT.cs](https://github.com/vkhorikov/CSharpFunctionalExtensions/blob/v3.7.0/CSharpFunctionalExtensions/Result/ResultT.cs)) | Typed `Error` struct: Code, Description, `ErrorType` (7 values), NumericType, `Dictionary<string, object>` metadata ([Error.cs](https://github.com/error-or/error-or/blob/v2.1.1/src/Errors/Error.cs), [ErrorType.cs](https://github.com/error-or/error-or/blob/v2.1.1/src/Errors/ErrorType.cs)) | `IError` class hierarchy with Message, metadata and nested `Reasons` ([Error.cs](https://github.com/altmann/FluentResults/blob/v4.0/src/FluentResults/Reasons/Error.cs)) |
 | Multiple errors per result | Yes (`Error[]`) | No: one string or one `E`; `Combine` concatenates strings ([Combine.cs](https://github.com/vkhorikov/CSharpFunctionalExtensions/blob/v3.7.0/CSharpFunctionalExtensions/Result/Methods/Combine.cs)) | Yes (`List<Error>`) ([ErrorOr.cs](https://github.com/error-or/error-or/blob/v2.1.1/src/ErrorOr/ErrorOr.cs)) | Yes (`List<IReason>`) ([ResultBase.cs](https://github.com/altmann/FluentResults/blob/v4.0/src/FluentResults/Results/ResultBase.cs)) |
 | Maybe / Option type | Yes, separate package CSharpEssentials.Maybe (`readonly struct Maybe<T>`) | Yes, in the package ([Maybe.cs](https://github.com/vkhorikov/CSharpFunctionalExtensions/blob/v3.7.0/CSharpFunctionalExtensions/Maybe/Maybe.cs)) | No | No |
 | Async extension coverage | Map, Bind, Tap, Ensure, Match on `Task` and `ValueTask` sources on every TFM including netstandard2.1; `ValueTask` handlers on instances need .NET 9+ (Readme, "Async overload matrix") | Map, Bind, Tap, Ensure, Match on Task (left, right, both); ValueTask only under `NET5_0_OR_GREATER` ([Extensions](https://github.com/vkhorikov/CSharpFunctionalExtensions/tree/v3.7.0/CSharpFunctionalExtensions/Result/Methods/Extensions)) | Task only: ThenAsync, ThenDoAsync, FailIfAsync, MatchAsync ([ThenExtensions](https://github.com/error-or/error-or/blob/v2.1.1/src/ErrorOr/ErrorOr.ThenExtensions.cs)) | Task and ValueTask for Bind, Map and Try; no Tap, Ensure or Match ([ResultExtensions.cs](https://github.com/altmann/FluentResults/blob/v4.0/src/FluentResults/Extensions/ResultExtensions.cs), [Results.cs](https://github.com/altmann/FluentResults/blob/v4.0/src/FluentResults/Factories/Results.cs) for `Try`) |
@@ -364,7 +582,7 @@ On the AOT row CSE is the only one of the four that declares `IsAotCompatible`. 
 
 ## Caveats
 
-- Every CFE number uses its default `Result<T>` with a `string` error. That is why CFE allocates 0 B on Create and Ensure failure and less on the async failure path. The cost of typed errors (`Result<T, E>`) in CFE was not measured.
+- Every CFE number in sections 1 to 9 uses its default `Result<T>` with a `string` error. That is why CFE allocates 0 B on Create and Ensure failure and less on the async failure path. CFE's typed `Result<T, E>` appears only in the typed-result classes.
 - The aggregation idioms differ: ErrorOr's documented idiom builds no per-check results, the other three do (section 8). CSE's typed `Result<T>.Combine` was not measured.
 - FluentResults has no Ensure, Tap or Maybe and only two of the five async steps, so it has no column there. Its Match column uses property access, the README's idiom.
 - CFE's 5.5893 to 9.2949 ns on net8/net9 against about 2 ns on net10/net11, the 4.8533 to 7.1051 ns Maybe rows on net8/net9, and the faster yielding rows on net11 (0.72-0.75× net10) affect libraries as a group and were not investigated. They are reported, not explained.

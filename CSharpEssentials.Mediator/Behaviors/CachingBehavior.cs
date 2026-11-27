@@ -43,10 +43,19 @@ public sealed partial class CachingBehavior<TRequest, TResponse>(
 
         TResponse result = await next(message, cancellationToken).ConfigureAwait(false);
 
+#if NET10_0_OR_GREATER
         if (!message.CacheFailures && result is IResultBase r && r.IsFailure)
+#else
+        if (!message.CacheFailures && ResponseFailure.IsFailure(result))
+#endif
             return result;
 
-        byte[] serialized = JsonSerializer.SerializeToUtf8Bytes(result);
+        if (!TrySerialize(result, out byte[]? serialized))
+        {
+            LogCacheValueUnserializable(logger, cacheKey);
+            return result;
+        }
+
         var options = new DistributedCacheEntryOptions();
         if (message.Expiration > TimeSpan.Zero)
             options.AbsoluteExpirationRelativeToNow = message.Expiration;
@@ -55,6 +64,20 @@ public sealed partial class CachingBehavior<TRequest, TResponse>(
         LogCacheSet(logger, cacheKey);
 
         return result;
+    }
+
+    private static bool TrySerialize(TResponse value, [NotNullWhen(true)] out byte[]? bytes)
+    {
+        try
+        {
+            bytes = JsonSerializer.SerializeToUtf8Bytes(value);
+            return true;
+        }
+        catch (Exception exception) when (exception is NotSupportedException or JsonException)
+        {
+            bytes = null;
+            return false;
+        }
     }
 
     private static bool TryDeserialize(byte[] bytes, [NotNullWhen(true)] out TResponse? value)
@@ -73,6 +96,9 @@ public sealed partial class CachingBehavior<TRequest, TResponse>(
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Cached value for key {CacheKey} could not be deserialized; removing it and calling the handler")]
     private static partial void LogCacheEntryUnreadable(ILogger logger, string cacheKey);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "The response for key {CacheKey} could not be serialized; it is returned without caching")]
+    private static partial void LogCacheValueUnserializable(ILogger logger, string cacheKey);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Cache hit for key {CacheKey}")]
     private static partial void LogCacheHit(ILogger logger, string cacheKey);

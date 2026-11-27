@@ -63,7 +63,7 @@ public class ExceptionHandlingBehaviorTests
         Result result = await behavior.Handle(command, throwingNext, default);
 
         result.IsFailure.Should().BeTrue();
-        result.FirstError.Type.Should().Be(ErrorType.Failure);
+        result.FirstError.Type.Should().Be(ErrorType.Unexpected);
     }
 
     [Fact]
@@ -103,7 +103,7 @@ public class ExceptionHandlingBehaviorTests
         Result<int> result = await behavior.Handle(command, throwingNext, default);
 
         result.IsFailure.Should().BeTrue();
-        result.FirstError.Type.Should().Be(ErrorType.Failure);
+        result.FirstError.Type.Should().Be(ErrorType.Unexpected);
     }
 
     // -------------------------------------------------------------------------

@@ -1,0 +1,27 @@
+```
+
+BenchmarkDotNet v0.14.0, CachyOS
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100
+  [Host]     : .NET 9.0.22 (9.0.2226.52218), X64 RyuJIT AVX2
+  DefaultJob : .NET 9.0.22 (9.0.2226.52218), X64 RyuJIT AVX2
+
+
+```
+| Method                             | Categories  | Case     | Mean       | Error   | StdDev  | Ratio | Gen0   | Allocated | Alloc Ratio |
+|----------------------------------- |------------ |--------- |-----------:|--------:|--------:|------:|-------:|----------:|------------:|
+| **CSharpEssentials_Typed_Deserialize** | **Deserialize** | **NotFound** | **1,189.2 ns** | **2.62 ns** | **2.45 ns** |  **1.00** | **0.0191** |     **320 B** |        **1.00** |
+| OneOf_Deserialize                  | Deserialize | NotFound | 1,009.2 ns | 2.94 ns | 2.61 ns |  0.85 | 0.0286 |     496 B |        1.55 |
+| Dunet_Deserialize                  | Deserialize | NotFound |   881.5 ns | 3.09 ns | 2.89 ns |  0.74 | 0.0544 |     912 B |        2.85 |
+|                                    |             |          |            |         |         |       |        |           |             |
+| **CSharpEssentials_Typed_Deserialize** | **Deserialize** | **Success**  |   **381.5 ns** | **0.66 ns** | **0.61 ns** |  **1.00** | **0.0024** |      **40 B** |        **1.00** |
+| OneOf_Deserialize                  | Deserialize | Success  |   377.5 ns | 0.85 ns | 0.75 ns |  0.99 | 0.0138 |     232 B |        5.80 |
+| Dunet_Deserialize                  | Deserialize | Success  |   319.8 ns | 0.72 ns | 0.67 ns |  0.84 | 0.0095 |     160 B |        4.00 |
+|                                    |             |          |            |         |         |       |        |           |             |
+| **CSharpEssentials_Typed_Serialize**   | **Serialize**   | **NotFound** |   **476.5 ns** | **1.30 ns** | **1.15 ns** |  **1.00** | **0.0181** |     **304 B** |        **1.00** |
+| OneOf_Serialize                    | Serialize   | NotFound |   475.3 ns | 2.83 ns | 2.64 ns |  1.00 | 0.0334 |     568 B |        1.87 |
+| Dunet_Serialize                    | Serialize   | NotFound |   557.3 ns | 2.59 ns | 2.43 ns |  1.17 | 0.0353 |     600 B |        1.97 |
+|                                    |             |          |            |         |         |       |        |           |             |
+| **CSharpEssentials_Typed_Serialize**   | **Serialize**   | **Success**  |   **249.5 ns** | **0.42 ns** | **0.37 ns** |  **1.00** | **0.0048** |      **80 B** |        **1.00** |
+| OneOf_Serialize                    | Serialize   | Success  |   246.7 ns | 0.70 ns | 0.58 ns |  0.99 | 0.0205 |     344 B |        4.30 |
+| Dunet_Serialize                    | Serialize   | Success  |   248.5 ns | 1.04 ns | 0.98 ns |  1.00 | 0.0229 |     384 B |        4.80 |

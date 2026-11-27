@@ -2,7 +2,7 @@
 
 Functional Result pattern for explicit success/failure handling in .NET, without exceptions for control flow.
 
-`Result` and `Result<T>` are value types with implicit conversions from values and errors. Operations chain with `Then`, `Bind`, `Map` and `Ensure`, a failure can carry several errors, every operation has async overloads, and `Result.Try`, `Result.TryAsync` and `TryCatch` turn exceptions into errors.
+`Result` and `Result<T>` are value types with implicit conversions from values and errors. `Result<T, E1..E3>` puts the error types in the signature for exhaustive matching with C# 15 ([Typed errors](#typed-errors-resultt-e1-resultt-e1-e2-resultt-e1-e2-e3)). Operations chain with `Then`, `Bind`, `Map` and `Ensure`, a failure can carry several errors, every operation has async overloads, and `Result.Try`, `Result.TryAsync` and `TryCatch` turn exceptions into errors.
 
 Targets `net11.0`, `net10.0`, `net9.0` and `netstandard2.1`. Depends on `CSharpEssentials.Errors` and `CSharpEssentials.Json`.
 
@@ -56,7 +56,7 @@ Result<int> multiError = new[]
 };
 ```
 
-`Result<T>` does not accept `null`: `Result<string> r = (string?)null;` throws `ArgumentNullException`. A `bool` converts to `Result` too: `true` is a success and `false` is the `Error.False` failure. `default(Result)` and `default(Result<T>)` are successes; the `Value` of `default(Result<T>)` is `default(TValue)` (`null` for reference types) even though the nullability annotations say it is set, so call `EnsureNotNull` on results that may come from an uninitialized field or array slot. A failure must hold at least one error: `Result.From` and `Result.Failure` throw `ArgumentException` for an empty collection. Results serialize with `System.Text.Json` (an `errors` array and, for `Result<T>`, a `Value`) and deserialize back to the same state.
+`Result<T>` does not accept `null`: `Result<string> r = (string?)null;` throws `ArgumentNullException`. A `bool` converts to `Result` too: `true` is a success and `false` is the `Error.False` failure. `default(Result)` and `default(Result<T>)` are uninitialized and fail closed: `IsFailure` is `true`, `Errors`, `FirstError` and `LastError` report one `Error.Unexpected` with the code `Result.Default` (HTTP 500), and `Value` is `default(TValue)`. Every member that passes the errors to your delegate or builds a new failure from them throws `InvalidOperationException` on it, sync and async, including the `Task` and `ValueTask` receiver overloads: `Match`, `MatchFirst`, `Switch`, `Map`, `Bind`, generic `Then`, `MapError`, `Else`, `TapError`, `ElseDo`, `Compensate` and `Recover`. Members that return the result unchanged on failure (`Result.Then`, `ThenDo`, `Tap`, `Ensure`) pass the `default` on, and `TryGet`, `ToString`, equality, JSON and the collection helpers (`Result.And`, `Partition`, `Combine`) report the `Result.Default` error. Build results with `Result.Success()`, a value or an error, never with `default`. A failure must hold at least one error: `Result.From` and `Result.Failure` throw `ArgumentException` for an empty collection. Results serialize with `System.Text.Json` (an `errors` array and, for `Result<T>`, a `Value`) and deserialize back to the same state.
 
 Use the explicit factories when the compiler cannot infer the target type, for example with `var`, in a lambda whose return type is inferred, or as a generic argument:
 
@@ -359,6 +359,280 @@ await result.TapIfAsync(isEnabled, async v => await TrackAsync(v));
 // Works on Task<Result<T>> and ValueTask<Result<T>>
 await GetResultAsync().TapIfAsync(v => v > 0, v => Enqueue(v));
 ```
+
+## Typed errors: `Result<T, E1>`, `Result<T, E1, E2>`, `Result<T, E1, E2, E3>`
+
+Matching on these types needs the C# 15 compiler. A net11.0 project gets C# 15 by default with the .NET 11 SDK. A project that targets net10.0, net9.0, net8.0 or netstandard2.1 must build with the .NET 11 SDK and set `<LangVersion>15</LangVersion>`; without it a type pattern over the result fails with CS9327 (C# 14), CS9260 (C# 13) or CS8400 (C# 8). Implicit returns, `Match`, `Switch`, `TryGetValue` and `ToResult` work at any language version.
+
+A typed result holds either the success value or exactly one error, and the error type is part of the signature. It is a `readonly struct` with one value field, one error field and a tag, so `Result<int, NotFoundError, ConflictError>` is 16 bytes and the success path allocates nothing. Up to three error types are supported.
+
+With the `UserErrors` catalog from [Typed error kinds](../CSharpEssentials.Errors/Readme.MD#typed-error-kinds), a handler returns values and errors directly:
+
+```csharp
+public Result<UserDto, NotFoundError, UserErrors.Locked> Get(Guid id)
+{
+    if (deleted) return UserErrors.Deleted;
+    if (!exists) return UserErrors.NotFound;
+    if (locked) return new UserErrors.Locked(id);
+    return dto;
+}
+```
+
+Values and errors convert implicitly, a predefined `static readonly` error keeps its instance, and a derived error (`UserErrors.Locked`) goes to the slot of its base kind when there is no slot of its own. An error type that is not in the set does not compile (CS0029), and two slots of the same type make every conversion ambiguous (CS0457). A nested error type is a type, not a value, so `return UserErrors.Locked;` does not compile (CS0119); create an instance. A catalog of `Error` fields does not convert into a typed slot either; [Moving a catalog to typed kinds](../CSharpEssentials.Errors/Readme.MD#moving-a-catalog-to-typed-kinds) shows the rewrite.
+
+### Choosing between `Result<T>` and `Result<T, E..>`
+
+Use a typed result when the caller acts differently on each failure and the failures form a short, closed set: a lookup that can be not found or locked, a command that can conflict. The compiler then checks that every caller handles every case.
+
+Keep `Result<T>` when:
+
+- a failure carries several errors at once, such as validation or `Combine` over independent checks;
+- a handler can fail in more than three ways, or the set of errors is open;
+- the caller only forwards the errors, for example to a problem details response;
+- the consuming projects cannot use C# 15, since matching is the reason to pick the typed result.
+
+The two models work together. `ToResult()` turns a typed result into a `Result<T>`, and `ToError()` turns a typed error into an `Error`, so a typed handler can sit behind code written for `Result<T>`.
+
+### Matching
+
+Use a switch expression. Once every case has an arm, the compiler needs no discard and no `null` arm; drop one case and it reports CS8509 naming the missing case.
+
+```csharp
+IResult response = Get(id) switch
+{
+    UserDto dto => Results.Ok(dto),
+    NotFoundError { Code: UserErrors.Codes.Deleted } => Results.StatusCode(410),
+    NotFoundError => Results.NotFound(),
+    UserErrors.Locked locked => Results.Conflict(locked.Id),
+};
+```
+
+The rules for the arms:
+
+- A `static readonly` field is not a pattern (CS0150), so `case UserErrors.NotFound` does not compile. Tell errors of the same type apart with a constant `Code` property pattern, which is why each catalog keeps a `Codes` class.
+- Property arms alone do not cover a slot. Keep a bare kind arm after them, or the compiler reports CS8509.
+- A `when` clause never counts toward exhaustiveness. `NotFoundError nf when nf == UserErrors.NotFound` as the only arm of that slot reports CS8846.
+- Put derived arms before the base kind. A base arm before a derived one makes the derived arm unreachable (CS8510), and a derived arm alone leaves the base slot open (CS8509).
+- Every slot type and the success type must be non-nullable. `Result<UserDto?, NotFoundError>` reports CS8714, and a switch over it then needs a `null` arm (CS8655). A nullable wrapper such as `Result<UserDto, NotFoundError>?` needs the `null` arm too (CS8655).
+- An `Error` slot is allowed but cannot be matched exhaustively: arms on `Error { Type: .. }` report CS8524 even when every `ErrorType` member has one, because an enum can hold any number. Match an `Error` slot with a bare `Error` arm, or use the typed kinds.
+
+Exhaustiveness is checked only for switch expressions:
+
+- A switch statement gets no exhaustiveness check. One that leaves out a case compiles without a warning, and one that returns from every case still reports CS0161 until you add `case null:`.
+- A `void` switch statement and an `if (r is A) .. else if ..` chain skip a missing case, and `default`, without a warning.
+
+In statement code prefer `Match` or `Switch`:
+
+```csharp
+int status = Get(id).Match(
+    onSuccess: _ => 200,
+    onError1: _ => 404,
+    onError2: _ => 409);
+```
+
+`Match` and `Switch` take one delegate per case, in slot order. `TryGetValue(out T)` and `TryGetValue(out Ei)` read a case without throwing.
+
+### Widening and reordering
+
+A result converts implicitly into a result whose error set contains its own, in any order, so a handler can return the result of a narrower call:
+
+```csharp
+Result<UserDto, NotFoundError> Find(Guid id) => ...;
+
+Result<UserDto, NotFoundError, UserErrors.Locked> Get(Guid id) => Find(id);
+Result<UserDto, UserErrors.Locked, NotFoundError> reordered = Get(id);
+```
+
+### Combinators
+
+The typed results have `Bind`, `BindWiden`, `Map`, `Ensure`, `FailIf`, `MapError`, `Recover` and `Compensate`, and the async forms in [Async combinators](#async-combinators). Each passes an error through in its slot without calling the delegate.
+
+| Member | Error set of the returned result |
+|---|---|
+| `Bind<TOut>(Func<T, Result<TOut, E..>>)` | the same |
+| `BindWiden<TOut, F..>(Func<T, Result<TOut, F..>>)` | this result's slots, then the inner result's slots (three at most) |
+| `Map<TOut>(Func<T, TOut>)` | the same |
+| `Ensure(predicate, Ei)` / `FailIf(predicate, Ei)` | the same |
+| `Ensure<F>(predicate, F)` / `FailIf<F>(predicate, F)` | `F` added as the last slot (arity 1 and 2 only) |
+| `MapError<F>(Func<Ei, F>)` | slot `Ei` becomes `F` |
+| `Recover(Func<Ei, T>)` | slot `Ei` removed; on `Result<T, E1>` it returns `T` |
+| `Compensate(Func<Ei, Result<T, E..>>)` | slot `Ei` removed; on `Result<T, E1>` the same set |
+
+```csharp
+Result<OrderDto, NotFoundError> Find(Guid id) => ...;
+Result<OrderDto, ConflictError> Lock(OrderDto order) => ...;
+
+Result<OrderDto, NotFoundError, ConflictError> locked = Find(id).BindWiden(Lock);
+Result<OrderDto, ConflictError> orNew = locked.Recover((NotFoundError _) => OrderDto.Empty);
+Result<OrderDto, NotFoundError, ValidationError> checkedOrder = Find(id).Ensure(o => o.Total > 0, OrderErrors.EmptyTotal);
+```
+
+Overload resolution picks the overload from the argument types, so a few calls need an explicit type:
+
+- `Bind` keeps the error set and `BindWiden` adds to it. They have different names because the result types differ: with one name, an inner result whose errors are a subset of the outer ones would pick the adding overload and, through `var`, silently produce a repeated slot such as `Result<string, NotFoundError, ConflictError, NotFoundError>`. When the inner result has fewer error types, call `Bind<TOut>` with the type argument and let the inner result widen: `Get(id).Bind<string>(d => Name(d.Id))`. `BindWiden` with such an inner result repeats the slot, which fails with CS0029 as soon as the result is assigned to the declared type.
+- A lambda that returns a value on one path and an error on another has no single return type (CS0411). Give the type arguments: `.BindWiden<string, ConflictError>(...)` or `.Bind<string>(...)`.
+- `MapError`, `Recover` and `Compensate` have one overload per slot. Give the lambda's parameter type to choose the slot, `Recover((NotFoundError e) => ...)`; an untyped `e => ...` fits several slots and fails with CS0121.
+- `Ensure` with an error of the exact type of a slot keeps the error set. An error whose static type is a derived type, such as `new UserErrors.Locked(id)` on a `ConflictError` slot, binds `Ensure<F>` and adds a slot, because an identity conversion beats the conversion to the base kind. Cast it to the slot type to keep the set.
+
+None of these synchronous overloads uses `OverloadResolutionPriority`, so they compile the same way on C# 12, 13 and 14. All of them throw `InvalidOperationException` on `default`, and `Map`, `MapError` and `Recover` throw `ArgumentNullException` when the delegate returns `null`.
+
+### Side effects, values, queries and collections
+
+| Member | What it does |
+|---|---|
+| `Tap(Action<T>)`, `TapIf(predicate, Action<T>)` | Runs the action on a success value and returns the result unchanged. |
+| `TapError(Action<Ei>)` | One overload per slot: runs the action when that slot holds the error. Type the lambda parameter, as for `Recover`. |
+| `TapError(Action<Error>)` | Runs the action with any error, converted as by `ToResult`. Only when every slot implements `IError`. |
+| `TryCatch<TOut, TException>(Func<T, TOut>)` | Like `Map`, but an exception of type `TException` becomes an error in a new last slot; any other exception propagates. Give both type arguments. Arity 1 and 2 only. |
+| `Finally<TOut>(Func<Result<..>, TOut>)`, `Finally(Action<Result<..>>)` | Hands the whole result to the delegate, whatever case it holds. |
+| `GetValueOrDefault()`, `GetValueOr(T)` | The success value, or a fallback. They never throw, not even on `default`. |
+| `GetValueOrThrow(string?)` | The success value, or `InvalidOperationException`. |
+| `GetValueOr(Func<Error, T>)` | The success value, or the fallback computed from the error. Only when every slot implements `IError`. |
+| `Select`, `SelectMany` | Query syntax: `Select` is `Map`; `SelectMany` keeps the error set or adds the inner result's slots. |
+| `Result<T, E..>.Combine(first, second, ...)` | 2 to 8 results with the same error set into a tuple. It stops at the first error and does not look at the later results. |
+| `Sequence()`, `Traverse(selector)` | A collection of results into one result of an array. They stop at the first error. |
+| `Partition()` | The success values and the errors (as `Error`) of a collection, in order. |
+
+`Combine`, `Sequence` and `Traverse` behave differently from the `Result<T>` versions, which collect every error. A typed result holds one error, so they return the first one. To collect all errors, convert with `ToResult()` and use the `Result<T>` helpers.
+
+The "any error" members are extensions constrained to `IError` slots, so they do not exist on a result with a slot such as an exception or a plain class (CS1661 or CS1660 for a lambda typed as `Error`). Write the lambda parameter type: `TapError((Error e) => log(e.Code))`. An untyped `e => ...` binds the per-slot overload on `Result<T, E1>` and reports CS0121 on larger arities. On a result with an `Error` slot, a lambda typed as `Error` binds that slot's `TapError` instead.
+
+```csharp
+Result<OrderDto, NotFoundError, ValidationError> order =
+    from found in Find(id)
+    from valid in Validate(found)
+    select valid with { Checked = true };
+
+Result<int, NotFoundError, FormatException> quantity = Find(id).TryCatch<int, FormatException>(o => int.Parse(o.Quantity));
+Result<OrderDto[], NotFoundError> all = ids.Traverse(Find);
+```
+
+Query syntax has one name for both `SelectMany` forms, so it cannot use separate names the way `Bind` and `BindWiden` do. The same-set form has `[OverloadResolutionPriority(1)]`, and the inner result decides which form a query gets:
+
+- The inner result has the same error set: the error set stays the same. On C# 12 both forms fit and the compiler reports CS1940; use `Bind` there.
+- The inner result has other error types: they are added after this result's, as with `BindWiden`.
+- The inner result's errors are a subset of this result's: the adding form is picked and repeats a slot, which reports CS0029 as soon as the result is assigned to the declared type. Use `Bind<TOut>` for that step.
+
+### Async combinators
+
+`Bind`, `BindWiden`, `Map`, `Ensure`, `FailIf`, `MapError`, `Compensate`, `Tap`, `TapIf`, `TapError`, `TryCatch`, `Finally` and `Select` have `*Async` forms with the same cells as `Result<T>`: an instance member that awaits a `Task` or `ValueTask` handler, and extensions on `Task<Result<T, E..>>` and `ValueTask<Result<T, E..>>` sources. `Recover`, `Combine` and `SelectMany` stay synchronous, as they are on `Result<T>`.
+
+| Family | Instance handler | `Task` source handler | `ValueTask` source handler |
+|---|---|---|---|
+| `BindAsync`, `BindWidenAsync` | `Task`, `ValueTask` | sync, `Task` | sync, `ValueTask` |
+| `MapAsync` | `Task`, `ValueTask` (.NET 9+) | sync, `Task` | sync, `ValueTask` |
+| `EnsureAsync`, `FailIfAsync` | `Task`, `ValueTask` (.NET 9+) | sync, `Task` | sync, `Task`, `ValueTask` (.NET 9+) |
+| `MapErrorAsync` | `Task`, `ValueTask` | sync, `Task` | sync, `ValueTask` |
+| `CompensateAsync` | `Task`, `ValueTask` (.NET 9+) | `Task` | `Task`, `ValueTask` (.NET 9+) |
+| `TapAsync` | `Task`, `ValueTask` (.NET 9+) | sync, `Task` | sync, `ValueTask` |
+| `TapIfAsync` | `Task`, `ValueTask` (.NET 9+) | sync, `Task` | sync, `Task`, `ValueTask` (.NET 9+) |
+| `TapErrorAsync` | `Task`, `ValueTask` (.NET 9+) | `Task` | `Task`, `ValueTask` (.NET 9+) |
+| `TryCatchAsync` | none | sync | sync |
+| `FinallyAsync` (`Func`) | none | sync, `Task` | sync, `ValueTask` (.NET 9+) |
+| `FinallyAsync` (`Action`) | none | sync, `Task` | sync, `Task`, `ValueTask` (.NET 9+) |
+| `SelectAsync` | none | sync, `Task` | sync |
+
+The "any error" `TapErrorAsync` has the same cells as the per-slot one, as extensions; the per-slot extensions sit above it in priority, so an untyped lambda keeps the per-slot overload. `GetValueOrDefaultAsync`, `GetValueOrAsync(T)` and, on `IError` slots, `GetValueOrAsync(Func<Error, T>)` exist on `Task` and `ValueTask` sources. `TraverseAsync` takes a `Task` selector, or a `ValueTask` one on .NET 9+, each with or without a token, and awaits one item at a time. `SequenceAsync` takes a collection of `Task` or `ValueTask` results; when it stops at an error it does not await the rest, and it observes their faults.
+
+```csharp
+Task<Result<OrderDto, NotFoundError>> FindAsync(Guid id, CancellationToken ct) => ...;
+Task<Result<OrderDto, ConflictError>> LockAsync(OrderDto order) => ...;
+
+Result<OrderDto, NotFoundError, ConflictError> locked = await FindAsync(id, ct)
+    .BindWidenAsync(LockAsync, ct)
+    .MapAsync(o => o with { Locked = true }, ct);
+```
+
+Every extension and every instance member except `BindAsync` and `BindWidenAsync` takes a `CancellationToken`. It is observed while a pending source or handler task is awaited; a task that has already completed is used as it is. `MapAsync` and `MapErrorAsync` also check it before they call the handler, as on `Result<T>`. `MapErrorAsync` then awaits its mapper without the token, also as on `Result<T>`, so a mapper that is already running is not abandoned. Library awaits use `ConfigureAwait(false)`.
+
+An untyped `async` lambda fits both the `Task` and the `ValueTask` handler; `[OverloadResolutionPriority(1)]` on the `Task` member picks it on C# 13 and later. On the extensions, the same-slot `EnsureAsync`/`FailIfAsync` have a higher priority than the slot-adding ones, because both are generic methods there and the tie-break that makes the synchronous `Ensure(predicate, Ei)` win does not apply. One difference follows: on a `Task` or `ValueTask` source an error of a derived type, such as `new UserErrors.Locked(id)` on a `ConflictError` slot, keeps the base slot, while the synchronous `Ensure` and the instance `EnsureAsync` add a slot. On C# 12 an untyped `async` lambda on an instance, and an error of a slot type on a source, report CS0121: type the handler, or give the type arguments as in `source.EnsureAsync<int, NotFoundError>(v => v > 0, error)`.
+
+### `default`
+
+`default(Result<T, E1, E2>)` holds no case. The compiler cannot catch it, and the [CSE5001](#diagnostics) analyzer reports only where one is created in source, so the members behave as follows:
+
+| Member | On `default` |
+|---|---|
+| `HasValue` | `false` |
+| `TryGetValue(...)` | `false` for every case |
+| `Value` | `null` |
+| `IsSuccess` / `IsFailure` | `false` / `true` |
+| switch expression without a `null` arm | throws `SwitchExpressionException` |
+| `Match`, `Switch`, `ToResult`, `GetValueOrThrow` and every combinator | throw `InvalidOperationException` |
+| `Finally` | passes the `default` result to the delegate |
+| `GetValueOrDefault`, `GetValueOr(T)` | return the fallback |
+| `IResultBase.Errors`, `FirstError`, `LastError` | an `Unexpected` error with code `Result.Default` |
+| `==` | equal to another `default`, and to nothing else |
+
+Create a typed result from a value or an error. Uninitialized fields, `new Result<T, E1>()` and array elements are all `default`.
+
+### Equality
+
+Two typed results are equal when they hold the same case: the same slot, and a value equal by `EqualityComparer<T>.Default` or an error equal by `Equals`. The same error instance in two different slots is not equal. `==`, `!=`, `Equals` and `GetHashCode` all follow this rule. Error kinds are records, so two errors with the same code, description and metadata are equal. The limits of error equality, across kinds and after a JSON round trip, are in [Typed error kinds](../CSharpEssentials.Errors/Readme.MD#typed-error-kinds).
+
+A typed result is a struct of three fields. Like any such struct, it can tear when one thread writes a shared field while another reads it: the reader can see the tag of one result and the error of another. Do not share a mutable field of this type between threads without a lock.
+
+### Struct error types
+
+Error types may be structs. A struct error is boxed when it is stored, because all slots share one `object` field. `default` of a struct error type is a valid error with whatever its fields default to, often a `null` code; the bridge below turns an `IError` without a code into an `Unexpected` error instead of throwing. Prefer the class kinds; the [Errors Readme](../CSharpEssentials.Errors/Readme.MD#typed-error-kinds) shows a struct error with `[ErrorKind]`.
+
+### JSON
+
+A typed result serializes with `System.Text.Json` as an envelope with the case name and its value:
+
+```text
+{"case":"Success","value":{"id":3}}
+{"case":"NotFoundError","value":{"Code":"User.NotFound","Description":"User not found.", ...}}
+```
+
+The case is `Success` or the name of the slot type; when two slots share a type name, both use the name as C# writes it, with namespace, declaring types and generic arguments (`MyApp.Invalid<MyApp.Email>`) and no assembly version. The value is written and read as the slot type, so a `Result<int, NotFoundError, UserErrors.Locked>` reads a `UserErrors.Locked` back into its own slot with its own fields, and the error types need no `[JsonDerivedType]` registration. A derived error in a base slot is written as the base type: `new UserErrors.Locked(7)` in a `ConflictError` slot comes back as a plain `ConflictError` with the same code and description. Struct errors round-trip like class errors.
+
+`default` is written as `null`, and `null` reads back as `default`. Reading throws `JsonException` for an unknown case, a missing `case` or `value`, a `null` value, or any other property. The two properties may come in either order, and their names are matched case-sensitively, whatever `PropertyNameCaseInsensitive` says.
+
+Error metadata comes back with `JsonElement` values, so an error with metadata keeps its code but is no longer equal to the original. Match on the code. The Mediator caching and idempotency behaviors replay a typed response through this envelope, so the replayed result holds the same slot and error type as the one the handler returned.
+
+The result types carry a converter factory that builds the converter through reflection. Under Native AOT that is not available: register the closed converter, and list the success type and every error type in the context:
+
+```csharp
+[JsonSourceGenerationOptions(Converters = [typeof(TypedResultJsonConverter<UserDto, NotFoundError, ConflictError>)])]
+[JsonSerializable(typeof(Result<UserDto, NotFoundError, ConflictError>))]
+[JsonSerializable(typeof(UserDto))]
+[JsonSerializable(typeof(NotFoundError))]
+[JsonSerializable(typeof(ConflictError))]
+internal sealed partial class AppJsonContext : JsonSerializerContext;
+```
+
+Without the registration, a Native AOT app throws `NotSupportedException` with the name of the converter to add. A context that lacks a slot type throws `NotSupportedException` when that case is written or read.
+
+### HTTP responses
+
+`CSharpEssentials.AspNetCore` turns a typed result into an HTTP response with `ToHttpResult()`, `ToOk()`, `ToCreated(...)` or `ToNoContent()`, and lists one problem response per error slot in the OpenAPI document. See [Typed results](../CSharpEssentials.AspNetCore/Readme.MD#typed-results).
+
+Do not return the result from a handler as it is. Without a guard its error would go out as a 200 with the error in the body. `AddEnhancedProblemDetails` registers a converter that throws before anything is written, so the request ends as a 500 instead (see [Forgetting `ToHttpResult()`](../CSharpEssentials.AspNetCore/Readme.MD#forgetting-tohttpresult)), and, in a project that references `CSharpEssentials.Endpoints`, analyzer [CSE1013](../CSharpEssentials.Endpoints/Readme.MD#diagnostics) reports a `Map*` handler that returns the result at build time.
+
+### Converting to `Result<T>`
+
+`ToResult()` returns the classic `Result<T>`, and the typed result also implements `IResultBase` and `ITypedResult` (`HasValue` and `Value` for code that holds a boxed typed result of any shape), so Mediator behaviors, `ResultEndpointFilter` and other code written for `Result<T>` keep working. Each error becomes one `Error`:
+
+- An `Error` stays as it is.
+- Any other `IError` (every `TypedError` kind) keeps its code, description, type and the same `ErrorMetadata` instance.
+- An `Exception` becomes `Error.Exception(exception)`.
+- Anything else becomes an `Unexpected` error whose code is the name of the slot type.
+
+`IResultBase.Errors` and the related members never throw, for any slot type. The typed results do not plug into the Mediator failure conversion: when a handler that returns a typed result throws, `ExceptionHandlingBehavior` lets the original exception through unchanged. The other behaviors are listed in the Mediator [Typed responses](../CSharpEssentials.Mediator/Readme.MD#typed-responses) section.
+
+### Diagnostics
+
+The package ships analyzers for the typed results. They load in any SDK whose compiler is Roslyn 4.8 or later, and every rule is a warning, so `TreatWarningsAsErrors` turns it into a build error. Change a severity in `.editorconfig` (`dotnet_diagnostic.CSE5001.severity = none`).
+
+| ID | Reports |
+|---|---|
+| CSE5001 | A typed result created as `default`: `default`, `default(R)`, `new R()`, `new R[n]` without an initializer, and a private field or an auto-property with no setter or a private one, without an initializer, that no code of its type assigns. A member other types can set, such as a public `init` property filled by an object initializer, is not reported. Comparing with `default` (`r == default`) is not reported. |
+| CSE5002 | A typed result type that repeats an error type, such as `Result<Dto, NotFoundError, NotFoundError>`. |
+| CSE5003 | Error slots where one converts to another, such as `Result<Dto, TypedError, NotFoundError>`: a `NotFoundError` whose static type is `TypedError` goes to the `TypedError` slot. User-defined conversions are not reported. |
+| CSE5004 | A success type that converts to an error slot or from one, such as `Result<object, NotFoundError>`. |
+| CSE5005 | A type whose `[ErrorKind]` names another kind than the nearest base that declares one, such as `[ErrorKind(ErrorType.Conflict)]` on a record derived from `NotFoundError`, or than its own `Type` property when that returns a constant (`public override ErrorType Type => ErrorType.NotFound;`). A `Type` declared on a base without `[ErrorKind]` is not compared. |
+| CSE5006 | `Ensure<F>`, `FailIf<F>`, `BindWiden`, `TryCatch`, a query `SelectMany` or their async forms returning a result whose added slot repeats, converts to or accepts a slot it already had: a derived error passed to `Ensure`, or `BindWiden` with an inner result whose errors the outer result already has. Slots the source result already had are reported by CSE5003, not here. The fixes are in [Combinators](#combinators). |
 
 ## Upgrading to 8.0
 
