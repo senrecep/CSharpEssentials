@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
@@ -34,6 +35,7 @@ public static class ConditionalRequestExtensions
         services.TryAddSingleton<ConditionalGetResultFilter>();
         services.TryAddSingleton<IfMatchResourceFilter>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IConfigureOptions<MvcOptions>, ConditionalRequestsMvcSetup>());
+        services.TryAddEnumerable(ServiceDescriptor.Transient<IApiDescriptionProvider, IfMatchResponses>());
         return services;
     }
 
@@ -174,6 +176,7 @@ public static class ConditionalRequestExtensions
             if (!endpoint.FilterFactories.Contains(IfMatchEndpointFilter.Factory))
                 endpoint.FilterFactories.Add(IfMatchEndpointFilter.Factory);
         });
+        builder.Finally(IfMatchResponses.AddTo);
         return builder;
     }
 
