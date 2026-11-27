@@ -11,7 +11,9 @@ namespace CSharpEssentials.ResultPattern;
 /// </summary>
 /// <remarks>
 /// The result type already carries <see cref="TypedResultJsonConverterFactory"/>, which creates this converter through
-/// reflection. Register it yourself when dynamic code is not available (Native AOT): in
+/// reflection unless the bundled source generator registered it for a type named in a <c>[JsonSerializable]</c> attribute.
+/// Where dynamic code is not available (Native AOT) and the generator does not see the type, register it yourself with
+/// <see cref="TypedResultJsonConverterFactory.Register{T, E1}"/>, in
 /// <c>[JsonSourceGenerationOptions(Converters = [typeof(TypedResultJsonConverter&lt;...&gt;)])]</c> or in
 /// <see cref="JsonSerializerOptions.Converters"/>. Each case is (de)serialized as its slot type, so a source-generated context
 /// must also list <typeparamref name="T"/> and every error type.
