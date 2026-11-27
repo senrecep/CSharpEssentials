@@ -20,6 +20,9 @@
     <ProjectReference Include="..\..\..\CSharpEssentials.Idempotency\CSharpEssentials.Idempotency.csproj" />
     <ProjectReference Include="..\..\..\CSharpEssentials.RequestResponseLogging\CSharpEssentials.RequestResponseLogging.csproj" />
     <ProjectReference Include="..\..\..\CSharpEssentials.Results\CSharpEssentials.Results.csproj" />
+    <ProjectReference Include="..\..\..\CSharpEssentials.Results.Generators\CSharpEssentials.Results.Generators.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\..\..\CSharpEssentials.Rules\CSharpEssentials.Rules.csproj" />
     <ProjectReference Include="..\..\..\CSharpEssentials.These\CSharpEssentials.These.csproj" />
     <ProjectReference Include="..\..\..\CSharpEssentials.Time\CSharpEssentials.Time.csproj" />

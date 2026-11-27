@@ -593,10 +593,9 @@ The case is `Success` or the name of the slot type; when two slots share a type 
 
 Error metadata comes back with `JsonElement` values, so an error with metadata keeps its code but is no longer equal to the original. Match on the code. The Mediator caching and idempotency behaviors replay a typed response through this envelope, so the replayed result holds the same slot and error type as the one the handler returned.
 
-The result types carry a converter factory that builds the converter through reflection. Under Native AOT that is not available: register the closed converter, and list the success type and every error type in the context:
+The result types carry a converter factory. It returns a converter registered for the closed result type, and otherwise builds one through reflection, which Native AOT does not allow. The package bundles a source generator that registers the converter of every typed result named in a `[JsonSerializable]` attribute, from a module initializer, so a source-generated context works under Native AOT with no extra step. List the result type, the success type and every error type in the context:
 
 ```csharp
-[JsonSourceGenerationOptions(Converters = [typeof(TypedResultJsonConverter<UserDto, NotFoundError, ConflictError>)])]
 [JsonSerializable(typeof(Result<UserDto, NotFoundError, ConflictError>))]
 [JsonSerializable(typeof(UserDto))]
 [JsonSerializable(typeof(NotFoundError))]
@@ -604,7 +603,9 @@ The result types carry a converter factory that builds the converter through ref
 internal sealed partial class AppJsonContext : JsonSerializerContext;
 ```
 
-Without the registration, a Native AOT app throws `NotSupportedException` with the name of the converter to add. A context that lacks a slot type throws `NotSupportedException` when that case is written or read.
+The generator also finds a typed result used as a generic argument or an array element of a listed type (`List<Result<UserDto, NotFoundError>>`). It does not look inside the properties of a listed type: for a typed result that is only reachable through a property, list it in its own `[JsonSerializable]` attribute or call `TypedResultJsonConverterFactory.Register<UserDto, NotFoundError>()` at startup. A converter added to `JsonSourceGenerationOptions.Converters` or `JsonSerializerOptions.Converters` still wins over the factory. The generator needs C# 9 and skips types that generated code in the assembly cannot name, such as private nested types.
+
+Under Native AOT, a typed result the factory has no registration for throws `NotSupportedException` with the type to list and the converter to add. A context that lacks a slot type throws `NotSupportedException` when that case is written or read.
 
 ### HTTP responses
 
