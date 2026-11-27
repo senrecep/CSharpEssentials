@@ -49,6 +49,7 @@ public class PackageDependencyAllowListTests
         ["CSharpEssentials.Mediator"] = ["CSharpEssentials.Errors", "CSharpEssentials.Idempotency", "CSharpEssentials.Json", "CSharpEssentials.Maybe", "CSharpEssentials.Results", "CSharpEssentials.Validation", "Mediator.Abstractions", "Microsoft.Extensions.Caching.Abstractions", "Microsoft.Extensions.DependencyInjection.Abstractions", "Microsoft.Extensions.Logging.Abstractions"],
         ["CSharpEssentials.RequestResponseLogging"] = ["Microsoft.IO.RecyclableMemoryStream"],
         ["CSharpEssentials.Resilience"] = ["CSharpEssentials.Errors", "CSharpEssentials.Results", "Polly.Core"],
+        ["CSharpEssentials.Results.CodeFixes"] = ["Microsoft.CodeAnalysis.Analyzers", "Microsoft.CodeAnalysis.CSharp", "Microsoft.CodeAnalysis.CSharp.Workspaces"],
         ["CSharpEssentials.Results.Generators"] = ["Microsoft.CodeAnalysis.Analyzers", "Microsoft.CodeAnalysis.CSharp"],
         ["CSharpEssentials.Results.Testing"] = ["CSharpEssentials.Maybe", "CSharpEssentials.Results", "System.Text.Json"],
         ["CSharpEssentials.Results"] = ["CSharpEssentials.Errors", "CSharpEssentials.Json"],

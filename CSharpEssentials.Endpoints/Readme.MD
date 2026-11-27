@@ -8,7 +8,7 @@ Source-generated endpoint organization for ASP.NET Core Minimal APIs. Route call
 dotnet add package CSharpEssentials.Endpoints
 ```
 
-Target frameworks: `net11.0`, `net10.0`, `net9.0`, `net8.0`. The source generator, analyzer and code fix are bundled in the package.
+Target frameworks: `net11.0`, `net10.0`, `net9.0`, `net8.0`. The source generator, analyzers and code fixes are bundled in the package.
 
 > Benchmarks against plain Minimal APIs, Carter and FastEndpoints are in [BENCHMARKS.md](./BENCHMARKS.md). On net10,
 > cold startup ties Carter at 10, 100 and 500 endpoints and ties plain Minimal APIs at 10; at 100 and 500 it takes
@@ -176,9 +176,11 @@ The bundled analyzer reports types the generator cannot map and explicit endpoin
 | CSE1010 | Warning | The same constant endpoint name is set at two call sites with `WithName(...)` or with `EndpointNameAttribute`, `EndpointNameMetadata` or `RouteNameMetadata` in `WithMetadata(...)`. Duplicate names produce duplicate operationIds and make link generation by name ambiguous. Endpoint names and route names are compared separately, so `WithMetadata(new EndpointNameMetadata("X"))` and `WithMetadata(new RouteNameMetadata("X"))` on one endpoint are not reported. Reported on each call site. |
 | CSE1011 | Info | An explicit endpoint name outside an `IEndpoint` or `IEndpointGroup` type is not a compile-time constant, so the generated registry cannot reserve it and `OperationNaming.TypeName` can generate the same name. Use a constant. Names set inside endpoint and group types are seen at runtime and are not reported. |
 | CSE1012 | Warning | A non-partial endpoint class inherits `Map` from a base class and does not declare it, so the generator leaves it out of the registry. Make the class `partial`, or declare `Map` on it (see [Upgrading to 8.0](#upgrading-to-80)). |
-| CSE1013 | Warning | A `Map*` route handler, lambda or method group, returns `Result<T, E1..E3>` from `CSharpEssentials.Results`, or a `Task` or `ValueTask` of it. The result would be written as a 200 response with the error in the body, and the OpenAPI document would list only that 200. Return `.ToHttpResult()`, `.ToOk()`, `.ToCreated(...)` or `.ToNoContent()` from `CSharpEssentials.AspNetCore` instead. Reported on any `Map*` call, inside an endpoint type or not. |
+| CSE1013 | Warning | A `Map*` route handler, lambda or method group, returns `Result<T, E1..E3>` from `CSharpEssentials.Results`, or a `Task` or `ValueTask` of it. The result would be written as a 200 response with the error in the body, and the OpenAPI document would list only that 200. Return `.ToHttpResult()`, `.ToOk()`, `.ToCreated(...)` or `.ToNoContent()` from `CSharpEssentials.AspNetCore` instead. Reported on any `Map*` call, inside an endpoint type or not. Code fix: appends `.ToHttpResult()` to what a lambda handler returns. |
 
 The bundled code fix for CSE1004 ("Remove instance state from '{Type}'") deletes the instance fields, auto-properties and parameterized constructors of the endpoint. It is offered only when nothing else in the solution uses them, and not for records.
+
+The code fix for CSE1013 ("Convert with ToHttpResult()") appends `.ToHttpResult()` to what a lambda handler returns, to every `return` of a block body, and wraps an `await` in parentheses (`(await GetAsync(id)).ToHttpResult()`). It adds `using CSharpEssentials.AspNetCore;` when the extension is not in scope. It is offered only when the project references `CSharpEssentials.AspNetCore`. It is not offered for a method group, because wrapping it in a lambda would drop the parameter names and attributes that minimal API binding reads, or for a lambda with an explicit return type. Use `.ToOk()`, `.ToCreated(...)` or `.ToNoContent()` by hand when the success should map to another status code.
 
 ## Migrating from Carter
 

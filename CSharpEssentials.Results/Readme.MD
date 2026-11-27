@@ -634,6 +634,16 @@ The package ships analyzers for the typed results. They load in any SDK whose co
 | CSE5005 | A type whose `[ErrorKind]` names another kind than the nearest base that declares one, such as `[ErrorKind(ErrorType.Conflict)]` on a record derived from `NotFoundError`, or than its own `Type` property when that returns a constant (`public override ErrorType Type => ErrorType.NotFound;`). A `Type` declared on a base without `[ErrorKind]` is not compared. |
 | CSE5006 | `Ensure<F>`, `FailIf<F>`, `BindWiden`, `TryCatch`, a query `SelectMany` or their async forms returning a result whose added slot repeats, converts to or accepts a slot it already had: a derived error passed to `Ensure`, or `BindWiden` with an inner result whose errors the outer result already has. Slots the source result already had are reported by CSE5003, not here. The fixes are in [Combinators](#combinators). |
 
+The package also ships code fixes, each with Fix All support. A fix either keeps what the code does at runtime or leaves a compile error to resolve, such as a result type with fewer slots where the old one was spelled out; it never changes behavior silently.
+
+| ID | Code fix |
+|---|---|
+| CSE5002 | Removes every error slot that repeats an earlier one: `Result<Dto, NotFoundError, NotFoundError>` becomes `Result<Dto, NotFoundError>`. A `Match` or `Switch` with a handler per slot then has one handler too many and fails to compile, so nothing changes silently. |
+| CSE5005 | Changes the argument of `[ErrorKind]` to the kind the errors already carry: the kind of the base, or the constant the type's own `Type` property returns. Offered only when the attribute is on the type itself and names a member of `ErrorType`, and not for the base kind when the type declares its own `Type` property. |
+| CSE5006 | `Ensure`, `FailIf` and their async forms: casts the error to the one slot it converts to (`(ConflictError)new Locked(1)`) and drops explicit type arguments, so the overload that keeps the error set is picked. `BindWiden` and `BindWidenAsync`: become `Bind` and `BindAsync`, so the inner result widens into the slots the result already has. Not offered when the error only accepts a slot (a cast down could throw), when the call does not then bind to an overload that keeps the error set, such as a method group whose result has other slots, or for `TryCatch` (the exception type to catch is a design choice) and a query `SelectMany` (the query has to be rewritten). |
+
+CSE5001 has no code fix: there is no value or error to put in place of `default`, and making a member `required` would change the API of its type. CSE5003 and CSE5004 have none either: moving or dropping a slot changes which case an error lands in, so the fix is picking error types that do not convert to each other.
+
 ## Upgrading to 8.0
 
 ### Deserializing a failure without errors
