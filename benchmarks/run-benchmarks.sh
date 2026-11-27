@@ -83,7 +83,7 @@ case "$SUITE" in
         PROJECT="$SCRIPT_DIR/CSharpEssentials.Results.Benchmarks/CSharpEssentials.Results.Benchmarks.csproj"
         RESULTS_DIR="$SCRIPT_DIR/results/results-pattern"
         ALL_FRAMEWORKS=("net8.0" "net9.0" "net10.0" "net11.0")
-        QUICK_PATTERNS=("*MapBenchmarks*" "*BindBenchmarks*" "*TapBenchmarks*" "*MatchBenchmarks*" "*EnsureBenchmarks*" "*ThenBenchmarks*" "*TraverseBenchmarks*" "*RenamedMemberBenchmarks*" "*.TypedBindBenchmarks.*" "*.TypedMatchBenchmarks.*" "*.TypedAsyncBenchmarks.*")
+        QUICK_PATTERNS=("*MapBenchmarks*" "*BindBenchmarks*" "*TapBenchmarks*" "*MatchBenchmarks*" "*EnsureBenchmarks*" "*ThenBenchmarks*" "*TraverseBenchmarks*" "*RenamedMemberBenchmarks*" "*.TypedBindBenchmarks.*" "*.TypedErrorChainBenchmarks.*" "*.TypedMatchBenchmarks.*" "*.TypedAsyncBenchmarks.*")
         ;;
     idempotency)
         PROJECT="$SCRIPT_DIR/CSharpEssentials.Idempotency.Benchmarks/CSharpEssentials.Idempotency.Benchmarks.csproj"

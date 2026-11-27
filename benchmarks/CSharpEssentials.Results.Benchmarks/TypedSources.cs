@@ -43,7 +43,15 @@ internal static class TypedSources
 
     public static Task<int> TaskValue(int value, bool yield) => yield ? YieldValue(value) : Task.FromResult(value);
 
+    public static Task<TOut> Completed<TOut>(TOut value, bool yield) => yield ? YieldOf(value) : Task.FromResult(value);
+
     private static async Task<int> YieldValue(int value)
+    {
+        await Task.Yield();
+        return value;
+    }
+
+    private static async Task<TOut> YieldOf<TOut>(TOut value)
     {
         await Task.Yield();
         return value;
