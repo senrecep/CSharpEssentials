@@ -10,12 +10,12 @@ AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
 ```
 | Method            | Succeed | Mean     | Error     | StdDev    | Ratio | Allocated | Alloc Ratio |
 |------------------ |-------- |---------:|----------:|----------:|------:|----------:|------------:|
-| **Result**            | **False**   | **2.850 ns** | **0.0032 ns** | **0.0029 ns** |  **1.00** |         **-** |          **NA** |
-| Typed_OneError    | False   | 2.643 ns | 0.0065 ns | 0.0061 ns |  0.93 |         - |          NA |
-| Typed_TwoErrors   | False   | 3.051 ns | 0.0087 ns | 0.0081 ns |  1.07 |         - |          NA |
-| Typed_ThreeErrors | False   | 2.905 ns | 0.0153 ns | 0.0143 ns |  1.02 |         - |          NA |
+| **Result**            | **False**   | **3.008 ns** | **0.0057 ns** | **0.0053 ns** |  **1.00** |         **-** |          **NA** |
+| Typed_OneError    | False   | 2.650 ns | 0.0075 ns | 0.0067 ns |  0.88 |         - |          NA |
+| Typed_TwoErrors   | False   | 2.984 ns | 0.0083 ns | 0.0074 ns |  0.99 |         - |          NA |
+| Typed_ThreeErrors | False   | 2.892 ns | 0.0124 ns | 0.0103 ns |  0.96 |         - |          NA |
 |                   |         |          |           |           |       |           |             |
-| **Result**            | **True**    | **3.394 ns** | **0.0020 ns** | **0.0017 ns** |  **1.00** |         **-** |          **NA** |
-| Typed_OneError    | True    | 4.017 ns | 0.0061 ns | 0.0047 ns |  1.18 |         - |          NA |
-| Typed_TwoErrors   | True    | 4.136 ns | 0.0072 ns | 0.0064 ns |  1.22 |         - |          NA |
-| Typed_ThreeErrors | True    | 4.023 ns | 0.0094 ns | 0.0088 ns |  1.19 |         - |          NA |
+| **Result**            | **True**    | **2.578 ns** | **0.0024 ns** | **0.0020 ns** |  **1.00** |         **-** |          **NA** |
+| Typed_OneError    | True    | 4.174 ns | 0.0106 ns | 0.0099 ns |  1.62 |         - |          NA |
+| Typed_TwoErrors   | True    | 3.977 ns | 0.0024 ns | 0.0020 ns |  1.54 |         - |          NA |
+| Typed_ThreeErrors | True    | 4.306 ns | 0.0079 ns | 0.0074 ns |  1.67 |         - |          NA |

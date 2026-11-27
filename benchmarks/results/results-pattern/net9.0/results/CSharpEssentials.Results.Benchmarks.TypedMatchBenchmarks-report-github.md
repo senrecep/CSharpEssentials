@@ -8,18 +8,18 @@ AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
 
 
 ```
-| Method                        | Succeed | Mean      | Error     | StdDev    | Ratio | Allocated | Alloc Ratio |
-|------------------------------ |-------- |----------:|----------:|----------:|------:|----------:|------------:|
-| **Result**                        | **False**   | **1.3206 ns** | **0.0017 ns** | **0.0013 ns** |  **1.00** |         **-** |          **NA** |
-| Typed_OneError                | False   | 1.4495 ns | 0.0047 ns | 0.0044 ns |  1.10 |         - |          NA |
-| Typed_TwoErrors               | False   | 3.0765 ns | 0.0061 ns | 0.0057 ns |  2.33 |         - |          NA |
-| Typed_ThreeErrors             | False   | 4.2107 ns | 0.0038 ns | 0.0032 ns |  3.19 |         - |          NA |
-| Typed_ThreeErrors_Switch      | False   | 1.3362 ns | 0.0014 ns | 0.0011 ns |  1.01 |         - |          NA |
-| Typed_ThreeErrors_TryGetValue | False   | 0.7403 ns | 0.0023 ns | 0.0020 ns |  0.56 |         - |          NA |
-|                               |         |           |           |           |       |           |             |
-| **Result**                        | **True**    | **1.2264 ns** | **0.0074 ns** | **0.0066 ns** |  **1.00** |         **-** |          **NA** |
-| Typed_OneError                | True    | 1.2201 ns | 0.0028 ns | 0.0026 ns |  0.99 |         - |          NA |
-| Typed_TwoErrors               | True    | 2.6330 ns | 0.0038 ns | 0.0035 ns |  2.15 |         - |          NA |
-| Typed_ThreeErrors             | True    | 3.3620 ns | 0.0051 ns | 0.0048 ns |  2.74 |         - |          NA |
-| Typed_ThreeErrors_Switch      | True    | 0.8142 ns | 0.0042 ns | 0.0039 ns |  0.66 |         - |          NA |
-| Typed_ThreeErrors_TryGetValue | True    | 0.4681 ns | 0.0006 ns | 0.0005 ns |  0.38 |         - |          NA |
+| Method                        | Succeed | Mean      | Error     | StdDev    | Ratio | RatioSD | Allocated | Alloc Ratio |
+|------------------------------ |-------- |----------:|----------:|----------:|------:|--------:|----------:|------------:|
+| **Result**                        | **False**   | **1.3190 ns** | **0.0020 ns** | **0.0018 ns** |  **1.00** |    **0.00** |         **-** |          **NA** |
+| Typed_OneError                | False   | 1.4510 ns | 0.0042 ns | 0.0039 ns |  1.10 |    0.00 |         - |          NA |
+| Typed_TwoErrors               | False   | 1.6355 ns | 0.0021 ns | 0.0018 ns |  1.24 |    0.00 |         - |          NA |
+| Typed_ThreeErrors             | False   | 2.2001 ns | 0.0021 ns | 0.0020 ns |  1.67 |    0.00 |         - |          NA |
+| Typed_ThreeErrors_Switch      | False   | 1.3388 ns | 0.0048 ns | 0.0043 ns |  1.02 |    0.00 |         - |          NA |
+| Typed_ThreeErrors_TryGetValue | False   | 0.7445 ns | 0.0043 ns | 0.0040 ns |  0.56 |    0.00 |         - |          NA |
+|                               |         |           |           |           |       |         |           |             |
+| **Result**                        | **True**    | **1.2372 ns** | **0.0107 ns** | **0.0100 ns** |  **1.00** |    **0.01** |         **-** |          **NA** |
+| Typed_OneError                | True    | 1.2279 ns | 0.0093 ns | 0.0087 ns |  0.99 |    0.01 |         - |          NA |
+| Typed_TwoErrors               | True    | 1.5890 ns | 0.0046 ns | 0.0043 ns |  1.28 |    0.01 |         - |          NA |
+| Typed_ThreeErrors             | True    | 2.0583 ns | 0.0114 ns | 0.0101 ns |  1.66 |    0.02 |         - |          NA |
+| Typed_ThreeErrors_Switch      | True    | 0.8104 ns | 0.0045 ns | 0.0042 ns |  0.66 |    0.01 |         - |          NA |
+| Typed_ThreeErrors_TryGetValue | True    | 0.4696 ns | 0.0011 ns | 0.0010 ns |  0.38 |    0.00 |         - |          NA |
