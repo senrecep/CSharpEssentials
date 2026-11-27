@@ -29,7 +29,7 @@ var app = builder.Build();
 app.UseVersionableSwagger();
 ```
 
-The first argument is the id of the security scheme in `components.securitySchemes`; the document requires it for every operation. `AddSwagger` includes the XML documentation file of every assembly that declares an endpoint (controllers and Minimal API handlers), plus the optional `assembly` argument. Missing files are skipped.
+The first argument is the id of the security scheme in `components.securitySchemes`; the document requires it for every operation. To require it only where the endpoint needs authorization, call `AddSwagger<DefaultConfigureSwaggerOptions>()` without a scheme and add `AddBearerSecurityScheme()` (see [Bearer security](#bearer-security)). `AddSwagger` includes the XML documentation file of every assembly that declares an endpoint (controllers and Minimal API handlers), plus the optional `assembly` argument. Missing files are skipped.
 
 `UseVersionableSwagger(options, uiOptions)` serves the documents at `/swagger/{documentName}/swagger.json` and the Swagger UI with one entry per API version (`v1` only when `Asp.Versioning` is not registered), titled `{Swagger:Title} {GROUP}`. The optional callbacks configure `SwaggerOptions` and `SwaggerUIOptions` further.
 
@@ -96,6 +96,36 @@ Each such operation gets:
 - `400` (`Idempotency.KeyMissing` when the key is required, `KeyInvalid`, and `ScopeRequired` when the endpoint rejects unscoped keys), `409` (`Idempotency.InFlight`, with a `Retry-After` header) and `422` (`Idempotency.KeyReused`) as `application/problem+json` with a `code` enum.
 
 An endpoint that already documents a 400, 409 or 422 keeps its description (ours is appended), headers and schema (the content becomes a `oneOf` of both). Header names are read from the options when the document is generated. `CSharpEssentials.AspNetCore.OpenApi` produces the same description.
+
+## Bearer security
+
+`SwaggerGenOptions.AddBearerSecurityScheme()` (opt-in) adds an HTTP `bearer` scheme to `components.securitySchemes` and a requirement for it to the operations that need authorization:
+
+```csharp
+builder.Services.AddAuthorization();
+builder.Services.AddSwagger<DefaultConfigureSwaggerOptions>();   // no scheme, no document level requirement
+builder.Services.Configure<SwaggerGenOptions>(o => o.AddBearerSecurityScheme());
+// or, without AddSwagger:
+builder.Services.AddSwaggerGen(o => o.AddBearerSecurityScheme());
+
+app.MapGet("/orders", GetOrders).RequireAuthorization();          // security: [{ "Bearer": [] }]
+app.MapGet("/health", GetHealth);                                 // no security
+app.MapGet("/status", GetStatus).RequireAuthorization().AllowAnonymous(); // no security
+```
+
+```json
+"securitySchemes": {
+  "Bearer": { "type": "http", "scheme": "bearer", "bearerFormat": "JWT" }
+}
+```
+
+- An operation gets the requirement when its endpoint metadata has `IAuthorizeData` (`[Authorize]` on the action, controller or a base class, any `.RequireAuthorization(...)` overload on the endpoint or its group, including the policy-object and policy-builder ones) and no `IAllowAnonymous` (`[AllowAnonymous]`, `.AllowAnonymous()`). Other operations get none.
+- The requirement is added whatever `IAuthorizeData.AuthenticationSchemes` names. An endpoint with `[Authorize(AuthenticationSchemes = "ApiKey")]` or a cookie scheme is still described as needing the bearer token, so call this only when bearer is the scheme your authorized endpoints accept.
+- The `FallbackPolicy` adds no endpoint metadata, so endpoints it alone protects are not described as secured. Add `[Authorize]` or `.RequireAuthorization()` to them.
+- `schemeName` (default `Bearer`, `SecuritySchemes.JwtBearerSchemeName`), `bearerFormat` (default `JWT`) and `description` (default none) are parameters: `o.AddBearerSecurityScheme("Jwt", "JWT", "Access token from the identity server.")`. A scheme already registered under the same name, also through `AddSecurityDefinition`, is replaced; an operation that already requires the scheme is not given a second requirement.
+- Do not combine it with `AddSwagger<T>(securitySchemeName, securityScheme)`: that overload adds a document level requirement, which every operation inherits, anonymous ones included.
+
+`CSharpEssentials.AspNetCore.OpenApi` produces the same description with `OpenApiOptions.AddBearerSecurityScheme()`; both are compared with the same golden files.
 
 ## Enum schemas
 
