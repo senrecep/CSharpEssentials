@@ -12,7 +12,6 @@ public readonly partial struct Result<T, E1, E2>
     /// <param name="compensate">Called with the error of type <typeparamref name="E1"/>. Give its parameter type to choose the slot.</param>
     /// <returns>The result of <paramref name="compensate"/>, or the same case.</returns>
     /// <exception cref="InvalidOperationException">The result is <see langword="default"/>.</exception>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Result<T, E2> Compensate(Func<E1, Result<T, E2>> compensate)
     {
         return Tag switch
@@ -29,7 +28,6 @@ public readonly partial struct Result<T, E1, E2>
     /// <param name="compensate">Called with the error of type <typeparamref name="E2"/>. Give its parameter type to choose the slot.</param>
     /// <returns>The result of <paramref name="compensate"/>, or the same case.</returns>
     /// <exception cref="InvalidOperationException">The result is <see langword="default"/>.</exception>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Result<T, E1> Compensate(Func<E2, Result<T, E1>> compensate)
     {
         return Tag switch

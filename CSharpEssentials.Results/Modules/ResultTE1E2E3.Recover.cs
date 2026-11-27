@@ -1,6 +1,4 @@
 // Produced by scripts/generate-typed-results.py; do not edit.
-using System.Runtime.CompilerServices;
-
 namespace CSharpEssentials.ResultPattern;
 
 public readonly partial struct Result<T, E1, E2, E3>
@@ -10,7 +8,6 @@ public readonly partial struct Result<T, E1, E2, E3>
     /// <returns>A result without the <typeparamref name="E1"/> slot.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="recover"/> returns <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException">The result is <see langword="default"/>.</exception>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Result<T, E2, E3> Recover(Func<E1, T> recover)
     {
         return Tag switch
@@ -28,7 +25,6 @@ public readonly partial struct Result<T, E1, E2, E3>
     /// <returns>A result without the <typeparamref name="E2"/> slot.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="recover"/> returns <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException">The result is <see langword="default"/>.</exception>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Result<T, E1, E3> Recover(Func<E2, T> recover)
     {
         return Tag switch
@@ -46,7 +42,6 @@ public readonly partial struct Result<T, E1, E2, E3>
     /// <returns>A result without the <typeparamref name="E3"/> slot.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="recover"/> returns <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException">The result is <see langword="default"/>.</exception>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Result<T, E1, E2> Recover(Func<E3, T> recover)
     {
         return Tag switch
