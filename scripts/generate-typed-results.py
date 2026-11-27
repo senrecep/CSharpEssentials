@@ -35,6 +35,9 @@ SUCCESS = "TypedResultLogic.SuccessTag"
 DEFAULT_ARM = "_ => throw TypedResultLogic.DefaultInitialized(),"
 DEFAULT_DOC = '<exception cref="InvalidOperationException">The result is <see langword="default"/>.</exception>'
 ORDINALS = {1: "first", 2: "second", 3: "third"}
+# MapError, Recover and Compensate on two and three slots switch over three or more dense tags, so Roslyn emits an IL switch
+# and the JIT inliner rejects the method on net8 and net10 (JitDisasm). The hand-written Match and Switch carry the same attribute.
+INLINE = "[MethodImpl(MethodImplOptions.AggressiveInlining)]"
 
 
 def slots(n: int, prefix: str = "E") -> list[str]:
@@ -95,7 +98,8 @@ class Op:
     """
 
     def __init__(self, family: str, name: str, generics: list[str], out: str, param: str, arg: str, ret: str | None, extras: list[tuple[str, str]], doc: list[str], body, checked_tag: str | None = None,
-                 leading: list[tuple[str, str]] | None = None, constraints: list[str] | None = None, cells: list[tuple[str, str, bool, bool]] | None = None, lift: int = 0):
+                 leading: list[tuple[str, str]] | None = None, constraints: list[str] | None = None, cells: list[tuple[str, str, bool, bool]] | None = None, lift: int = 0,
+                 inline: bool = False):
         self.family, self.name, self.generics, self.out = family, name, generics, out
         # ret None: the handler returns nothing (Action, Func<.., Task>, Func<.., ValueTask>).
         self.param, self.arg, self.ret, self.extras, self.doc, self.body = param, arg, ret, extras, doc, body
@@ -105,6 +109,7 @@ class Op:
         self.constraints = constraints or generics
         self.cells = cells or CELLS[family]
         self.lift = lift
+        self.inline = inline
 
     def type_args(self) -> str:
         return f"<{', '.join(self.generics)}>" if self.generics else ""
@@ -126,6 +131,7 @@ class Op:
             f"public {self.out} {self.name}{self.type_args()}({self.parameters('sync')})",
             self.constraints,
             self.body(lambda a: f"{self.param}({a})", ""),
+            (INLINE,) if self.inline else (),
         )
 
 
@@ -276,6 +282,7 @@ def map_error(n: int) -> list[Op]:
             ],
             body,
             str(tag(i)),
+            inline=n > 1,
         ))
     return ops
 
@@ -301,7 +308,7 @@ def recover(n: int) -> list[str]:
             signature = f"public {result('T', without(errors, i))} Recover(Func<{e}, T> recover)"
             arms = [f"{SUCCESS} => new(Tag, RawValue, null),", *removing_arms(n, i, f"new({SUCCESS}, TypedResultLogic.NotNull(recover(({e})RawError!), nameof(recover)), null)")]
         doc += ['<exception cref="ArgumentNullException"><paramref name="recover"/> returns <see langword="null"/>.</exception>', DEFAULT_DOC]
-        members.append(method(doc, signature, [], switch([*arms, DEFAULT_ARM])))
+        members.append(method(doc, signature, [], switch([*arms, DEFAULT_ARM]), (INLINE,) if n > 1 else ()))
     return join(members)
 
 
@@ -337,6 +344,7 @@ def compensate(n: int) -> list[Op]:
                 DEFAULT_DOC,
             ],
             body,
+            inline=n > 1,
         ))
     return ops
 
@@ -926,7 +934,7 @@ def library_file(n: int, family: str) -> str | None:
     text = "\n".join([*struct, *extensions])
     usings = [u for u, used in (
         ("using System.Diagnostics.CodeAnalysis;", "[SuppressMessage(" in text),
-        ("using System.Runtime.CompilerServices;", "[OverloadResolutionPriority(" in text),
+        ("using System.Runtime.CompilerServices;", "[OverloadResolutionPriority(" in text or INLINE in text),
         ("using CSharpEssentials.Core;", ".WithCancellation(" in text),
         ("using CSharpEssentials.Errors;", family in ERRORS_USING),
     ) if used]
