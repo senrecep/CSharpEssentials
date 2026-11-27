@@ -36,6 +36,7 @@
   <Project Path="CSharpEssentials.RequestResponseLogging/CSharpEssentials.RequestResponseLogging.csproj" />
   <Project Path="CSharpEssentials.Resilience/CSharpEssentials.Resilience.csproj" />
   <Project Path="CSharpEssentials.Results/CSharpEssentials.Results.csproj" />
+  <Project Path="CSharpEssentials.Results.CodeFixes/CSharpEssentials.Results.CodeFixes.csproj" />
   <Project Path="CSharpEssentials.Results.Testing/CSharpEssentials.Results.Testing.csproj" />
   <Project Path="CSharpEssentials.Results.Generators/CSharpEssentials.Results.Generators.csproj" />
   <Project Path="CSharpEssentials.Rules/CSharpEssentials.Rules.csproj" />

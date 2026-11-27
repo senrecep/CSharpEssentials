@@ -13,7 +13,7 @@ Source-generated endpoint organization for Minimal APIs. Route calls (`MapGet`, 
 dotnet add package CSharpEssentials.Endpoints
 ```
 
-Target frameworks: `net11.0`, `net10.0`, `net9.0`, `net8.0`. The source generator, analyzer and code fix ship in the package.
+Target frameworks: `net11.0`, `net10.0`, `net9.0`, `net8.0`. The source generator, analyzers and code fixes ship in the package.
 
 ## Namespace
 
