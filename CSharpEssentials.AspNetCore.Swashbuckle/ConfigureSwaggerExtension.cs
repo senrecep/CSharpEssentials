@@ -24,7 +24,6 @@ public static class ConfigureSwaggerExtension
         ArgumentException.ThrowIfNullOrWhiteSpace(securitySchemeName);
         ArgumentNullException.ThrowIfNull(securityScheme);
 
-        services.AddEndpointsApiExplorer();
         services.AddSwaggerGen(options =>
         {
             options.AddSecurityDefinition(securitySchemeName, securityScheme);
@@ -32,6 +31,26 @@ public static class ConfigureSwaggerExtension
             {
                 { new OpenApiSecuritySchemeReference(securitySchemeName, document), [] }
             });
+        });
+        return services.AddSwagger<TConfigureSwaggerOptions>(assembly);
+    }
+
+    /// <summary>
+    /// Registers Swashbuckle with the CSharpEssentials conventions (versioned documents from
+    /// <typeparamref name="TConfigureSwaggerOptions"/>, namespace-qualified schema ids, enum and idempotency conventions,
+    /// optional route parameters and XML comments) and no security scheme. Describe authentication per operation with
+    /// <see cref="SwaggerBearerSecurityExtensions.AddBearerSecurityScheme"/>.
+    /// </summary>
+    /// <typeparam name="TConfigureSwaggerOptions">The options class that creates the Swagger documents.</typeparam>
+    /// <param name="services">The service collection.</param>
+    /// <param name="assembly">An extra assembly whose XML documentation file is included, or <see langword="null"/>.</param>
+    /// <returns><paramref name="services"/>.</returns>
+    public static IServiceCollection AddSwagger<TConfigureSwaggerOptions>(this IServiceCollection services, Assembly? assembly = null)
+        where TConfigureSwaggerOptions : ConfigureSwaggerOptions
+    {
+        services.AddEndpointsApiExplorer();
+        services.AddSwaggerGen(options =>
+        {
             var factory = new SwashbuckleSchemaIdFactory();
             options.CustomSchemaIds(factory.GetSchemaId);
         });

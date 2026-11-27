@@ -1,13 +1,7 @@
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using CSharpEssentials.Tests.Fixtures.OpenApiSample;
 using FluentAssertions;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OpenApi;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi;
 
@@ -19,8 +13,6 @@ namespace CSharpEssentials.AspNetCore.OpenApi.Tests;
 /// </summary>
 public sealed class BearerSecurityOpenApiTests
 {
-    private static readonly JsonSerializerOptions _indented = new() { WriteIndented = true };
-
     [Theory]
     [InlineData(OpenApiSpecVersion.OpenApi3_0, null)]
     [InlineData(OpenApiSpecVersion.OpenApi3_1, "openapi31")]
@@ -28,7 +20,7 @@ public sealed class BearerSecurityOpenApiTests
     {
         string json = await GetJsonAsync(version, static options => options.AddBearerSecurityScheme());
 
-        Golden.Verify(OpenApiGolden.PathOf("bearer-security", suffix), Extract(json));
+        Golden.Verify(OpenApiGolden.PathOf("bearer-security", suffix), BearerSecurityApi.Extract(json));
     }
 
     [Fact]
@@ -109,61 +101,7 @@ public sealed class BearerSecurityOpenApiTests
             version,
             [OptionalRouteParameterOpenApiHost.DocumentName],
             configure,
-            controllers: [typeof(BearerSecurityController), typeof(BearerSecurityAnonymousController)],
+            controllers: BearerSecurityApi.Controllers,
             configureServices: static services => services.AddAuthorization(),
-            configureApp: MapEndpoints))[OptionalRouteParameterOpenApiHost.DocumentName];
-
-    private static void MapEndpoints(WebApplication app)
-    {
-        app.MapGet("/bearer/secure", static () => "secure").RequireAuthorization();
-        app.MapGet("/bearer/anonymous", static () => "anonymous").RequireAuthorization().AllowAnonymous();
-        app.MapGet("/bearer/plain", static () => "plain");
-        app.MapGet("/bearer/policy", static () => "policy").RequireAuthorization(static policy => policy.RequireAuthenticatedUser());
-        app.MapGet("/bearer/policy-object", static () => "policy-object")
-            .RequireAuthorization(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
-        RouteGroupBuilder group = app.MapGroup("/bearer/group").RequireAuthorization();
-        group.MapGet("/secure", static () => "secure");
-        group.MapGet("/anonymous", static () => "anonymous").AllowAnonymous();
-    }
-
-    private static string Extract(string json)
-    {
-        JsonNode root = JsonNode.Parse(json)!;
-        var operations = new JsonObject();
-        foreach ((string path, JsonNode? item) in root["paths"]!.AsObject().OrderBy(static p => p.Key, StringComparer.Ordinal))
-        {
-            foreach ((string method, JsonNode? operation) in item!.AsObject())
-                operations[$"{method.ToUpperInvariant()} {path}"] = operation!["security"]?.DeepClone();
-        }
-
-        var extract = new JsonObject
-        {
-            ["securitySchemes"] = root["components"]?["securitySchemes"]?.DeepClone(),
-            ["operations"] = operations,
-        };
-        return extract.ToJsonString(_indented).Replace("\r\n", "\n", StringComparison.Ordinal);
-    }
-}
-
-[ApiController]
-[Authorize]
-[Route("bearer/controller")]
-internal sealed class BearerSecurityController : ControllerBase
-{
-    [HttpGet("secure")]
-    public string Secure() => "secure";
-
-    [HttpGet("anonymous")]
-    [AllowAnonymous]
-    public string Anonymous() => "anonymous";
-}
-
-[ApiController]
-[AllowAnonymous]
-[Route("bearer/anonymous-controller")]
-internal sealed class BearerSecurityAnonymousController : ControllerBase
-{
-    [HttpGet("authorized")]
-    [Authorize]
-    public string Authorized() => "authorized";
+            configureApp: static app => BearerSecurityApi.MapEndpoints(app)))[OptionalRouteParameterOpenApiHost.DocumentName];
 }

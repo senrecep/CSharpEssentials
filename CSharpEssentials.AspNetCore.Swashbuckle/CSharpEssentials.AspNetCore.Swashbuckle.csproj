@@ -43,6 +43,7 @@
   <ItemGroup>
     <Compile Include="..\shared\OpenApiEnums\*.cs" Link="OpenApiEnums\%(Filename)%(Extension)" />
     <Compile Include="..\shared\IdempotencyOpenApi\*.cs" Link="IdempotencyOpenApi\%(Filename)%(Extension)" />
+    <Compile Include="..\shared\BearerSecurityOpenApi\*.cs" Link="BearerSecurityOpenApi\%(Filename)%(Extension)" />
     <Compile Include="..\shared\OptionalRouteParameters\*.cs" Link="OptionalRouteParameters\%(Filename)%(Extension)" />
   </ItemGroup>
 

@@ -128,7 +128,7 @@ app.MapGet("/status", GetStatus).RequireAuthorization().AllowAnonymous(); // no 
 - The `FallbackPolicy` adds no endpoint metadata, so endpoints it alone protects are not described as secured. Add `[Authorize]` or `.RequireAuthorization()` to them.
 - `schemeName` (default `Bearer`), `bearerFormat` (default `JWT`) and `description` (default none) are parameters: `o.AddBearerSecurityScheme("Jwt", "JWT", "Access token from the identity server.")`. A scheme already registered under the same name is replaced; an operation that already requires the scheme is not given a second requirement.
 
-`CSharpEssentials.AspNetCore.Swashbuckle` has no per-operation equivalent: its `AddSwagger` registers the scheme you pass and requires it on every operation.
+`CSharpEssentials.AspNetCore.Swashbuckle` produces the same description with `SwaggerGenOptions.AddBearerSecurityScheme()`, with the same parameters.
 
 ## Scalar
 
