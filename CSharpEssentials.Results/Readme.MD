@@ -591,10 +591,9 @@ The case is `Success` or the name of the slot type; when two slots share a type 
 
 Error metadata comes back with `JsonElement` values, so an error with metadata keeps its code but is no longer equal to the original. Match on the code. The Mediator caching and idempotency behaviors replay a typed response through this envelope, so the replayed result holds the same slot and error type as the one the handler returned.
 
-The result types carry a converter factory that builds the converter through reflection. Under Native AOT that is not available: register the closed converter, and list the success type and every error type in the context:
+The result types carry a converter factory. It returns a converter registered for the closed result type, and otherwise builds one through reflection, which Native AOT does not allow. The package bundles a source generator that registers the converter of every typed result named in a `[JsonSerializable]` attribute, from a module initializer, so a source-generated context works under Native AOT with no extra step. List the result type, the success type and every error type in the context:
 
 ```csharp
-[JsonSourceGenerationOptions(Converters = [typeof(TypedResultJsonConverter<UserDto, NotFoundError, ConflictError>)])]
 [JsonSerializable(typeof(Result<UserDto, NotFoundError, ConflictError>))]
 [JsonSerializable(typeof(UserDto))]
 [JsonSerializable(typeof(NotFoundError))]
@@ -602,7 +601,9 @@ The result types carry a converter factory that builds the converter through ref
 internal sealed partial class AppJsonContext : JsonSerializerContext;
 ```
 
-Without the registration, a Native AOT app throws `NotSupportedException` with the name of the converter to add. A context that lacks a slot type throws `NotSupportedException` when that case is written or read.
+The generator also finds a typed result used as a generic argument or an array element of a listed type (`List<Result<UserDto, NotFoundError>>`). It does not look inside the properties of a listed type: for a typed result that is only reachable through a property, list it in its own `[JsonSerializable]` attribute or call `TypedResultJsonConverterFactory.Register<UserDto, NotFoundError>()` at startup. A converter added to `JsonSourceGenerationOptions.Converters` or `JsonSerializerOptions.Converters` still wins over the factory. The generator needs C# 9 and skips types that generated code in the assembly cannot name, such as private nested types.
+
+Under Native AOT, a typed result the factory has no registration for throws `NotSupportedException` with the type to list and the converter to add. A context that lacks a slot type throws `NotSupportedException` when that case is written or read.
 
 ### HTTP responses
 
@@ -633,6 +634,16 @@ The package ships analyzers for the typed results. They load in any SDK whose co
 | CSE5004 | A success type that converts to an error slot or from one, such as `Result<object, NotFoundError>`. |
 | CSE5005 | A type whose `[ErrorKind]` names another kind than the nearest base that declares one, such as `[ErrorKind(ErrorType.Conflict)]` on a record derived from `NotFoundError`, or than its own `Type` property when that returns a constant (`public override ErrorType Type => ErrorType.NotFound;`). A `Type` declared on a base without `[ErrorKind]` is not compared. |
 | CSE5006 | `Ensure<F>`, `FailIf<F>`, `BindWiden`, `TryCatch`, a query `SelectMany` or their async forms returning a result whose added slot repeats, converts to or accepts a slot it already had: a derived error passed to `Ensure`, or `BindWiden` with an inner result whose errors the outer result already has. Slots the source result already had are reported by CSE5003, not here. The fixes are in [Combinators](#combinators). |
+
+The package also ships code fixes, each with Fix All support. A fix either keeps what the code does at runtime or leaves a compile error to resolve, such as a result type with fewer slots where the old one was spelled out; it never changes behavior silently.
+
+| ID | Code fix |
+|---|---|
+| CSE5002 | Removes every error slot that repeats an earlier one: `Result<Dto, NotFoundError, NotFoundError>` becomes `Result<Dto, NotFoundError>`. A `Match` or `Switch` with a handler per slot then has one handler too many and fails to compile, so nothing changes silently. |
+| CSE5005 | Changes the argument of `[ErrorKind]` to the kind the errors already carry: the kind of the base, or the constant the type's own `Type` property returns. Offered only when the attribute is on the type itself and names a member of `ErrorType`, and not for the base kind when the type declares its own `Type` property. |
+| CSE5006 | `Ensure`, `FailIf` and their async forms: casts the error to the one slot it converts to (`(ConflictError)new Locked(1)`) and drops explicit type arguments, so the overload that keeps the error set is picked. `BindWiden` and `BindWidenAsync`: become `Bind` and `BindAsync`, so the inner result widens into the slots the result already has. Not offered when the error only accepts a slot (a cast down could throw), when the call does not then bind to an overload that keeps the error set, such as a method group whose result has other slots, or for `TryCatch` (the exception type to catch is a design choice) and a query `SelectMany` (the query has to be rewritten). |
+
+CSE5001 has no code fix: there is no value or error to put in place of `default`, and making a member `required` would change the API of its type. CSE5003 and CSE5004 have none either: moving or dropping a slot changes which case an error lands in, so the fix is picking error types that do not convert to each other.
 
 ## Upgrading to 8.0
 

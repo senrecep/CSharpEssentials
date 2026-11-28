@@ -127,6 +127,7 @@
     <ProjectReference Include="..\CSharpEssentials.Results.Generators\CSharpEssentials.Results.Generators.csproj"
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\CSharpEssentials.Results.CodeFixes\CSharpEssentials.Results.CodeFixes.csproj" />
     <ProjectReference Include="..\tests\CSharpEssentials.Tests.Fixtures.JsonCore\CSharpEssentials.Tests.Fixtures.JsonCore.csproj" />
     <ProjectReference Include="..\tests\CSharpEssentials.Tests.Fixtures.JsonEvents\CSharpEssentials.Tests.Fixtures.JsonEvents.csproj" />
     <ProjectReference Include="..\tests\CSharpEssentials.Tests.Fixtures.OpenApiSample\CSharpEssentials.Tests.Fixtures.OpenApiSample.csproj" />

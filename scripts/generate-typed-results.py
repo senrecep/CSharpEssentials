@@ -1562,6 +1562,7 @@ def async_ops(n: int, family: str) -> list[AsyncOp]:
             ops.append(AsyncOp(family, "MapError", f"MapError{e}", src, e, "ValidationError", out, "", "e", [
                 AsyncCase(f"MapTheError_When_{case_name(e)}", FIXTURE[e], FIXTURE["ValidationError"], FIXTURE["ValidationError"], 1, "ValidationError"),
                 AsyncCase("KeepTheValue_When_TheResultHoldsAValue", OK, FIXTURE["ValidationError"], OK, 0),
+                *[AsyncCase(f"PassTheErrorThrough_When_{case_name(x)}", FIXTURE[x], FIXTURE["ValidationError"], FIXTURE[x], 0, x) for x in errors if x != e],
             ]))
     elif family == "Compensate":
         for e in errors:
@@ -1569,6 +1570,7 @@ def async_ops(n: int, family: str) -> list[AsyncOp]:
             ops.append(AsyncOp(family, "Compensate", f"Compensate{e}", src, e, out, out, "", "e", [
                 AsyncCase(f"ReturnTheCompensatingValue_When_{case_name(e)}", FIXTURE[e], RECOVERED, RECOVERED, 1),
                 AsyncCase("KeepTheValue_When_TheResultHoldsAValue", OK, RECOVERED, OK, 0),
+                *[AsyncCase(f"MoveTheErrorToItsNewSlot_When_{case_name(x)}", FIXTURE[x], RECOVERED, FIXTURE[x], 0, x) for x in errors if x != e],
             ]))
     elif family == "Tap":
         ops.append(AsyncOp(family, "Tap", "Tap", src, "int", None, src, "", "v", [

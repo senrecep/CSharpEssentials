@@ -470,6 +470,8 @@ A `byte[]` row version must be encoded (`Convert.ToBase64String(rowVersion)`); i
 
 MVC: `[ConditionalGet]` on a `[HttpGet, HttpHead]` action or controller, `[IfMatch(Required = true)]` on a write action, or `MapControllers().WithConditionalGet()` / `.WithIfMatch()` for all actions (action > controller > endpoint).
 
+OpenAPI: a `POST`, `PUT`, `PATCH` or `DELETE` endpoint with `WithIfMatch()` or an action with `[IfMatch]` declares `400` and `412` problem responses (`application/problem+json`), plus `428` when the header is required, so Swashbuckle and Microsoft.AspNetCore.OpenApi list them without extra setup. A status the endpoint already declares is kept as it is. For MVC actions this needs `AddConditionalRequests()`, for `[IfMatch]` and for `MapControllers().WithIfMatch()` alike.
+
 | Request | Response |
 |---------|----------|
 | `GET`/`HEAD` with a successful value (object, `Result<T>` success, `Ok<T>` or another 2xx `IValueHttpResult`) | `ETag` and `Last-Modified` (second precision, never later than now) are set |

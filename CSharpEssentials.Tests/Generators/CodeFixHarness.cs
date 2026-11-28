@@ -62,4 +62,37 @@ public static class CodeFixHarness
         Compilation compilation = (await project.GetCompilationAsync())!;
         return [.. compilation.GetDiagnostics().Where(static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)];
     }
+
+    public static async Task<Project> FixAllAsync(Project project, ImmutableArray<Diagnostic> diagnostics, CodeFixProvider provider)
+    {
+        CodeAction first = (await GetActionsAsync(project, diagnostics[0], provider))[0];
+        return await FixAllAsync(project, diagnostics, provider, first.EquivalenceKey);
+    }
+
+    public static async Task<Project> FixAllAsync(Project project, ImmutableArray<Diagnostic> diagnostics, CodeFixProvider provider, string? equivalenceKey)
+    {
+        Document document = project.GetDocument(diagnostics[0].Location.SourceTree)!;
+        FixAllContext context = new(
+            document,
+            provider,
+            FixAllScope.Document,
+            equivalenceKey,
+            provider.FixableDiagnosticIds,
+            new FixedDiagnosticProvider(diagnostics),
+            CancellationToken.None);
+        CodeAction fixAll = (await provider.GetFixAllProvider()!.GetFixAsync(context))!;
+        return await ApplyAsync(project, fixAll);
+    }
+
+    private sealed class FixedDiagnosticProvider(ImmutableArray<Diagnostic> diagnostics) : FixAllContext.DiagnosticProvider
+    {
+        public override Task<IEnumerable<Diagnostic>> GetDocumentDiagnosticsAsync(Document document, CancellationToken cancellationToken) =>
+            Task.FromResult<IEnumerable<Diagnostic>>(diagnostics);
+
+        public override Task<IEnumerable<Diagnostic>> GetProjectDiagnosticsAsync(Project project, CancellationToken cancellationToken) =>
+            Task.FromResult<IEnumerable<Diagnostic>>([]);
+
+        public override Task<IEnumerable<Diagnostic>> GetAllDiagnosticsAsync(Project project, CancellationToken cancellationToken) =>
+            Task.FromResult<IEnumerable<Diagnostic>>(diagnostics);
+    }
 }

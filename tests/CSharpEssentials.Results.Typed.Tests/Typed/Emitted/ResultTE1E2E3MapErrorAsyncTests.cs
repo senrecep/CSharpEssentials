@@ -37,6 +37,36 @@ public sealed class ResultTE1E2E3MapErrorAsyncTests
     }
 
     [Fact]
+    public async Task MapErrorNotFoundErrorAsync_InstanceTaskHandler_Should_PassTheErrorThrough_When_TheResultHoldsConflictError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Conflict;
+        int calls = 0;
+        Func<NotFoundError, Task<ValidationError>> handler = _ => { calls++; return Task.FromResult<ValidationError>(TypedFixture.Invalid); };
+
+        Result<int, ValidationError, ConflictError, RateLimited> result = await source.MapErrorAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, ValidationError, ConflictError, RateLimited> expected = TypedFixture.Conflict;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.Conflict);
+    }
+
+    [Fact]
+    public async Task MapErrorNotFoundErrorAsync_InstanceTaskHandler_Should_PassTheErrorThrough_When_TheResultHoldsRateLimited()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Limited;
+        int calls = 0;
+        Func<NotFoundError, Task<ValidationError>> handler = _ => { calls++; return Task.FromResult<ValidationError>(TypedFixture.Invalid); };
+
+        Result<int, ValidationError, ConflictError, RateLimited> result = await source.MapErrorAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, ValidationError, ConflictError, RateLimited> expected = TypedFixture.Limited;
+        result.Should().Be(expected);
+        result.Value.Should().Be(TypedFixture.Limited);
+    }
+
+    [Fact]
     public async Task MapErrorNotFoundErrorAsync_InstanceTaskHandler_Should_Throw_When_TheResultIsDefault()
     {
         Result<int, NotFoundError, ConflictError, RateLimited> source = default;
@@ -110,6 +140,36 @@ public sealed class ResultTE1E2E3MapErrorAsyncTests
         calls.Should().Be(0);
         Result<int, ValidationError, ConflictError, RateLimited> expected = 5;
         result.Should().Be(expected);
+    }
+
+    [Fact]
+    public async Task MapErrorNotFoundErrorAsync_InstanceValueTaskHandler_Should_PassTheErrorThrough_When_TheResultHoldsConflictError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Conflict;
+        int calls = 0;
+        Func<NotFoundError, ValueTask<ValidationError>> handler = _ => { calls++; return new ValueTask<ValidationError>(TypedFixture.Invalid); };
+
+        Result<int, ValidationError, ConflictError, RateLimited> result = await source.MapErrorAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, ValidationError, ConflictError, RateLimited> expected = TypedFixture.Conflict;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.Conflict);
+    }
+
+    [Fact]
+    public async Task MapErrorNotFoundErrorAsync_InstanceValueTaskHandler_Should_PassTheErrorThrough_When_TheResultHoldsRateLimited()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Limited;
+        int calls = 0;
+        Func<NotFoundError, ValueTask<ValidationError>> handler = _ => { calls++; return new ValueTask<ValidationError>(TypedFixture.Invalid); };
+
+        Result<int, ValidationError, ConflictError, RateLimited> result = await source.MapErrorAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, ValidationError, ConflictError, RateLimited> expected = TypedFixture.Limited;
+        result.Should().Be(expected);
+        result.Value.Should().Be(TypedFixture.Limited);
     }
 
     [Fact]
@@ -189,6 +249,36 @@ public sealed class ResultTE1E2E3MapErrorAsyncTests
     }
 
     [Fact]
+    public async Task MapErrorNotFoundErrorAsync_TaskSourceSyncHandler_Should_PassTheErrorThrough_When_TheResultHoldsConflictError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Conflict;
+        int calls = 0;
+        Func<NotFoundError, ValidationError> handler = _ => { calls++; return TypedFixture.Invalid; };
+
+        Result<int, ValidationError, ConflictError, RateLimited> result = await Task.FromResult(source).MapErrorAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, ValidationError, ConflictError, RateLimited> expected = TypedFixture.Conflict;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.Conflict);
+    }
+
+    [Fact]
+    public async Task MapErrorNotFoundErrorAsync_TaskSourceSyncHandler_Should_PassTheErrorThrough_When_TheResultHoldsRateLimited()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Limited;
+        int calls = 0;
+        Func<NotFoundError, ValidationError> handler = _ => { calls++; return TypedFixture.Invalid; };
+
+        Result<int, ValidationError, ConflictError, RateLimited> result = await Task.FromResult(source).MapErrorAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, ValidationError, ConflictError, RateLimited> expected = TypedFixture.Limited;
+        result.Should().Be(expected);
+        result.Value.Should().Be(TypedFixture.Limited);
+    }
+
+    [Fact]
     public async Task MapErrorNotFoundErrorAsync_TaskSourceSyncHandler_Should_Throw_When_TheResultIsDefault()
     {
         Result<int, NotFoundError, ConflictError, RateLimited> source = default;
@@ -243,6 +333,36 @@ public sealed class ResultTE1E2E3MapErrorAsyncTests
         calls.Should().Be(0);
         Result<int, ValidationError, ConflictError, RateLimited> expected = 5;
         result.Should().Be(expected);
+    }
+
+    [Fact]
+    public async Task MapErrorNotFoundErrorAsync_TaskSourceTaskHandler_Should_PassTheErrorThrough_When_TheResultHoldsConflictError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Conflict;
+        int calls = 0;
+        Func<NotFoundError, Task<ValidationError>> handler = _ => { calls++; return Task.FromResult<ValidationError>(TypedFixture.Invalid); };
+
+        Result<int, ValidationError, ConflictError, RateLimited> result = await Task.FromResult(source).MapErrorAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, ValidationError, ConflictError, RateLimited> expected = TypedFixture.Conflict;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.Conflict);
+    }
+
+    [Fact]
+    public async Task MapErrorNotFoundErrorAsync_TaskSourceTaskHandler_Should_PassTheErrorThrough_When_TheResultHoldsRateLimited()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Limited;
+        int calls = 0;
+        Func<NotFoundError, Task<ValidationError>> handler = _ => { calls++; return Task.FromResult<ValidationError>(TypedFixture.Invalid); };
+
+        Result<int, ValidationError, ConflictError, RateLimited> result = await Task.FromResult(source).MapErrorAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, ValidationError, ConflictError, RateLimited> expected = TypedFixture.Limited;
+        result.Should().Be(expected);
+        result.Value.Should().Be(TypedFixture.Limited);
     }
 
     [Fact]
@@ -337,6 +457,36 @@ public sealed class ResultTE1E2E3MapErrorAsyncTests
     }
 
     [Fact]
+    public async Task MapErrorNotFoundErrorAsync_ValueTaskSourceSyncHandler_Should_PassTheErrorThrough_When_TheResultHoldsConflictError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Conflict;
+        int calls = 0;
+        Func<NotFoundError, ValidationError> handler = _ => { calls++; return TypedFixture.Invalid; };
+
+        Result<int, ValidationError, ConflictError, RateLimited> result = await new ValueTask<Result<int, NotFoundError, ConflictError, RateLimited>>(source).MapErrorAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, ValidationError, ConflictError, RateLimited> expected = TypedFixture.Conflict;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.Conflict);
+    }
+
+    [Fact]
+    public async Task MapErrorNotFoundErrorAsync_ValueTaskSourceSyncHandler_Should_PassTheErrorThrough_When_TheResultHoldsRateLimited()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Limited;
+        int calls = 0;
+        Func<NotFoundError, ValidationError> handler = _ => { calls++; return TypedFixture.Invalid; };
+
+        Result<int, ValidationError, ConflictError, RateLimited> result = await new ValueTask<Result<int, NotFoundError, ConflictError, RateLimited>>(source).MapErrorAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, ValidationError, ConflictError, RateLimited> expected = TypedFixture.Limited;
+        result.Should().Be(expected);
+        result.Value.Should().Be(TypedFixture.Limited);
+    }
+
+    [Fact]
     public async Task MapErrorNotFoundErrorAsync_ValueTaskSourceSyncHandler_Should_Throw_When_TheResultIsDefault()
     {
         Result<int, NotFoundError, ConflictError, RateLimited> source = default;
@@ -391,6 +541,36 @@ public sealed class ResultTE1E2E3MapErrorAsyncTests
         calls.Should().Be(0);
         Result<int, ValidationError, ConflictError, RateLimited> expected = 5;
         result.Should().Be(expected);
+    }
+
+    [Fact]
+    public async Task MapErrorNotFoundErrorAsync_ValueTaskSourceValueTaskHandler_Should_PassTheErrorThrough_When_TheResultHoldsConflictError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Conflict;
+        int calls = 0;
+        Func<NotFoundError, ValueTask<ValidationError>> handler = _ => { calls++; return new ValueTask<ValidationError>(TypedFixture.Invalid); };
+
+        Result<int, ValidationError, ConflictError, RateLimited> result = await new ValueTask<Result<int, NotFoundError, ConflictError, RateLimited>>(source).MapErrorAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, ValidationError, ConflictError, RateLimited> expected = TypedFixture.Conflict;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.Conflict);
+    }
+
+    [Fact]
+    public async Task MapErrorNotFoundErrorAsync_ValueTaskSourceValueTaskHandler_Should_PassTheErrorThrough_When_TheResultHoldsRateLimited()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Limited;
+        int calls = 0;
+        Func<NotFoundError, ValueTask<ValidationError>> handler = _ => { calls++; return new ValueTask<ValidationError>(TypedFixture.Invalid); };
+
+        Result<int, ValidationError, ConflictError, RateLimited> result = await new ValueTask<Result<int, NotFoundError, ConflictError, RateLimited>>(source).MapErrorAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, ValidationError, ConflictError, RateLimited> expected = TypedFixture.Limited;
+        result.Should().Be(expected);
+        result.Value.Should().Be(TypedFixture.Limited);
     }
 
     [Fact]
@@ -485,6 +665,36 @@ public sealed class ResultTE1E2E3MapErrorAsyncTests
     }
 
     [Fact]
+    public async Task MapErrorConflictErrorAsync_InstanceTaskHandler_Should_PassTheErrorThrough_When_TheResultHoldsNotFoundError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.NotFound;
+        int calls = 0;
+        Func<ConflictError, Task<ValidationError>> handler = _ => { calls++; return Task.FromResult<ValidationError>(TypedFixture.Invalid); };
+
+        Result<int, NotFoundError, ValidationError, RateLimited> result = await source.MapErrorAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, ValidationError, RateLimited> expected = TypedFixture.NotFound;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.NotFound);
+    }
+
+    [Fact]
+    public async Task MapErrorConflictErrorAsync_InstanceTaskHandler_Should_PassTheErrorThrough_When_TheResultHoldsRateLimited()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Limited;
+        int calls = 0;
+        Func<ConflictError, Task<ValidationError>> handler = _ => { calls++; return Task.FromResult<ValidationError>(TypedFixture.Invalid); };
+
+        Result<int, NotFoundError, ValidationError, RateLimited> result = await source.MapErrorAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, ValidationError, RateLimited> expected = TypedFixture.Limited;
+        result.Should().Be(expected);
+        result.Value.Should().Be(TypedFixture.Limited);
+    }
+
+    [Fact]
     public async Task MapErrorConflictErrorAsync_InstanceTaskHandler_Should_Throw_When_TheResultIsDefault()
     {
         Result<int, NotFoundError, ConflictError, RateLimited> source = default;
@@ -558,6 +768,36 @@ public sealed class ResultTE1E2E3MapErrorAsyncTests
         calls.Should().Be(0);
         Result<int, NotFoundError, ValidationError, RateLimited> expected = 5;
         result.Should().Be(expected);
+    }
+
+    [Fact]
+    public async Task MapErrorConflictErrorAsync_InstanceValueTaskHandler_Should_PassTheErrorThrough_When_TheResultHoldsNotFoundError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.NotFound;
+        int calls = 0;
+        Func<ConflictError, ValueTask<ValidationError>> handler = _ => { calls++; return new ValueTask<ValidationError>(TypedFixture.Invalid); };
+
+        Result<int, NotFoundError, ValidationError, RateLimited> result = await source.MapErrorAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, ValidationError, RateLimited> expected = TypedFixture.NotFound;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.NotFound);
+    }
+
+    [Fact]
+    public async Task MapErrorConflictErrorAsync_InstanceValueTaskHandler_Should_PassTheErrorThrough_When_TheResultHoldsRateLimited()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Limited;
+        int calls = 0;
+        Func<ConflictError, ValueTask<ValidationError>> handler = _ => { calls++; return new ValueTask<ValidationError>(TypedFixture.Invalid); };
+
+        Result<int, NotFoundError, ValidationError, RateLimited> result = await source.MapErrorAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, ValidationError, RateLimited> expected = TypedFixture.Limited;
+        result.Should().Be(expected);
+        result.Value.Should().Be(TypedFixture.Limited);
     }
 
     [Fact]
@@ -637,6 +877,36 @@ public sealed class ResultTE1E2E3MapErrorAsyncTests
     }
 
     [Fact]
+    public async Task MapErrorConflictErrorAsync_TaskSourceSyncHandler_Should_PassTheErrorThrough_When_TheResultHoldsNotFoundError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.NotFound;
+        int calls = 0;
+        Func<ConflictError, ValidationError> handler = _ => { calls++; return TypedFixture.Invalid; };
+
+        Result<int, NotFoundError, ValidationError, RateLimited> result = await Task.FromResult(source).MapErrorAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, ValidationError, RateLimited> expected = TypedFixture.NotFound;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.NotFound);
+    }
+
+    [Fact]
+    public async Task MapErrorConflictErrorAsync_TaskSourceSyncHandler_Should_PassTheErrorThrough_When_TheResultHoldsRateLimited()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Limited;
+        int calls = 0;
+        Func<ConflictError, ValidationError> handler = _ => { calls++; return TypedFixture.Invalid; };
+
+        Result<int, NotFoundError, ValidationError, RateLimited> result = await Task.FromResult(source).MapErrorAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, ValidationError, RateLimited> expected = TypedFixture.Limited;
+        result.Should().Be(expected);
+        result.Value.Should().Be(TypedFixture.Limited);
+    }
+
+    [Fact]
     public async Task MapErrorConflictErrorAsync_TaskSourceSyncHandler_Should_Throw_When_TheResultIsDefault()
     {
         Result<int, NotFoundError, ConflictError, RateLimited> source = default;
@@ -691,6 +961,36 @@ public sealed class ResultTE1E2E3MapErrorAsyncTests
         calls.Should().Be(0);
         Result<int, NotFoundError, ValidationError, RateLimited> expected = 5;
         result.Should().Be(expected);
+    }
+
+    [Fact]
+    public async Task MapErrorConflictErrorAsync_TaskSourceTaskHandler_Should_PassTheErrorThrough_When_TheResultHoldsNotFoundError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.NotFound;
+        int calls = 0;
+        Func<ConflictError, Task<ValidationError>> handler = _ => { calls++; return Task.FromResult<ValidationError>(TypedFixture.Invalid); };
+
+        Result<int, NotFoundError, ValidationError, RateLimited> result = await Task.FromResult(source).MapErrorAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, ValidationError, RateLimited> expected = TypedFixture.NotFound;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.NotFound);
+    }
+
+    [Fact]
+    public async Task MapErrorConflictErrorAsync_TaskSourceTaskHandler_Should_PassTheErrorThrough_When_TheResultHoldsRateLimited()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Limited;
+        int calls = 0;
+        Func<ConflictError, Task<ValidationError>> handler = _ => { calls++; return Task.FromResult<ValidationError>(TypedFixture.Invalid); };
+
+        Result<int, NotFoundError, ValidationError, RateLimited> result = await Task.FromResult(source).MapErrorAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, ValidationError, RateLimited> expected = TypedFixture.Limited;
+        result.Should().Be(expected);
+        result.Value.Should().Be(TypedFixture.Limited);
     }
 
     [Fact]
@@ -785,6 +1085,36 @@ public sealed class ResultTE1E2E3MapErrorAsyncTests
     }
 
     [Fact]
+    public async Task MapErrorConflictErrorAsync_ValueTaskSourceSyncHandler_Should_PassTheErrorThrough_When_TheResultHoldsNotFoundError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.NotFound;
+        int calls = 0;
+        Func<ConflictError, ValidationError> handler = _ => { calls++; return TypedFixture.Invalid; };
+
+        Result<int, NotFoundError, ValidationError, RateLimited> result = await new ValueTask<Result<int, NotFoundError, ConflictError, RateLimited>>(source).MapErrorAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, ValidationError, RateLimited> expected = TypedFixture.NotFound;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.NotFound);
+    }
+
+    [Fact]
+    public async Task MapErrorConflictErrorAsync_ValueTaskSourceSyncHandler_Should_PassTheErrorThrough_When_TheResultHoldsRateLimited()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Limited;
+        int calls = 0;
+        Func<ConflictError, ValidationError> handler = _ => { calls++; return TypedFixture.Invalid; };
+
+        Result<int, NotFoundError, ValidationError, RateLimited> result = await new ValueTask<Result<int, NotFoundError, ConflictError, RateLimited>>(source).MapErrorAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, ValidationError, RateLimited> expected = TypedFixture.Limited;
+        result.Should().Be(expected);
+        result.Value.Should().Be(TypedFixture.Limited);
+    }
+
+    [Fact]
     public async Task MapErrorConflictErrorAsync_ValueTaskSourceSyncHandler_Should_Throw_When_TheResultIsDefault()
     {
         Result<int, NotFoundError, ConflictError, RateLimited> source = default;
@@ -839,6 +1169,36 @@ public sealed class ResultTE1E2E3MapErrorAsyncTests
         calls.Should().Be(0);
         Result<int, NotFoundError, ValidationError, RateLimited> expected = 5;
         result.Should().Be(expected);
+    }
+
+    [Fact]
+    public async Task MapErrorConflictErrorAsync_ValueTaskSourceValueTaskHandler_Should_PassTheErrorThrough_When_TheResultHoldsNotFoundError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.NotFound;
+        int calls = 0;
+        Func<ConflictError, ValueTask<ValidationError>> handler = _ => { calls++; return new ValueTask<ValidationError>(TypedFixture.Invalid); };
+
+        Result<int, NotFoundError, ValidationError, RateLimited> result = await new ValueTask<Result<int, NotFoundError, ConflictError, RateLimited>>(source).MapErrorAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, ValidationError, RateLimited> expected = TypedFixture.NotFound;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.NotFound);
+    }
+
+    [Fact]
+    public async Task MapErrorConflictErrorAsync_ValueTaskSourceValueTaskHandler_Should_PassTheErrorThrough_When_TheResultHoldsRateLimited()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Limited;
+        int calls = 0;
+        Func<ConflictError, ValueTask<ValidationError>> handler = _ => { calls++; return new ValueTask<ValidationError>(TypedFixture.Invalid); };
+
+        Result<int, NotFoundError, ValidationError, RateLimited> result = await new ValueTask<Result<int, NotFoundError, ConflictError, RateLimited>>(source).MapErrorAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, ValidationError, RateLimited> expected = TypedFixture.Limited;
+        result.Should().Be(expected);
+        result.Value.Should().Be(TypedFixture.Limited);
     }
 
     [Fact]
@@ -933,6 +1293,36 @@ public sealed class ResultTE1E2E3MapErrorAsyncTests
     }
 
     [Fact]
+    public async Task MapErrorRateLimitedAsync_InstanceTaskHandler_Should_PassTheErrorThrough_When_TheResultHoldsNotFoundError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.NotFound;
+        int calls = 0;
+        Func<RateLimited, Task<ValidationError>> handler = _ => { calls++; return Task.FromResult<ValidationError>(TypedFixture.Invalid); };
+
+        Result<int, NotFoundError, ConflictError, ValidationError> result = await source.MapErrorAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, ConflictError, ValidationError> expected = TypedFixture.NotFound;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.NotFound);
+    }
+
+    [Fact]
+    public async Task MapErrorRateLimitedAsync_InstanceTaskHandler_Should_PassTheErrorThrough_When_TheResultHoldsConflictError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Conflict;
+        int calls = 0;
+        Func<RateLimited, Task<ValidationError>> handler = _ => { calls++; return Task.FromResult<ValidationError>(TypedFixture.Invalid); };
+
+        Result<int, NotFoundError, ConflictError, ValidationError> result = await source.MapErrorAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, ConflictError, ValidationError> expected = TypedFixture.Conflict;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.Conflict);
+    }
+
+    [Fact]
     public async Task MapErrorRateLimitedAsync_InstanceTaskHandler_Should_Throw_When_TheResultIsDefault()
     {
         Result<int, NotFoundError, ConflictError, RateLimited> source = default;
@@ -1006,6 +1396,36 @@ public sealed class ResultTE1E2E3MapErrorAsyncTests
         calls.Should().Be(0);
         Result<int, NotFoundError, ConflictError, ValidationError> expected = 5;
         result.Should().Be(expected);
+    }
+
+    [Fact]
+    public async Task MapErrorRateLimitedAsync_InstanceValueTaskHandler_Should_PassTheErrorThrough_When_TheResultHoldsNotFoundError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.NotFound;
+        int calls = 0;
+        Func<RateLimited, ValueTask<ValidationError>> handler = _ => { calls++; return new ValueTask<ValidationError>(TypedFixture.Invalid); };
+
+        Result<int, NotFoundError, ConflictError, ValidationError> result = await source.MapErrorAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, ConflictError, ValidationError> expected = TypedFixture.NotFound;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.NotFound);
+    }
+
+    [Fact]
+    public async Task MapErrorRateLimitedAsync_InstanceValueTaskHandler_Should_PassTheErrorThrough_When_TheResultHoldsConflictError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Conflict;
+        int calls = 0;
+        Func<RateLimited, ValueTask<ValidationError>> handler = _ => { calls++; return new ValueTask<ValidationError>(TypedFixture.Invalid); };
+
+        Result<int, NotFoundError, ConflictError, ValidationError> result = await source.MapErrorAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, ConflictError, ValidationError> expected = TypedFixture.Conflict;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.Conflict);
     }
 
     [Fact]
@@ -1085,6 +1505,36 @@ public sealed class ResultTE1E2E3MapErrorAsyncTests
     }
 
     [Fact]
+    public async Task MapErrorRateLimitedAsync_TaskSourceSyncHandler_Should_PassTheErrorThrough_When_TheResultHoldsNotFoundError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.NotFound;
+        int calls = 0;
+        Func<RateLimited, ValidationError> handler = _ => { calls++; return TypedFixture.Invalid; };
+
+        Result<int, NotFoundError, ConflictError, ValidationError> result = await Task.FromResult(source).MapErrorAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, ConflictError, ValidationError> expected = TypedFixture.NotFound;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.NotFound);
+    }
+
+    [Fact]
+    public async Task MapErrorRateLimitedAsync_TaskSourceSyncHandler_Should_PassTheErrorThrough_When_TheResultHoldsConflictError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Conflict;
+        int calls = 0;
+        Func<RateLimited, ValidationError> handler = _ => { calls++; return TypedFixture.Invalid; };
+
+        Result<int, NotFoundError, ConflictError, ValidationError> result = await Task.FromResult(source).MapErrorAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, ConflictError, ValidationError> expected = TypedFixture.Conflict;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.Conflict);
+    }
+
+    [Fact]
     public async Task MapErrorRateLimitedAsync_TaskSourceSyncHandler_Should_Throw_When_TheResultIsDefault()
     {
         Result<int, NotFoundError, ConflictError, RateLimited> source = default;
@@ -1139,6 +1589,36 @@ public sealed class ResultTE1E2E3MapErrorAsyncTests
         calls.Should().Be(0);
         Result<int, NotFoundError, ConflictError, ValidationError> expected = 5;
         result.Should().Be(expected);
+    }
+
+    [Fact]
+    public async Task MapErrorRateLimitedAsync_TaskSourceTaskHandler_Should_PassTheErrorThrough_When_TheResultHoldsNotFoundError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.NotFound;
+        int calls = 0;
+        Func<RateLimited, Task<ValidationError>> handler = _ => { calls++; return Task.FromResult<ValidationError>(TypedFixture.Invalid); };
+
+        Result<int, NotFoundError, ConflictError, ValidationError> result = await Task.FromResult(source).MapErrorAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, ConflictError, ValidationError> expected = TypedFixture.NotFound;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.NotFound);
+    }
+
+    [Fact]
+    public async Task MapErrorRateLimitedAsync_TaskSourceTaskHandler_Should_PassTheErrorThrough_When_TheResultHoldsConflictError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Conflict;
+        int calls = 0;
+        Func<RateLimited, Task<ValidationError>> handler = _ => { calls++; return Task.FromResult<ValidationError>(TypedFixture.Invalid); };
+
+        Result<int, NotFoundError, ConflictError, ValidationError> result = await Task.FromResult(source).MapErrorAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, ConflictError, ValidationError> expected = TypedFixture.Conflict;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.Conflict);
     }
 
     [Fact]
@@ -1233,6 +1713,36 @@ public sealed class ResultTE1E2E3MapErrorAsyncTests
     }
 
     [Fact]
+    public async Task MapErrorRateLimitedAsync_ValueTaskSourceSyncHandler_Should_PassTheErrorThrough_When_TheResultHoldsNotFoundError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.NotFound;
+        int calls = 0;
+        Func<RateLimited, ValidationError> handler = _ => { calls++; return TypedFixture.Invalid; };
+
+        Result<int, NotFoundError, ConflictError, ValidationError> result = await new ValueTask<Result<int, NotFoundError, ConflictError, RateLimited>>(source).MapErrorAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, ConflictError, ValidationError> expected = TypedFixture.NotFound;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.NotFound);
+    }
+
+    [Fact]
+    public async Task MapErrorRateLimitedAsync_ValueTaskSourceSyncHandler_Should_PassTheErrorThrough_When_TheResultHoldsConflictError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Conflict;
+        int calls = 0;
+        Func<RateLimited, ValidationError> handler = _ => { calls++; return TypedFixture.Invalid; };
+
+        Result<int, NotFoundError, ConflictError, ValidationError> result = await new ValueTask<Result<int, NotFoundError, ConflictError, RateLimited>>(source).MapErrorAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, ConflictError, ValidationError> expected = TypedFixture.Conflict;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.Conflict);
+    }
+
+    [Fact]
     public async Task MapErrorRateLimitedAsync_ValueTaskSourceSyncHandler_Should_Throw_When_TheResultIsDefault()
     {
         Result<int, NotFoundError, ConflictError, RateLimited> source = default;
@@ -1287,6 +1797,36 @@ public sealed class ResultTE1E2E3MapErrorAsyncTests
         calls.Should().Be(0);
         Result<int, NotFoundError, ConflictError, ValidationError> expected = 5;
         result.Should().Be(expected);
+    }
+
+    [Fact]
+    public async Task MapErrorRateLimitedAsync_ValueTaskSourceValueTaskHandler_Should_PassTheErrorThrough_When_TheResultHoldsNotFoundError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.NotFound;
+        int calls = 0;
+        Func<RateLimited, ValueTask<ValidationError>> handler = _ => { calls++; return new ValueTask<ValidationError>(TypedFixture.Invalid); };
+
+        Result<int, NotFoundError, ConflictError, ValidationError> result = await new ValueTask<Result<int, NotFoundError, ConflictError, RateLimited>>(source).MapErrorAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, ConflictError, ValidationError> expected = TypedFixture.NotFound;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.NotFound);
+    }
+
+    [Fact]
+    public async Task MapErrorRateLimitedAsync_ValueTaskSourceValueTaskHandler_Should_PassTheErrorThrough_When_TheResultHoldsConflictError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Conflict;
+        int calls = 0;
+        Func<RateLimited, ValueTask<ValidationError>> handler = _ => { calls++; return new ValueTask<ValidationError>(TypedFixture.Invalid); };
+
+        Result<int, NotFoundError, ConflictError, ValidationError> result = await new ValueTask<Result<int, NotFoundError, ConflictError, RateLimited>>(source).MapErrorAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, ConflictError, ValidationError> expected = TypedFixture.Conflict;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.Conflict);
     }
 
     [Fact]

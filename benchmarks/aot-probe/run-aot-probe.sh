@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Native AOT probe for the packages this branch marks IsAotCompatible (Time, These, Rules, Entity, Clone, Http,
-# Idempotency, RequestResponseLogging) and for the typed Result JSON converter. CI runs it after the Examples.Endpoints
+# Idempotency, RequestResponseLogging) and for the typed Result JSON converters the Results generator registers. CI runs it after the Examples.Endpoints
 # publish. Publishes AotProbe from a clean obj with TrimmerSingleWarn=false (set in the
 # csproj) and the repo's warnings-as-errors, so any IL warning fails the publish, then runs the native binary, which
 # prints "OK <package>" for each package and exits 0 only when every check passes.

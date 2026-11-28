@@ -36,6 +36,36 @@ public sealed class ResultTE1E2E3CompensateAsyncTests
     }
 
     [Fact]
+    public async Task CompensateNotFoundErrorAsync_InstanceTaskHandler_Should_MoveTheErrorToItsNewSlot_When_TheResultHoldsConflictError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Conflict;
+        int calls = 0;
+        Func<NotFoundError, Task<Result<int, ConflictError, RateLimited>>> handler = _ => { calls++; return Task.FromResult<Result<int, ConflictError, RateLimited>>(9); };
+
+        Result<int, ConflictError, RateLimited> result = await source.CompensateAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, ConflictError, RateLimited> expected = TypedFixture.Conflict;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.Conflict);
+    }
+
+    [Fact]
+    public async Task CompensateNotFoundErrorAsync_InstanceTaskHandler_Should_MoveTheErrorToItsNewSlot_When_TheResultHoldsRateLimited()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Limited;
+        int calls = 0;
+        Func<NotFoundError, Task<Result<int, ConflictError, RateLimited>>> handler = _ => { calls++; return Task.FromResult<Result<int, ConflictError, RateLimited>>(9); };
+
+        Result<int, ConflictError, RateLimited> result = await source.CompensateAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, ConflictError, RateLimited> expected = TypedFixture.Limited;
+        result.Should().Be(expected);
+        result.Value.Should().Be(TypedFixture.Limited);
+    }
+
+    [Fact]
     public async Task CompensateNotFoundErrorAsync_InstanceTaskHandler_Should_Throw_When_TheResultIsDefault()
     {
         Result<int, NotFoundError, ConflictError, RateLimited> source = default;
@@ -89,6 +119,36 @@ public sealed class ResultTE1E2E3CompensateAsyncTests
         calls.Should().Be(0);
         Result<int, ConflictError, RateLimited> expected = 5;
         result.Should().Be(expected);
+    }
+
+    [Fact]
+    public async Task CompensateNotFoundErrorAsync_TaskSourceTaskHandler_Should_MoveTheErrorToItsNewSlot_When_TheResultHoldsConflictError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Conflict;
+        int calls = 0;
+        Func<NotFoundError, Task<Result<int, ConflictError, RateLimited>>> handler = _ => { calls++; return Task.FromResult<Result<int, ConflictError, RateLimited>>(9); };
+
+        Result<int, ConflictError, RateLimited> result = await Task.FromResult(source).CompensateAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, ConflictError, RateLimited> expected = TypedFixture.Conflict;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.Conflict);
+    }
+
+    [Fact]
+    public async Task CompensateNotFoundErrorAsync_TaskSourceTaskHandler_Should_MoveTheErrorToItsNewSlot_When_TheResultHoldsRateLimited()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Limited;
+        int calls = 0;
+        Func<NotFoundError, Task<Result<int, ConflictError, RateLimited>>> handler = _ => { calls++; return Task.FromResult<Result<int, ConflictError, RateLimited>>(9); };
+
+        Result<int, ConflictError, RateLimited> result = await Task.FromResult(source).CompensateAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, ConflictError, RateLimited> expected = TypedFixture.Limited;
+        result.Should().Be(expected);
+        result.Value.Should().Be(TypedFixture.Limited);
     }
 
     [Fact]
@@ -148,6 +208,36 @@ public sealed class ResultTE1E2E3CompensateAsyncTests
     }
 
     [Fact]
+    public async Task CompensateNotFoundErrorAsync_ValueTaskSourceTaskHandler_Should_MoveTheErrorToItsNewSlot_When_TheResultHoldsConflictError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Conflict;
+        int calls = 0;
+        Func<NotFoundError, Task<Result<int, ConflictError, RateLimited>>> handler = _ => { calls++; return Task.FromResult<Result<int, ConflictError, RateLimited>>(9); };
+
+        Result<int, ConflictError, RateLimited> result = await new ValueTask<Result<int, NotFoundError, ConflictError, RateLimited>>(source).CompensateAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, ConflictError, RateLimited> expected = TypedFixture.Conflict;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.Conflict);
+    }
+
+    [Fact]
+    public async Task CompensateNotFoundErrorAsync_ValueTaskSourceTaskHandler_Should_MoveTheErrorToItsNewSlot_When_TheResultHoldsRateLimited()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Limited;
+        int calls = 0;
+        Func<NotFoundError, Task<Result<int, ConflictError, RateLimited>>> handler = _ => { calls++; return Task.FromResult<Result<int, ConflictError, RateLimited>>(9); };
+
+        Result<int, ConflictError, RateLimited> result = await new ValueTask<Result<int, NotFoundError, ConflictError, RateLimited>>(source).CompensateAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, ConflictError, RateLimited> expected = TypedFixture.Limited;
+        result.Should().Be(expected);
+        result.Value.Should().Be(TypedFixture.Limited);
+    }
+
+    [Fact]
     public async Task CompensateNotFoundErrorAsync_ValueTaskSourceTaskHandler_Should_Throw_When_TheResultIsDefault()
     {
         Result<int, NotFoundError, ConflictError, RateLimited> source = default;
@@ -201,6 +291,36 @@ public sealed class ResultTE1E2E3CompensateAsyncTests
         calls.Should().Be(0);
         Result<int, NotFoundError, RateLimited> expected = 5;
         result.Should().Be(expected);
+    }
+
+    [Fact]
+    public async Task CompensateConflictErrorAsync_InstanceTaskHandler_Should_MoveTheErrorToItsNewSlot_When_TheResultHoldsNotFoundError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.NotFound;
+        int calls = 0;
+        Func<ConflictError, Task<Result<int, NotFoundError, RateLimited>>> handler = _ => { calls++; return Task.FromResult<Result<int, NotFoundError, RateLimited>>(9); };
+
+        Result<int, NotFoundError, RateLimited> result = await source.CompensateAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, RateLimited> expected = TypedFixture.NotFound;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.NotFound);
+    }
+
+    [Fact]
+    public async Task CompensateConflictErrorAsync_InstanceTaskHandler_Should_MoveTheErrorToItsNewSlot_When_TheResultHoldsRateLimited()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Limited;
+        int calls = 0;
+        Func<ConflictError, Task<Result<int, NotFoundError, RateLimited>>> handler = _ => { calls++; return Task.FromResult<Result<int, NotFoundError, RateLimited>>(9); };
+
+        Result<int, NotFoundError, RateLimited> result = await source.CompensateAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, RateLimited> expected = TypedFixture.Limited;
+        result.Should().Be(expected);
+        result.Value.Should().Be(TypedFixture.Limited);
     }
 
     [Fact]
@@ -260,6 +380,36 @@ public sealed class ResultTE1E2E3CompensateAsyncTests
     }
 
     [Fact]
+    public async Task CompensateConflictErrorAsync_TaskSourceTaskHandler_Should_MoveTheErrorToItsNewSlot_When_TheResultHoldsNotFoundError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.NotFound;
+        int calls = 0;
+        Func<ConflictError, Task<Result<int, NotFoundError, RateLimited>>> handler = _ => { calls++; return Task.FromResult<Result<int, NotFoundError, RateLimited>>(9); };
+
+        Result<int, NotFoundError, RateLimited> result = await Task.FromResult(source).CompensateAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, RateLimited> expected = TypedFixture.NotFound;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.NotFound);
+    }
+
+    [Fact]
+    public async Task CompensateConflictErrorAsync_TaskSourceTaskHandler_Should_MoveTheErrorToItsNewSlot_When_TheResultHoldsRateLimited()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Limited;
+        int calls = 0;
+        Func<ConflictError, Task<Result<int, NotFoundError, RateLimited>>> handler = _ => { calls++; return Task.FromResult<Result<int, NotFoundError, RateLimited>>(9); };
+
+        Result<int, NotFoundError, RateLimited> result = await Task.FromResult(source).CompensateAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, RateLimited> expected = TypedFixture.Limited;
+        result.Should().Be(expected);
+        result.Value.Should().Be(TypedFixture.Limited);
+    }
+
+    [Fact]
     public async Task CompensateConflictErrorAsync_TaskSourceTaskHandler_Should_Throw_When_TheResultIsDefault()
     {
         Result<int, NotFoundError, ConflictError, RateLimited> source = default;
@@ -313,6 +463,36 @@ public sealed class ResultTE1E2E3CompensateAsyncTests
         calls.Should().Be(0);
         Result<int, NotFoundError, RateLimited> expected = 5;
         result.Should().Be(expected);
+    }
+
+    [Fact]
+    public async Task CompensateConflictErrorAsync_ValueTaskSourceTaskHandler_Should_MoveTheErrorToItsNewSlot_When_TheResultHoldsNotFoundError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.NotFound;
+        int calls = 0;
+        Func<ConflictError, Task<Result<int, NotFoundError, RateLimited>>> handler = _ => { calls++; return Task.FromResult<Result<int, NotFoundError, RateLimited>>(9); };
+
+        Result<int, NotFoundError, RateLimited> result = await new ValueTask<Result<int, NotFoundError, ConflictError, RateLimited>>(source).CompensateAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, RateLimited> expected = TypedFixture.NotFound;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.NotFound);
+    }
+
+    [Fact]
+    public async Task CompensateConflictErrorAsync_ValueTaskSourceTaskHandler_Should_MoveTheErrorToItsNewSlot_When_TheResultHoldsRateLimited()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Limited;
+        int calls = 0;
+        Func<ConflictError, Task<Result<int, NotFoundError, RateLimited>>> handler = _ => { calls++; return Task.FromResult<Result<int, NotFoundError, RateLimited>>(9); };
+
+        Result<int, NotFoundError, RateLimited> result = await new ValueTask<Result<int, NotFoundError, ConflictError, RateLimited>>(source).CompensateAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, RateLimited> expected = TypedFixture.Limited;
+        result.Should().Be(expected);
+        result.Value.Should().Be(TypedFixture.Limited);
     }
 
     [Fact]
@@ -372,6 +552,36 @@ public sealed class ResultTE1E2E3CompensateAsyncTests
     }
 
     [Fact]
+    public async Task CompensateRateLimitedAsync_InstanceTaskHandler_Should_MoveTheErrorToItsNewSlot_When_TheResultHoldsNotFoundError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.NotFound;
+        int calls = 0;
+        Func<RateLimited, Task<Result<int, NotFoundError, ConflictError>>> handler = _ => { calls++; return Task.FromResult<Result<int, NotFoundError, ConflictError>>(9); };
+
+        Result<int, NotFoundError, ConflictError> result = await source.CompensateAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, ConflictError> expected = TypedFixture.NotFound;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.NotFound);
+    }
+
+    [Fact]
+    public async Task CompensateRateLimitedAsync_InstanceTaskHandler_Should_MoveTheErrorToItsNewSlot_When_TheResultHoldsConflictError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Conflict;
+        int calls = 0;
+        Func<RateLimited, Task<Result<int, NotFoundError, ConflictError>>> handler = _ => { calls++; return Task.FromResult<Result<int, NotFoundError, ConflictError>>(9); };
+
+        Result<int, NotFoundError, ConflictError> result = await source.CompensateAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, ConflictError> expected = TypedFixture.Conflict;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.Conflict);
+    }
+
+    [Fact]
     public async Task CompensateRateLimitedAsync_InstanceTaskHandler_Should_Throw_When_TheResultIsDefault()
     {
         Result<int, NotFoundError, ConflictError, RateLimited> source = default;
@@ -428,6 +638,36 @@ public sealed class ResultTE1E2E3CompensateAsyncTests
     }
 
     [Fact]
+    public async Task CompensateRateLimitedAsync_TaskSourceTaskHandler_Should_MoveTheErrorToItsNewSlot_When_TheResultHoldsNotFoundError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.NotFound;
+        int calls = 0;
+        Func<RateLimited, Task<Result<int, NotFoundError, ConflictError>>> handler = _ => { calls++; return Task.FromResult<Result<int, NotFoundError, ConflictError>>(9); };
+
+        Result<int, NotFoundError, ConflictError> result = await Task.FromResult(source).CompensateAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, ConflictError> expected = TypedFixture.NotFound;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.NotFound);
+    }
+
+    [Fact]
+    public async Task CompensateRateLimitedAsync_TaskSourceTaskHandler_Should_MoveTheErrorToItsNewSlot_When_TheResultHoldsConflictError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Conflict;
+        int calls = 0;
+        Func<RateLimited, Task<Result<int, NotFoundError, ConflictError>>> handler = _ => { calls++; return Task.FromResult<Result<int, NotFoundError, ConflictError>>(9); };
+
+        Result<int, NotFoundError, ConflictError> result = await Task.FromResult(source).CompensateAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, ConflictError> expected = TypedFixture.Conflict;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.Conflict);
+    }
+
+    [Fact]
     public async Task CompensateRateLimitedAsync_TaskSourceTaskHandler_Should_Throw_When_TheResultIsDefault()
     {
         Result<int, NotFoundError, ConflictError, RateLimited> source = default;
@@ -481,6 +721,36 @@ public sealed class ResultTE1E2E3CompensateAsyncTests
         calls.Should().Be(0);
         Result<int, NotFoundError, ConflictError> expected = 5;
         result.Should().Be(expected);
+    }
+
+    [Fact]
+    public async Task CompensateRateLimitedAsync_ValueTaskSourceTaskHandler_Should_MoveTheErrorToItsNewSlot_When_TheResultHoldsNotFoundError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.NotFound;
+        int calls = 0;
+        Func<RateLimited, Task<Result<int, NotFoundError, ConflictError>>> handler = _ => { calls++; return Task.FromResult<Result<int, NotFoundError, ConflictError>>(9); };
+
+        Result<int, NotFoundError, ConflictError> result = await new ValueTask<Result<int, NotFoundError, ConflictError, RateLimited>>(source).CompensateAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, ConflictError> expected = TypedFixture.NotFound;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.NotFound);
+    }
+
+    [Fact]
+    public async Task CompensateRateLimitedAsync_ValueTaskSourceTaskHandler_Should_MoveTheErrorToItsNewSlot_When_TheResultHoldsConflictError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Conflict;
+        int calls = 0;
+        Func<RateLimited, Task<Result<int, NotFoundError, ConflictError>>> handler = _ => { calls++; return Task.FromResult<Result<int, NotFoundError, ConflictError>>(9); };
+
+        Result<int, NotFoundError, ConflictError> result = await new ValueTask<Result<int, NotFoundError, ConflictError, RateLimited>>(source).CompensateAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, ConflictError> expected = TypedFixture.Conflict;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.Conflict);
     }
 
     [Fact]
@@ -541,6 +811,36 @@ public sealed class ResultTE1E2E3CompensateAsyncTests
     }
 
     [Fact]
+    public async Task CompensateNotFoundErrorAsync_InstanceValueTaskHandler_Should_MoveTheErrorToItsNewSlot_When_TheResultHoldsConflictError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Conflict;
+        int calls = 0;
+        Func<NotFoundError, ValueTask<Result<int, ConflictError, RateLimited>>> handler = _ => { calls++; return new ValueTask<Result<int, ConflictError, RateLimited>>(9); };
+
+        Result<int, ConflictError, RateLimited> result = await source.CompensateAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, ConflictError, RateLimited> expected = TypedFixture.Conflict;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.Conflict);
+    }
+
+    [Fact]
+    public async Task CompensateNotFoundErrorAsync_InstanceValueTaskHandler_Should_MoveTheErrorToItsNewSlot_When_TheResultHoldsRateLimited()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Limited;
+        int calls = 0;
+        Func<NotFoundError, ValueTask<Result<int, ConflictError, RateLimited>>> handler = _ => { calls++; return new ValueTask<Result<int, ConflictError, RateLimited>>(9); };
+
+        Result<int, ConflictError, RateLimited> result = await source.CompensateAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, ConflictError, RateLimited> expected = TypedFixture.Limited;
+        result.Should().Be(expected);
+        result.Value.Should().Be(TypedFixture.Limited);
+    }
+
+    [Fact]
     public async Task CompensateNotFoundErrorAsync_InstanceValueTaskHandler_Should_Throw_When_TheResultIsDefault()
     {
         Result<int, NotFoundError, ConflictError, RateLimited> source = default;
@@ -594,6 +894,36 @@ public sealed class ResultTE1E2E3CompensateAsyncTests
         calls.Should().Be(0);
         Result<int, ConflictError, RateLimited> expected = 5;
         result.Should().Be(expected);
+    }
+
+    [Fact]
+    public async Task CompensateNotFoundErrorAsync_ValueTaskSourceValueTaskHandler_Should_MoveTheErrorToItsNewSlot_When_TheResultHoldsConflictError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Conflict;
+        int calls = 0;
+        Func<NotFoundError, ValueTask<Result<int, ConflictError, RateLimited>>> handler = _ => { calls++; return new ValueTask<Result<int, ConflictError, RateLimited>>(9); };
+
+        Result<int, ConflictError, RateLimited> result = await new ValueTask<Result<int, NotFoundError, ConflictError, RateLimited>>(source).CompensateAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, ConflictError, RateLimited> expected = TypedFixture.Conflict;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.Conflict);
+    }
+
+    [Fact]
+    public async Task CompensateNotFoundErrorAsync_ValueTaskSourceValueTaskHandler_Should_MoveTheErrorToItsNewSlot_When_TheResultHoldsRateLimited()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Limited;
+        int calls = 0;
+        Func<NotFoundError, ValueTask<Result<int, ConflictError, RateLimited>>> handler = _ => { calls++; return new ValueTask<Result<int, ConflictError, RateLimited>>(9); };
+
+        Result<int, ConflictError, RateLimited> result = await new ValueTask<Result<int, NotFoundError, ConflictError, RateLimited>>(source).CompensateAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, ConflictError, RateLimited> expected = TypedFixture.Limited;
+        result.Should().Be(expected);
+        result.Value.Should().Be(TypedFixture.Limited);
     }
 
     [Fact]
@@ -653,6 +983,36 @@ public sealed class ResultTE1E2E3CompensateAsyncTests
     }
 
     [Fact]
+    public async Task CompensateConflictErrorAsync_InstanceValueTaskHandler_Should_MoveTheErrorToItsNewSlot_When_TheResultHoldsNotFoundError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.NotFound;
+        int calls = 0;
+        Func<ConflictError, ValueTask<Result<int, NotFoundError, RateLimited>>> handler = _ => { calls++; return new ValueTask<Result<int, NotFoundError, RateLimited>>(9); };
+
+        Result<int, NotFoundError, RateLimited> result = await source.CompensateAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, RateLimited> expected = TypedFixture.NotFound;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.NotFound);
+    }
+
+    [Fact]
+    public async Task CompensateConflictErrorAsync_InstanceValueTaskHandler_Should_MoveTheErrorToItsNewSlot_When_TheResultHoldsRateLimited()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Limited;
+        int calls = 0;
+        Func<ConflictError, ValueTask<Result<int, NotFoundError, RateLimited>>> handler = _ => { calls++; return new ValueTask<Result<int, NotFoundError, RateLimited>>(9); };
+
+        Result<int, NotFoundError, RateLimited> result = await source.CompensateAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, RateLimited> expected = TypedFixture.Limited;
+        result.Should().Be(expected);
+        result.Value.Should().Be(TypedFixture.Limited);
+    }
+
+    [Fact]
     public async Task CompensateConflictErrorAsync_InstanceValueTaskHandler_Should_Throw_When_TheResultIsDefault()
     {
         Result<int, NotFoundError, ConflictError, RateLimited> source = default;
@@ -706,6 +1066,36 @@ public sealed class ResultTE1E2E3CompensateAsyncTests
         calls.Should().Be(0);
         Result<int, NotFoundError, RateLimited> expected = 5;
         result.Should().Be(expected);
+    }
+
+    [Fact]
+    public async Task CompensateConflictErrorAsync_ValueTaskSourceValueTaskHandler_Should_MoveTheErrorToItsNewSlot_When_TheResultHoldsNotFoundError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.NotFound;
+        int calls = 0;
+        Func<ConflictError, ValueTask<Result<int, NotFoundError, RateLimited>>> handler = _ => { calls++; return new ValueTask<Result<int, NotFoundError, RateLimited>>(9); };
+
+        Result<int, NotFoundError, RateLimited> result = await new ValueTask<Result<int, NotFoundError, ConflictError, RateLimited>>(source).CompensateAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, RateLimited> expected = TypedFixture.NotFound;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.NotFound);
+    }
+
+    [Fact]
+    public async Task CompensateConflictErrorAsync_ValueTaskSourceValueTaskHandler_Should_MoveTheErrorToItsNewSlot_When_TheResultHoldsRateLimited()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Limited;
+        int calls = 0;
+        Func<ConflictError, ValueTask<Result<int, NotFoundError, RateLimited>>> handler = _ => { calls++; return new ValueTask<Result<int, NotFoundError, RateLimited>>(9); };
+
+        Result<int, NotFoundError, RateLimited> result = await new ValueTask<Result<int, NotFoundError, ConflictError, RateLimited>>(source).CompensateAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, RateLimited> expected = TypedFixture.Limited;
+        result.Should().Be(expected);
+        result.Value.Should().Be(TypedFixture.Limited);
     }
 
     [Fact]
@@ -765,6 +1155,36 @@ public sealed class ResultTE1E2E3CompensateAsyncTests
     }
 
     [Fact]
+    public async Task CompensateRateLimitedAsync_InstanceValueTaskHandler_Should_MoveTheErrorToItsNewSlot_When_TheResultHoldsNotFoundError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.NotFound;
+        int calls = 0;
+        Func<RateLimited, ValueTask<Result<int, NotFoundError, ConflictError>>> handler = _ => { calls++; return new ValueTask<Result<int, NotFoundError, ConflictError>>(9); };
+
+        Result<int, NotFoundError, ConflictError> result = await source.CompensateAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, ConflictError> expected = TypedFixture.NotFound;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.NotFound);
+    }
+
+    [Fact]
+    public async Task CompensateRateLimitedAsync_InstanceValueTaskHandler_Should_MoveTheErrorToItsNewSlot_When_TheResultHoldsConflictError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Conflict;
+        int calls = 0;
+        Func<RateLimited, ValueTask<Result<int, NotFoundError, ConflictError>>> handler = _ => { calls++; return new ValueTask<Result<int, NotFoundError, ConflictError>>(9); };
+
+        Result<int, NotFoundError, ConflictError> result = await source.CompensateAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, ConflictError> expected = TypedFixture.Conflict;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.Conflict);
+    }
+
+    [Fact]
     public async Task CompensateRateLimitedAsync_InstanceValueTaskHandler_Should_Throw_When_TheResultIsDefault()
     {
         Result<int, NotFoundError, ConflictError, RateLimited> source = default;
@@ -818,6 +1238,36 @@ public sealed class ResultTE1E2E3CompensateAsyncTests
         calls.Should().Be(0);
         Result<int, NotFoundError, ConflictError> expected = 5;
         result.Should().Be(expected);
+    }
+
+    [Fact]
+    public async Task CompensateRateLimitedAsync_ValueTaskSourceValueTaskHandler_Should_MoveTheErrorToItsNewSlot_When_TheResultHoldsNotFoundError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.NotFound;
+        int calls = 0;
+        Func<RateLimited, ValueTask<Result<int, NotFoundError, ConflictError>>> handler = _ => { calls++; return new ValueTask<Result<int, NotFoundError, ConflictError>>(9); };
+
+        Result<int, NotFoundError, ConflictError> result = await new ValueTask<Result<int, NotFoundError, ConflictError, RateLimited>>(source).CompensateAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, ConflictError> expected = TypedFixture.NotFound;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.NotFound);
+    }
+
+    [Fact]
+    public async Task CompensateRateLimitedAsync_ValueTaskSourceValueTaskHandler_Should_MoveTheErrorToItsNewSlot_When_TheResultHoldsConflictError()
+    {
+        Result<int, NotFoundError, ConflictError, RateLimited> source = TypedFixture.Conflict;
+        int calls = 0;
+        Func<RateLimited, ValueTask<Result<int, NotFoundError, ConflictError>>> handler = _ => { calls++; return new ValueTask<Result<int, NotFoundError, ConflictError>>(9); };
+
+        Result<int, NotFoundError, ConflictError> result = await new ValueTask<Result<int, NotFoundError, ConflictError, RateLimited>>(source).CompensateAsync(handler);
+
+        calls.Should().Be(0);
+        Result<int, NotFoundError, ConflictError> expected = TypedFixture.Conflict;
+        result.Should().Be(expected);
+        result.Value.Should().BeSameAs(TypedFixture.Conflict);
     }
 
     [Fact]
