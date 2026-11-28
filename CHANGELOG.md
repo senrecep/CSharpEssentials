@@ -8,7 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### ⚠ BREAKING CHANGES
 
-* typed results, gap report features and perf work (#280-#306)
+* **aspnetcore:** WithIfMatch() and [IfMatch] now declare 400 and 412 problem responses in OpenAPI, plus 428 when the header is required. Generated documents change, so regenerate clients and OpenAPI snapshots. See docs/migration/v8-to-v9.md.
 * **build:** CSharpEssentials.Results no longer exposes a public MemberNotNullWhenAttribute on netstandard2.1.
 * **efcore:** IDomainEventOutbox.StoreAsync takes the saving DbContext, and BaseDbContext stores after-save events in the outbox before the write instead of after it. Rows the outbox added are detached when the outbox or the save throws.
 * **results:** default(Result) and default(Result<T>) are failures with the Result.Default error. See docs/migration/v8-to-v9.md.
@@ -45,8 +45,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 * **swashbuckle:** add AddBearerSecurityScheme with the OpenApi package's per-operation behavior ([343ff21](https://github.com/senrecep/CSharpEssentials/commit/343ff21565892b2958d2992fe44bce2cfaf76308))
 * **testing:** add Results.Testing assertion helpers ([d377f61](https://github.com/senrecep/CSharpEssentials/commit/d377f61bb6be5aba51be45a26ce743f90b3f3ef8))
 * **time:** add TimeZones lookup and NowIn/TodayIn helpers, honor TimeProvider.LocalTimeZone ([e28f271](https://github.com/senrecep/CSharpEssentials/commit/e28f271f03f147c52d8902c1fd5963c5a6d5c949))
-* typed results, gap report features and perf work ([#280](https://github.com/senrecep/CSharpEssentials/issues/280)-[#306](https://github.com/senrecep/CSharpEssentials/issues/306)) ([4404982](https://github.com/senrecep/CSharpEssentials/commit/4404982b7ad52fadb035cba3c3aa8071d625f2d8))
-* v9 follow-ups (Swashbuckle bearer, analyzer code fixes, AOT typed JSON, If-Match OpenAPI responses) ([c562e72](https://github.com/senrecep/CSharpEssentials/commit/c562e721bd987aa5e140c16c3d0e22aa4154d26b))
 * **validation:** add field metadata and by-field error format ([60b58e8](https://github.com/senrecep/CSharpEssentials/commit/60b58e851ac0729cfdbc9b39f7994060c58f3c94))
 
 
