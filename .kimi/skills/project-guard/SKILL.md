@@ -24,7 +24,7 @@ Before committing, verify the following.
       // fallback for net8.0 and netstandard
   #endif
   ```
-  Other symbols in use: `NETSTANDARD`, `NETSTANDARD2_0`, and `CSHARP_ESSENTIALS_ENABLE_UNIONS` (defined on net11.0).
+  Other symbols in use: `NETSTANDARD`, `NETSTANDARD2_0`, and `NET11_0_OR_GREATER` (the union polyfill gate).
 - Never use an API newer than a project's lowest target without a `#if` guard.
 
 ### Project files

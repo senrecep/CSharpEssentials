@@ -1,104 +1,125 @@
 ---
 name: csharpessentials-entity
-description: Use when building DDD domain models. Covers EntityBase<TId> for aggregate roots with audit fields and domain events (Raise/DomainEvents/ClearDomainEvents), SoftDeletableEntityBase<TId> for the MarkAsDeleted/Restore/MarkAsHardDeleted lifecycle, and IDomainEvent with [DomainEventTiming] for publish timing.
+description: Use when writing DDD entities or aggregate roots. Covers EntityBase/EntityBase<TId> (audit fields via SetCreatedInfo/SetUpdatedInfo, domain events via Raise/DomainEvents/ClearDomainEvents), SoftDeletableEntityBase<TId> (MarkAsDeleted/Restore/MarkAsHardDeleted, HardDelete()), the DomainEvent record (EventId, OccurredAt from a TimeProvider), IDomainEvent and [DomainEventTiming(BeforeSave|AfterSave)].
 ---
 
 # CSharpEssentials.Entity
 
-DDD base classes for aggregate roots with audit fields, soft deletion and domain events.
+Base classes for entities with a typed id, audit fields, soft delete and domain events. The EF Core package (`csharpessentials-efcore` skill) fills the audit fields and dispatches the events on save.
 
 ```bash
 dotnet add package CSharpEssentials.Entity
 ```
 
 ```csharp
-using CSharpEssentials.Entity;            // EntityBase, SoftDeletableEntityBase
-using CSharpEssentials.Entity.Interfaces; // IDomainEvent, ISoftDeletable, IEntityBase
+using CSharpEssentials.Entity;            // EntityBase, EntityBase<TId>, SoftDeletableEntityBase<TId>, DomainEvent, DomainEventTiming, HardDelete()
+using CSharpEssentials.Entity.Interfaces; // IDomainEvent, IIdentifiedDomainEvent, ISoftDeletable, IEntityBase, ICreationAudit, IModificationAudit
 ```
 
----
+## Quick start
 
-## EntityBase\<TId\>
+```csharp Program.cs
+// dotnet add package CSharpEssentials.Entity
+using CSharpEssentials.Entity;
+using CSharpEssentials.Entity.Interfaces;
 
-```csharp
-public record OrderCreatedEvent(Guid OrderId, string CustomerId) : IDomainEvent;
+Order order = Order.Place("customer-1", 120m);
+order.SetCreatedInfo(DateTimeOffset.UtcNow, "alice");
+order.ChangeTotal(150m);
 
-public class Order : EntityBase<Guid>
+IDomainEvent[] events = [.. order.DomainEvents];   // copy, then clear
+order.ClearDomainEvents();
+Console.WriteLine($"{events.Length} events, {order.DomainEvents.Count} left");   // 2 events, 0 left
+
+order.MarkAsDeleted(DateTimeOffset.UtcNow, "alice");
+Console.WriteLine(order.IsDeleted);                 // True
+order.Restore();
+Console.WriteLine(order.IsDeleted);                 // False
+
+public sealed record OrderPlaced(Guid OrderId) : DomainEvent;
+
+[DomainEventTiming(DomainEventTiming.BeforeSave)]
+public sealed record OrderTotalChanged(Guid OrderId, decimal Total) : IDomainEvent;
+
+public sealed class Order : SoftDeletableEntityBase<Guid>
 {
-    public string CustomerId { get; private set; } = default!;
+    private Order() { }
+
+    public string CustomerId { get; private set; } = "";
     public decimal Total { get; private set; }
 
-    public static Order Create(string customerId, decimal total)
+    public static Order Place(string customerId, decimal total)
     {
-        var order = new Order { Id = Guid.NewGuid(), CustomerId = customerId, Total = total };
-        order.Raise(new OrderCreatedEvent(order.Id, customerId));
+        Order order = new() { Id = Guid.NewGuid(), CustomerId = customerId, Total = total };
+        order.Raise(new OrderPlaced(order.Id));
         return order;
     }
-}
 
-// Provided members:
-// TId? Id
-// DateTimeOffset CreatedAt: set by AuditInterceptor (or SetCreatedInfo); MinValue throws
-// string? CreatedBy: set by AuditInterceptor (or SetCreatedInfo)
-// DateTimeOffset? UpdatedAt: NOT ModifiedAt
-// string? UpdatedBy: NOT ModifiedBy
-// IReadOnlyList<IDomainEvent> DomainEvents: property, a cached live read-only view (not a copy)
-// void Raise(IDomainEvent)
-// void ClearDomainEvents()
+    public void ChangeTotal(decimal total)
+    {
+        Total = total;
+        Raise(new OrderTotalChanged(Id, total));
+    }
+}
 ```
 
----
+## Choosing a base class
 
-## SoftDeletableEntityBase\<TId\>
+| Need | Derive from |
+|---|---|
+| Typed id, audit, events | `EntityBase<TId>` (`TId : IEquatable<TId>`, for example `Guid`, `int`, `long`, `string`) |
+| The same without an id property | `EntityBase` |
+| Plus soft delete | `SoftDeletableEntityBase<TId>` or `SoftDeletableEntityBase` |
+
+`Id` is `TId? Id { get; protected set; }`. Assign it inside the class (constructor or factory method).
+
+## Audit fields
 
 ```csharp
-public class Product : SoftDeletableEntityBase<int>
-{
-    public string Name { get; private set; } = default!;
-}
-
-var product = new Product();
-
-// Soft delete lifecycle
-product.MarkAsDeleted(DateTimeOffset.UtcNow, "admin"); // two params: (deletedAt, deletedBy)
-product.MarkAsHardDeleted();                            // sets IsHardDeleted
-product.Restore();                                      // clears IsDeleted, DeletedAt, DeletedBy and IsHardDeleted
-
-// Hard-delete a batch: products.HardDelete() calls MarkAsHardDeleted() on each item
-// IsHardDeleted makes the EF Core AuditInterceptor remove the row instead of turning the delete into a soft delete
-
-// Additional members:
-// DateTimeOffset? DeletedAt
-// string? DeletedBy
-// bool IsDeleted
-// bool IsHardDeleted
+entity.SetCreatedInfo(DateTimeOffset createdAt, string createdBy);   // CreatedAt, CreatedBy
+entity.SetUpdatedInfo(DateTimeOffset updatedAt, string updatedBy);   // UpdatedAt, UpdatedBy (null until set)
 ```
 
----
+Setters are private. `SetCreatedInfo` throws `ArgumentOutOfRangeException` for `DateTimeOffset.MinValue`. With EF Core, `AuditInterceptor` calls both on save.
+
+## Soft delete
+
+```csharp
+entity.MarkAsDeleted(DateTimeOffset.UtcNow, "alice");   // IsDeleted, DeletedAt, DeletedBy
+entity.Restore();                                      // clears all four soft delete fields
+entity.MarkAsHardDeleted();                            // IsHardDeleted: EF Core removes the row instead of soft-deleting it
+entities.HardDelete();                                 // extension on IEnumerable<T> where T : ISoftDeletable
+```
 
 ## Domain events
 
 ```csharp
-// Default timing is AfterSave; a BeforeSave event is published before the save and a throwing handler aborts it
-[DomainEventTiming(DomainEventTiming.BeforeSave)]
-public record InventoryReservedEvent(Guid ProductId, int Qty) : IDomainEvent;
-
-// Raise inside the aggregate (see Order.Create above)
-Order order = Order.Create("customer-1", 99m);
-
-// Copy, then clear: DomainEvents is a live view, so an uncopied reference is empty after the clear
-IDomainEvent[] events = [.. order.DomainEvents];
-order.ClearDomainEvents();
+public sealed record PriceChanged(Guid ProductId, decimal Price) : IDomainEvent;   // plain event
+public sealed record OrderPlaced(Guid OrderId) : DomainEvent;                      // with EventId + OccurredAt
+public sealed record OrderShipped : DomainEvent                                    // with a test clock
+{
+    public OrderShipped(Guid orderId, TimeProvider clock) : base(clock) => OrderId = orderId;
+    public Guid OrderId { get; init; }
+}
 ```
 
----
+- `DomainEvent` sets `OccurredAt = timeProvider.GetUtcNow()` (default `TimeProvider.System`) and `EventId = Guider.NewGuid(OccurredAt)` (version 7). Both are `init`, so JSON round trips keep them. Use it for events an outbox stores.
+- `[DomainEventTiming(DomainEventTiming.BeforeSave)]`: dispatched before the write; a throwing handler aborts the save. No attribute means `AfterSave`. The attribute is not inherited.
 
-## Guidance
+## Rules
 
-- For events an outbox stores, derive from `DomainEvent` (`public sealed record OrderPlaced(Guid OrderId) : DomainEvent;`). It implements `IIdentifiedDomainEvent` with `EventId` (version 7 GUID) and `OccurredAt` from `TimeProvider.System`, or from the `TimeProvider` passed to `base(clock)`.
+- `DomainEvents` is a property. There is no `GetDomainEvents()` method.
+- `DomainEvents` is a live view. Copy it (`[.. entity.DomainEvents]`) before `ClearDomainEvents()` or before raising inside a loop over it; otherwise you get an empty list or `InvalidOperationException`.
+- `Raise(null)` throws `ArgumentNullException`.
+- Call `Raise` inside entity methods, not from services.
+- Audit names are `UpdatedAt`/`UpdatedBy`, never `ModifiedAt`/`ModifiedBy`.
+- `MarkAsDeleted` takes two arguments `(DateTimeOffset deletedAt, string deletedBy)`.
+- Do not assign `CreatedAt`, `DeletedAt` and the other audit properties directly: the setters are private.
+- A type of your own named `DomainEvent` conflicts with `CSharpEssentials.Entity.DomainEvent` (CS0104) when both namespaces are imported. Use an alias.
+- The attribute only labels events. Publishing needs `BaseDbContext.DispatchDomainEventsOnSaveChanges` or `DomainEventInterceptor` from `CSharpEssentials.EntityFrameworkCore`.
 
-- Call `Raise()` only inside entity methods to keep domain events encapsulated in the aggregate.
-- `DomainEvents` is a property; there is no `GetDomainEvents()`. Raising or clearing while iterating it throws `InvalidOperationException`.
-- Audit fields are `UpdatedAt`/`UpdatedBy`, not `ModifiedAt`/`ModifiedBy`.
-- `MarkAsDeleted()` takes two parameters: `(DateTimeOffset deletedAt, string deletedBy)`.
-- Use `DomainEventTiming.BeforeSave` for events that must be processed before the save; the attribute only labels the event, `CSharpEssentials.EntityFrameworkCore` publishes it (`BaseDbContext` dispatches `AfterSave` events after the save, `DomainEventInterceptor` inside `SavingChanges`, before the write).
+## Interfaces
+
+`ICreationAudit`, `IModificationAudit`, `IDomainEventHolder`, `IEntityBase`, `IEntityBase<TId>`, `ISoftDeletableBase` (`IsDeleted`), `ISoftDeletable`, `ISoftDeletableEntityBase(<TId>)`, `IDeletableEntityBase(<TId>)`, `IDomainEvent`, `IIdentifiedDomainEvent` (`EventId`, `OccurredAt`). The EF Core interceptors and query filters work against these interfaces, so your own classes can implement them instead of deriving from the base classes.
+
+The package reports no diagnostics.

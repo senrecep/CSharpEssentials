@@ -1,223 +1,317 @@
 ---
 name: csharpessentials-results
-description: Use when handling operation outcomes without exceptions. Covers Result and Result<T> for success/failure, railway-oriented chaining with Then/ThenAsync/Ensure, Match for consumption, and Result.And/Or for combining multiple results.
+description: Use when a method can fail in expected ways and should return the failure instead of throwing. Covers Result and Result<T> (implicit returns, Then/Map/Bind/Ensure chains, Match/Switch, Else/Compensate/Recover, Result.Try, Combine/CombineAll/Traverse), the *Async forms on Task and ValueTask sources, and typed Result<T, E1..E3> with Match, BindWiden, JSON and the CSE5001-CSE5006 analyzers.
 ---
 
 # CSharpEssentials.Results
 
-`Result` and `Result<T>` model operation outcomes as values instead of exceptions.
+`Result` (no value) and `Result<T>` hold success or a failure with one or more `Error` values. `Result<T, E1>`, `Result<T, E1, E2>` and `Result<T, E1, E2, E3>` hold a value or exactly one typed error.
 
-## Installation
+## Install
 
 ```bash
 dotnet add package CSharpEssentials.Results
 ```
 
-## Namespace
+## Namespaces
 
 ```csharp
-using CSharpEssentials.ResultPattern;
+using CSharpEssentials.Errors;         // Error, ErrorType, NotFoundError, ConflictError, ...
+using CSharpEssentials.ResultPattern;  // Result, Result<T>, Result<T, E1..E3>, extensions
+```
+
+`IResultBase`, `IResult<T>` and `ITypedResult` are in `CSharpEssentials.ResultPattern.Interfaces`.
+
+## Quick start
+
+```csharp Program.cs
+// dotnet add package CSharpEssentials.Results
 using CSharpEssentials.Errors;
+using CSharpEssentials.ResultPattern;
+
+var service = new UserService();
+
+Console.WriteLine(service.Rename(1, "Grace").Match(u => $"renamed to {u.Name}", e => e[0].Code)); // renamed to Grace
+Console.WriteLine(service.Rename(1, "").Match(u => u.Name, e => e[0].Code));                     // User.NameEmpty
+Console.WriteLine(service.Rename(9, "Bob").Match(u => u.Name, e => e[0].Code));                  // User.NotFound
+
+Result<User> loaded = await service.FindAsync(1).EnsureAsync(u => u.Name.Length > 0, Error.Validation("User.NoName", "No name."));
+Console.WriteLine(loaded.Value.Name);                                                            // Grace
+
+public sealed record User(int Id, string Name);
+
+public sealed class UserService
+{
+    private readonly Dictionary<int, User> _users = new() { [1] = new User(1, "Ada") };
+
+    public Result<User> Find(int id)
+    {
+        if (!_users.TryGetValue(id, out User? user))
+            return Error.NotFound("User.NotFound", $"User {id} was not found.");   // Error -> Result<User>
+        return user;                                                               // User -> Result<User>
+    }
+
+    public Task<Result<User>> FindAsync(int id) => Task.FromResult(Find(id));
+
+    public Result<User> Rename(int id, string name) =>
+        Find(id)
+            .Ensure(_ => name.Length > 0, Error.Validation("User.NameEmpty", "Name is required."))
+            .Map(user => user with { Name = name })
+            .Tap(user => _users[id] = user);
+}
 ```
 
 ## Creating results
 
 ```csharp
-// Success
-Result ok          = Result.Success();                              // non-generic: keep the factory
-Result<User> found = user;                                          // T → Result<T>
+Result ok = Result.Success();                                   // non-generic success: always the factory
+Result<int> value = 42;                                         // T -> Result<T>
+Result fail = Error.Validation("Input.Invalid", "Input was invalid.");
+Result<int> many = new[] { Error.Validation("A", "a"), Error.Validation("B", "b") }; // Error[], List<Error>, HashSet<Error>
+Result fromBool = true;                                         // false -> Error.False failure
 
-// Failure: Error, Error[], List<Error>, HashSet<Error> convert implicitly
-Result fail          = Error.Validation("Input.Invalid", "Input was invalid.");
-Result<User> missing = Error.NotFound("User.NotFound", "Not found.");
-Result<int> multi    = new[]
+// Only where the target type cannot be inferred (var, generic arguments, Task.FromResult):
+var explicitFail = Result.Failure<int>(Error.NotFound("X.NotFound", "Missing."));
+Task<Result<int>> task = Task.FromResult(Result.Success(42));
+```
+
+## Reading a result
+
+```csharp
+Result<int> result = 42;
+if (result.IsSuccess) Console.WriteLine(result.Value);   // Value is default on failure
+Error first = result.FirstError;                         // also LastError, Errors (Error[]), ErrorsOrEmptyArray
+var (isSuccess, value, errors) = result;                 // Result<T>; Result gives (isSuccess, errors)
+bool ok = result.TryGet(out int v, out Error[]? errs);
+```
+
+## Chaining (runs only on success)
+
+```csharp Program.cs
+// dotnet add package CSharpEssentials.Results
+using CSharpEssentials.Errors;
+using CSharpEssentials.ResultPattern;
+
+Result<string> r = Result.Success(" 42 ")
+    .Map(s => s.Trim())                                                        // Func<T, U>
+    .Bind(ParseInt)                                                            // Func<T, Result<U>>
+    .Ensure(n => n > 0, Error.Validation("Range", "Must be positive."))        // fail when predicate is false
+    .FailIf(n => n > 1000, Error.Validation("Range", "Too large."))            // fail when predicate is true
+    .ThenEnsure(n => n % 2 == 0 ? Result.Success() : Error.Validation("Odd", "Must be even."))
+    .Tap(n => Console.WriteLine($"got {n}"))                                   // side effect, result unchanged
+    .Then(n => $"#{n}");                                                       // Then = Map or Bind by lambda shape
+
+Console.WriteLine(r.Value);                                                    // #42
+
+static Result<int> ParseInt(string s)
 {
-    Error.Validation("Name.Empty", "Name is required."),
-    Error.Validation("Email.Invalid", "Email is invalid.")
+    if (int.TryParse(s, out int n))
+        return n;
+    return Error.Validation("Nan", "Not a number.");
+}
+```
+
+Other success-side members: `BindIf(condition, func)`, `TapIf(predicate, action)`, `ThenDo(action)`, `EnsureNotNull(error)`, LINQ `from a in r1 from b in r2 select ...`. On non-generic `Result`, handlers take no argument (`Then(Func<Result>)`, `Map(Func<T>)`, `Bind(Func<Result<T>>)`, `ThenDo(Action)`).
+
+## Consuming
+
+```csharp
+string text = result.Match(onSuccess: v => $"ok {v}", onError: errors => errors[0].Description); // Error[]
+string first = result.MatchFirst(onSuccess: v => "ok", onFirstError: e => e.Code);              // one Error
+result.Switch(onSuccess: v => Log(v), onError: errors => Log(errors));
+string plain = Result.Success().Match(onSuccess: () => "ok", onFailure: errors => "failed");     // Result: onFailure
+int n = result.GetValueOrDefault(0);           // also GetValueOrDefault(() => 0), UnwrapOrDefault(0)
+int m = result.Unwrap();                       // ResultUnwrapException (.Errors) on failure
+int k = result.GetValueOrThrow("message");     // InvalidOperationException on failure
+string s = result.Finally(r => r.IsSuccess ? "ok" : "failed");
+```
+
+## Handling failures
+
+```csharp Program.cs
+// dotnet add package CSharpEssentials.Results
+using CSharpEssentials.Errors;
+using CSharpEssentials.ResultPattern;
+
+Result<int> failed = Error.NotFound("Count.Missing", "No count.");
+
+Console.WriteLine(failed.Else(0).Value);                                           // fallback value: 0
+Console.WriteLine(failed.Compensate(errors => Result.Success(1)).Value);            // fallback Result: 1
+Console.WriteLine(failed.Recover(ErrorType.NotFound, e => 2).Value);                // only for that ErrorType: 2
+Console.WriteLine(failed.MapError(e => Error.Failure($"Svc.{e.Code}", e.Description)).FirstError.Code); // Svc.Count.Missing
+failed.TapError(errors => Console.WriteLine($"{errors.Length} error(s)"));          // side effect: 1 error(s)
+```
+
+Also: `Else(Error)`, `Else(Func<Error[], Error>)`, `CompensateFirst`, `RecoverFirst`, `Recover(Func<Error, bool>, ...)`, `TapErrorFirst`, `TapErrorIf(bool, ...)`, `ElseDo`, `ElseDoFirst`, `MapError(Func<Error[], Error[]>)`.
+
+## Exceptions to errors
+
+```csharp
+Result<int> parsed = Result.Try(() => int.Parse(input), ex => Error.Exception(ex));
+Result<Data> data = await Result.TryAsync(() => LoadAsync(ct), ex => Error.Exception(ex), ct); // caller cancellation still throws
+Result<int> next = parsed.TryCatch(n => Result.Success(100 / n));   // func must return a Result; exception -> Error.Exception(ex)
+```
+
+## Combining
+
+```csharp
+Result first = Result.And(r1, r2, r3);                    // errors of the first failure
+Result all = new[] { r1, r2, r3 }.CombineAll();           // every error
+Result any = Result.Or(r1, r2);                           // success if one succeeds
+Result<(int, string)> pair = Result<int>.Combine(a, b);   // 2..8 results of any types, every error
+Result<int[]> values = Result<int>.And(a1, a2);           // same as a1 + a2
+Result<Dto[]> mapped = ids.Traverse(id => Get(id));       // every error
+var (ok, errors) = results.Partition();
+Result<int[]> stop = results.FirstFailureOrSuccesses();   // stops at the first failure
+Result guard = Result.SuccessIf(age >= 18, Error.Validation("Age.Minor", "Must be 18."));
+Result empty = Result.FailureIf(items.Count == 0, Error.Validation("Items.Empty", "No items."));
+```
+
+## Async
+
+```csharp Program.cs
+// dotnet add package CSharpEssentials.Results
+using CSharpEssentials.Errors;
+using CSharpEssentials.ResultPattern;
+
+Result<string> r = await GetAsync(1)                                  // Task<Result<int>>
+    .EnsureAsync(n => n > 0, Error.Validation("Range", "Positive."))
+    .BindAsync(n => GetAsync(n + 1))                                  // Func<int, Task<Result<int>>>
+    .TapAsync(async n => await Task.Delay(1))                         // async lambda: awaited
+    .MapAsync(n => $"value {n}");
+
+Console.WriteLine(r.Value);                                           // value 2
+
+Result<string[]> names = await new[] { 1, 2 }.TraverseAsync(
+    (id, ct) => Task.FromResult(Result.Success($"u{id}")), CancellationToken.None);   // sequential, every error
+Console.WriteLine(string.Join(",", names.Value));                     // u1,u2
+
+string text = await GetAsync(5).MatchAsync(n => $"ok {n}", errors => "failed");
+Console.WriteLine(text);                                              // ok 5
+
+static Task<Result<int>> GetAsync(int id) => Task.FromResult<Result<int>>(id);
+```
+
+Async names: `MapAsync`, `BindAsync`, `ThenAsync`, `TapAsync`, `TapIfAsync`, `EnsureAsync`, `FailIfAsync`, `ThenEnsureAsync`, `MatchAsync`, `MatchFirstAsync`, `SwitchAsync`, `ElseAsync`, `CompensateAsync`, `MapErrorAsync`, `TapErrorAsync`, `ElseDoAsync`, `FinallyAsync`, `BindIfAsync`, `SelectAsync`, `TryCatchAsync`, `GetValueOrDefaultAsync`, `TraverseAsync`, `SequenceAsync`, `Result.TryAsync`.
+
+Handler flavour must match the source:
+
+| Source | Handlers it takes |
+|---|---|
+| `Result` / `Result<T>` instance | `Task`; `ValueTask` on .NET 9+ |
+| `Task<Result..>` | sync or `Task` |
+| `ValueTask<Result..>` | sync or `ValueTask` (some members also `Task`) |
+
+## Typed results
+
+Use `Result<T, E1..E3>` when the caller must handle each failure differently and there are at most three. Error types come from `CSharpEssentials.Errors` (`NotFoundError`, `ConflictError`, `ValidationError`, ... or records derived from them).
+
+```csharp Program.cs
+// dotnet add package CSharpEssentials.Results
+using CSharpEssentials.Errors;
+using CSharpEssentials.ResultPattern;
+
+foreach (int id in new[] { 1, 2, 3 })
+{
+    int status = Reserve(id).Match(
+        onSuccess: _ => 200,
+        onError1: _ => 404,                // NotFoundError
+        onError2: _ => 409);               // OrderErrors.Locked
+    Console.WriteLine($"{id}: {status}");  // 1: 200, 2: 404, 3: 409
+}
+
+Result<Order, NotFoundError, OrderErrors.Locked> r = Reserve(3);
+Console.WriteLine(r.TryGetValue(out OrderErrors.Locked? locked) ? locked.OrderId : 0);     // 3
+Console.WriteLine(r.ToResult().FirstError.Code);                                           // Order.Locked
+
+Result<Order, NotFoundError, ConflictError> chained = Find(1).BindWiden(Lock);            // adds ConflictError slot
+Result<Order, ConflictError> recovered = Find(5).BindWiden(Lock).Recover((NotFoundError _) => new Order(0)); // removes a slot
+Console.WriteLine($"{chained.IsSuccess} {recovered.GetValueOrThrow().Id}");                // True 0
+
+static Result<Order, NotFoundError> Find(int id) =>
+    id is 1 or 3 ? new Order(id) : OrderErrors.NotFound;
+
+static Result<Order, ConflictError> Lock(Order order) => order;
+
+static Result<Order, NotFoundError, OrderErrors.Locked> Reserve(int id)
+{
+    if (id == 3) return new OrderErrors.Locked(id);   // instance, not the type name
+    Result<Order, NotFoundError> found = Find(id);
+    return found;                                     // widens implicitly
+}
+
+public sealed record Order(int Id);
+
+public static class OrderErrors
+{
+    public static class Codes { public const string NotFound = "Order.NotFound"; public const string Locked = "Order.Locked"; }
+    public static readonly NotFoundError NotFound = new(Codes.NotFound, "Order not found.");
+    public sealed record Locked(int OrderId) : ConflictError(Codes.Locked, "Order is locked.");
+}
+```
+
+Switch expressions over a typed result need C# 15 (`<LangVersion>15</LangVersion>` on net10.0 and lower, default on net11.0). On C# 14 a type pattern fails with CS9327; use `Match`, `Switch` or `TryGetValue`.
+
+```csharp
+// C# 15 only
+IResult http = Reserve(id) switch
+{
+    Order o => Results.Ok(o),
+    NotFoundError => Results.NotFound(),
+    OrderErrors.Locked l => Results.Conflict(l.OrderId),
 };
-
-// Explicit factories: only where the target type cannot be inferred (var, inferred lambdas, generic arguments)
-var conflict = Result.Failure<string>(Error.Conflict("User.Duplicate", "Duplicate."));
-Task<Result<int>> pending = Task.FromResult(Result.Success(42));
 ```
 
-## Checking the result
+Typed members: `Bind<TOut>` (same set), `BindWiden` (adds the inner slots), `Map`, `Ensure`/`FailIf` (same slot, or `Ensure<F>` adds a slot), `MapError((Ei e) => ...)`, `Recover((Ei e) => ...)`, `Compensate((Ei e) => ...)`, `Tap`, `TapIf`, `TapError((Ei e) => ...)`, `TapError((Error e) => ...)`, `TryCatch<TOut, TException>`, `Finally`, `GetValueOrDefault`, `GetValueOr(T)`, `GetValueOr(Func<Error, T>)`, `GetValueOrThrow`, `Select`/`SelectMany`, `Result<T, E..>.Combine`, `Sequence`, `Traverse`, `Partition`, `ToResult`, plus `*Async` forms (`BindAsync`, `BindWidenAsync`, `MapAsync`, `EnsureAsync`, ...). `Combine`, `Sequence` and `Traverse` stop at the first error.
+
+JSON: a typed result serializes as `{"case":"Success","value":...}` or `{"case":"NotFoundError","value":{...}}`. For Native AOT, list the result, the success type and every error type in a `JsonSerializerContext`; the bundled generator registers the converter:
 
 ```csharp
-if (result.IsFailure)
-{
-    Error first = result.FirstError; // first error in the list
-    Error[] all = result.Errors;
-}
-
-if (result.IsSuccess)
-{
-    User value = result.Value;       // default on a failure
-}
+[JsonSerializable(typeof(Result<Order, NotFoundError>))]
+[JsonSerializable(typeof(Order))]
+[JsonSerializable(typeof(NotFoundError))]
+internal sealed partial class AppJsonContext : JsonSerializerContext;
+// A typed result reachable only through a property: TypedResultJsonConverterFactory.Register<Order, NotFoundError>();
 ```
 
-## Chaining: railway-oriented
+## Testing results
+
+`dotnet add package CSharpEssentials.Results.Testing`, namespace `CSharpEssentials.ResultPattern.Testing`. Each helper throws `ResultAssertionException` on a mismatch and returns what it checked; no test framework is referenced.
 
 ```csharp
-// Then: transform value, short-circuits on failure
-Result<int> result = Parse("5")
-    .Then(n => n * 2)
-    .Then(n => n + 10);
-
-// ThenAsync: async chain
-Result<OrderConfirmation> placed = await GetUserAsync(id)
-    .ThenAsync(user => ValidateOrderAsync(user, order))
-    .ThenAsync(order => ChargePaymentAsync(order));
-
-// Ensure: guard condition, adds error if predicate fails
-Result<int> ensured = Result.Success(50)
-    .Ensure(v => v > 0,   Error.Validation("Range", "Must be positive."))
-    .Ensure(v => v < 100, Error.Validation("Range", "Must be less than 100."));
-
-// EnsureAsync
-Result<User> validated = await GetUserAsync(id)
-    .EnsureAsync(u => IsActiveAsync(u), Error.Validation("User.Inactive", "Account is inactive."));
+int value = Divide(10, 2).ShouldBeSuccess();                    // Result<T> and typed results return the value
+Error[] errors = Divide(1, 0).ShouldBeFailure();
+Error byCode = Divide(1, 0).ShouldHaveError("Math.DivideByZero"); // also (ErrorType) and (ErrorType, code)
+ConflictError c = reserve.ShouldBeFailureOf<ConflictError>();      // typed results only
+JsonElement body = await response.ShouldBeProblemAsync(404, "Order.NotFound");
+await response.ShouldBeValidationProblemAsync("Name.NotEmpty");
 ```
 
-## Mapping errors
-
-```csharp
-// Per-error mapper: called once for every error, in order; never on success
-Result<User> renamed = GetUser(id)
-    .MapError(e => Error.Failure($"Users.{e.Code}", e.Description));
-
-// Array mapper: replaces the whole error array
-Result<User> collapsed = GetUser(id)
-    .MapError(errors => [Error.Failure("Users.Failed", $"{errors.Length} error(s)")]);
-```
-
-`MapError(Func<Error, Error>)` maps every error. Older versions mapped only `FirstError` and dropped the rest.
-
-```csharp
-// MapErrorAsync (instance): Task or ValueTask mappers, per error or per array
-Result<User> localized = await result.MapErrorAsync(e => LocalizeAsync(e, ct), ct);
-
-// Task<Result<T>> source: sync or Task mappers; ValueTask<Result<T>> source: sync or ValueTask mappers
-Result<User> mapped = await GetUserAsync(id)
-    .MapErrorAsync(e => Error.Failure($"Users.{e.Code}", e.Description));
-```
-
-Per-error async mappers run one at a time, in order. The `CancellationToken` is checked before each mapper call; a mapper that is already running is not abandoned, so pass the token into the mapper if it must stop early. An async lambda (`async e => ...`) binds to the `Task` overload.
-
-## Consuming: Match
-
-```csharp
-string msg = result.Match(
-    onSuccess: value  => $"OK: {value}",
-    onError:   errors => $"Failed: {errors[0].Description}");  // errors is Error[]
-
-// Async match: both handlers return Task<T>
-bool sent = await result.MatchAsync(
-    onSuccess: async value  => await SendConfirmationAsync(value),
-    onError:   async errors => { await LogErrorsAsync(errors); return false; });
-```
-
-## Combining results
-
-```csharp
-// And: Result.And returns the errors of the first failure
-Result combined = Result.And(r1, r2, r3);
-Result<int[]> values = Result<int>.And(v1, v2); // collects every value, or every error
-
-// Or: first success wins
-Result any = Result.Or(r1, r2, r3);
-```
-
-## Recovery, side effects and extraction
-
-```csharp
-// Else: replace a failure (Error, Error[], fallback value or a function of the errors)
-Result<int> fallback = GetCount().Else(0);
-
-// Compensate / Recover: turn a failure back into a success
-Result<int> healed  = GetCount().Compensate(errors => Result.Success(0));
-Result<int> cached  = GetCount().Recover(ErrorType.NotFound, error => 0);
-
-// TapError / ElseDo: side effect on failure, result unchanged
-GetCount().TapError(errors => logger.LogWarning("{Count} errors", errors.Length));
-
-// FailIf: the opposite of Ensure
-Result<int> checkedCount = GetCount().FailIf(v => v > 100, Error.Validation("Count.TooHigh", "Too many."));
-
-// Extraction
-int a = GetCount().GetValueOrDefault(0);
-int b = GetCount().Unwrap();                    // ResultUnwrapException (with .Errors) on failure
-int c = GetCount().GetValueOrThrow("no count"); // InvalidOperationException on failure
-
-// TryCatch: run a function on success, exception becomes an Error
-Result<string> text = GetCount().TryCatch(v => Result.Success(v.ToString()));
-
-// Conditional construction and tuple combine
-Result guard = Result.SuccessIf(age >= 18, Error.Validation("Age.Minor", "Must be 18 or older."));
-Result<(int, string)> pair = Result<int>.Combine(GetCount(), GetName());   // collects every error
-```
-
-## Async collections
-
-```csharp
-// Sequential (one item at a time), accumulates ALL errors in input order
-Result<OrderDto[]> orders = await orderIds.TraverseAsync((id, ct) => GetOrderAsync(id, ct), ct);
-
-// Already-started tasks: awaits every task, even after a failure; only the first exception is rethrown
-Result<int[]> values = await tasks.SequenceAsync();
-```
-
-Cancellation throws `OperationCanceledException` (never an error `Result`). On cancellation `SequenceAsync` observes the remaining tasks of a materialized collection and does not enumerate lazy sources further. The `ValueTask` selector twins of `TraverseAsync` exist on .NET 9+ only.
-
-## Safe execution
-
-```csharp
-// Wrap exception → Result
-Result<int> safe = Result.Try(() => int.Parse(input), ex => Error.Exception(ex));
-
-// Async
-Result<Data> data = await Result.TryAsync(() => _db.GetAsync(id), ex => Error.Exception(ex), cancellationToken);
-// Caller cancellation (OperationCanceledException while cancellationToken is cancelled) propagates; it is not converted to an Error.
-// Other OperationCanceledExceptions (e.g. HttpClient timeout) still go through the handler.
-```
-
-## Conditional side effects
-
-```csharp
-// TapIf: runs only on success when the predicate is true
-result.TapIf(v => v > 0, v => Audit(v));
-
-// Async: instance methods (the bool overload exists only on TapIfAsync)
-await result.TapIfAsync(v => v > 0, async v => await AuditAsync(v));
-await result.TapIfAsync(isEnabled,   async v => await TrackAsync(v));
-
-// Extension variants: Task<Result<T>> and ValueTask<Result<T>>
-await GetResultAsync().TapIfAsync(v => v > 0, v => Enqueue(v));
-await GetValueTaskResultAsync().TapIfAsync(true, async v => await LogAsync(v));
-```
-
-## Async rules
-
-- Every member that returns `Task` or `ValueTask` ends in `Async`. Always call the `*Async` name when a handler or source is async (`MapAsync`, `BindAsync`, `TapAsync`, `EnsureAsync`, `MatchAsync`, `ThenAsync`). The unsuffixed names on `Task`/`ValueTask` sources and the `Bind` overloads that take a `Task`/`ValueTask` function are `[Obsolete]` forwarders; never write them. The `CancellationToken` is optional on every `Task` source.
-- Match the handler to the source: on `Task<Result..>` pass sync or `Task` handlers; on `ValueTask<Result..>` pass sync or `ValueTask` handlers. On an instance `Result`/`Result<T>`, `Task` handlers work everywhere; `ValueTask` handlers on instances and static `Result.TryAsync` (and on `ValueTask` sources for `Match*`, `Switch*`, `Ensure`, `TapIf`, `Then`, `ThenDo`, `Else`, `FailIf`, `TapError*`, `ElseDo*`, `Compensate*`, `ThenEnsure`, `Finally`) exist only on .NET 9+.
-- Never pass an `async` lambda to an `Action` overload. It compiles as `async void`: nothing awaits it and its exceptions are lost. `TapAsync(async v => ...)` and the conditional `TapAsync(condition, async v => ...)` on a `Task`/`ValueTask` source bind the awaited `Func<T, Task>`/`Func<T, ValueTask>` overload. A non-`async` lambda whose flavour does not match the source also binds `Action` and its result is discarded: a `Task` on a `ValueTask` source (`vt.TapAsync(v => SaveAsync(v))`) or a `ValueTask` on a `Task` source (`taskResult.TapAsync(v => SaveValueTaskAsync(v))`). Write `async v => await SaveAsync(v)`. A non-`async` lambda returning a `Task` on a `Task` source is awaited.
-- `MapAsync` on a `ValueTask<Result<T>>` with an `async` lambda returns `ValueTask<Result<U>>`.
-- `TraverseAsync` is sequential and accumulates every error in input order (no short-circuit); cancellation throws. Use `SequenceAsync` for tasks that are already running.
-- If the project targets .NET 9+ with `LangVersion` 12, untyped `async` lambdas are ambiguous (CS0121) on every operation with a `ValueTask` twin (the .NET 9+ list above, plus `TraverseAsync` and instance `MapAsync`/`TapAsync`). Use C# 13+ or type the first handler: `(Func<int, Task<string>>)(async v => ...)`.
-- A mismatched handler flavour gives a nested type, not an error: `vt.MapAsync(x => Task.FromResult(x))` returns `ValueTask<Result<Task<int>>>`.
-- On C# 12, `MapErrorAsync(async e => ...)` and `Result<T>.BindAsync(async v => ...)` are ambiguous on every target; type the handler with a cast (`(Func<int, Task<Result<int>>>)(async v => ...)`), because annotating the lambda parameter alone is not enough. On C# 13+ both compile and `MapErrorAsync` matches the lambda on what its body returns: an `Error` (including `return e;`) binds the per-error mapper, a new `Error[]` binds the array mapper; cast to `Func<Error[], Task<Error[]>>` to be explicit.
-- `result.Bind(async v => ...)` (no `Async` suffix) is ambiguous on every language version; call `BindAsync`.
-
-```csharp
-Result<OrderDto> order = await LoadOrderAsync(id, ct)                    // Task<Result<Order>>
-    .EnsureAsync(o => o.Lines.Count > 0, Error.Validation("Order.Empty", "Order has no lines."))
-    .TapAsync(async o => await _audit.WriteAsync(o.Id, ct))             // awaited
-    .MapAsync(o => new OrderDto(o));
-```
+`Maybe<T>` has `ShouldHaveValue()` and `ShouldBeNone()`. See the [Results.Testing Readme](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.Results.Testing/Readme.MD).
 
 ## Rules
 
-- Check `.IsSuccess` before reading `.Value`; it is `default` on a failure.
-- Never use `default(Result)` or `default(Result<T>)` as a success. It is a failure with the `Result.Default` error, and every member that hands the errors to a delegate or builds a new failure from them (`Match`, `Switch`, `Map`, `Bind`, `Then`, `MapError`, `Else`, `TapError`, `Compensate`, `Recover`, sync and async) throws `InvalidOperationException` on it. Use `Result.Success()` or a value.
-- `onError` in `Match` receives `Error[]`; `MatchFirst` passes a single `Error`.
-- Prefer implicit conversions (`return value;`, `return Error.NotFound(...);`); use `Result.Success(value)`/`Result.Failure<T>(error)` only where the target type cannot be inferred. Keep `Result.Success()` for non-generic success.
+- Return values and errors directly (`return user;`, `return Error.NotFound(...);`). Use `Result.Success()` for non-generic success.
+- Never `return default;` for a result. `default(Result)`/`default(Result<T>)` is a failure coded `Result.Default`, and `Match`, `Map`, `Bind`, `MapError`, `Else` and similar throw `InvalidOperationException` on it. `default` typed results hold no case (CSE5001).
+- Check `IsSuccess` before `Value`. `Result<T>` cannot hold `null`: `Result.Success<string?>(null)` throws `ArgumentNullException`.
+- `Match` `onError` receives `Error[]`; use `MatchFirst` for one `Error`. Non-generic `Result.Match` names it `onFailure`.
+- Every Task/ValueTask-returning member ends in `Async`. Write `BindAsync`, never `Bind(async v => ...)` (CS0121). Unsuffixed names on `Task` sources are `[Obsolete]`.
+- Never pass an `async` lambda where an `Action` is taken (`Tap(condition, async () => ...)`): it becomes `async void`. On a `ValueTask` source, `TapAsync(v => SaveAsync(v))` (non-async lambda returning `Task`) drops the task; write `async v => await SaveAsync(v)`.
+- `TryCatch` on `Result<T>` takes a function that returns a `Result`, not a plain value.
+- `Result.And` stops at the first failure; `CombineAll`, `Sequence`, `Traverse` and `Result<T>.Combine` collect every error.
+- `TraverseAsync` is sequential and safe with one `DbContext`; cancellation throws, it is not an error.
+- Typed results: `return OrderErrors.Locked;` is a type (CS0119), create an instance. An `Error` does not convert to a typed slot (CS0029); use typed kinds or `ToError()` the other way. Type the lambda parameter for per-slot members (`Recover((NotFoundError e) => ...)`), or CS0121. Use `Bind<TOut>` when the inner result has fewer error types; `BindWiden` would repeat a slot.
+- A typed result returned raw from an ASP.NET Core handler is not an HTTP error; call `ToHttpResult()` from `CSharpEssentials.AspNetCore`.
+
+## Diagnostics
+
+| ID | Meaning | Fix |
+|---|---|---|
+| CSE5001 | Typed result created as `default` (`default`, `new R()`, `new R[n]`, unassigned private field) | Assign a value or an error |
+| CSE5002 | Same error type twice in one result | Code fix removes the repeat |
+| CSE5003 | One error slot converts to another (`TypedError` and `NotFoundError`) | Pick unrelated error types |
+| CSE5004 | Success type converts to or from an error slot (`object`) | Use a specific success type |
+| CSE5005 | `[ErrorKind]` disagrees with the base kind or the `Type` property | Code fix sets the right kind |
+| CSE5006 | `Ensure<F>`, `FailIf<F>`, `BindWiden`, `TryCatch` or `SelectMany` adds a slot the result already covers | Code fix casts the error or uses `Bind` |
+
+All are warnings (errors under `TreatWarningsAsErrors`). Full reference: [Results Readme](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.Results/Readme.MD).

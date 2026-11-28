@@ -1,13 +1,13 @@
 ---
 name: csharpessentials-logging
-description: Use when logging HTTP requests and responses in ASP.NET Core. Covers app.AddRequestResponseLogging(opt => …) with UseLogger(ILoggerFactory, LoggingOptions), UseHandler, IgnorePaths, LogFields selection, and [SkipRequestLogging] / [SkipResponseLogging] / [SkipRequestResponseLogging] endpoint metadata for per-endpoint opt-out.
+description: Use when logging HTTP request and response bodies in ASP.NET Core with CSharpEssentials.RequestResponseLogging. Covers app.AddRequestResponseLogging(opt => ...) with UseLogger(ILoggerFactory, LoggingOptions), LoggingOptions.CreateAllFields(), LogFields, HeaderKeys, UseHandler(Func<RequestResponseContext, Task>), IgnorePaths, and the [SkipRequestLogging], [SkipResponseLogging] and [SkipRequestResponseLogging] attributes.
 ---
 
 # CSharpEssentials.RequestResponseLogging
 
-Middleware that logs HTTP requests and responses (bodies, headers, path, method, timing, sizes). Configured on `IApplicationBuilder`; no service registration is needed.
+Middleware that writes one log entry per HTTP request: request and response bodies, selected request headers, path, method, query string, timing and body lengths.
 
-## Installation
+## Install
 
 ```bash
 dotnet add package CSharpEssentials.RequestResponseLogging
@@ -16,34 +16,46 @@ dotnet add package CSharpEssentials.RequestResponseLogging
 ## Namespace
 
 ```csharp
-using CSharpEssentials.RequestResponseLogging;
+using CSharpEssentials.RequestResponseLogging; // AddRequestResponseLogging, LoggingOptions, LogFields, RequestResponseContext, Skip*Attribute
 ```
 
----
+## Quick start
 
-## Register
+```csharp Program.cs
+// dotnet add package CSharpEssentials.RequestResponseLogging
+using CSharpEssentials.RequestResponseLogging;
+using Microsoft.Net.Http.Headers;
 
-`AddRequestResponseLogging` is an `IApplicationBuilder` extension that adds the middleware. Call it on the built app.
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+builder.Services.AddControllers();
+WebApplication app = builder.Build();
 
-```csharp
-var app = builder.Build();
-
+app.UseRouting();
 app.AddRequestResponseLogging(opt =>
 {
-    opt.UseLogger(app.Services.GetRequiredService<ILoggerFactory>(), LoggingOptions.CreateAllFields());
+    LoggingOptions logging = LoggingOptions.CreateAllFields();
+    logging.HeaderKeys.Add(HeaderNames.AcceptLanguage);
+    opt.UseLogger(app.Services.GetRequiredService<ILoggerFactory>(), logging);
     opt.IgnorePaths("/health", "/metrics");
 });
+
+app.MapControllers();
+app.MapPost("/login", (LoginRequest request) => Results.Ok())
+    .WithMetadata(new SkipRequestLoggingAttribute());
+app.MapGet("/health", () => "ok");
+
+app.Run();
+
+public sealed record LoginRequest(string User, string Password);
 ```
 
-- Without `UseLogger` or `UseHandler`, the middleware runs but writes nothing.
-- `IgnorePaths` matches by prefix, ignoring case and a trailing `/` (`"/health"` also skips `/healthz`). `"/"` skips only the root path. A later call replaces the earlier list.
-- Without a handler, the request body is read only when `LoggingFields` has `Request` or `RequestLength`, the response body only when it has `Response` or `ResponseLength`. With a handler both are captured.
-- A request with a `Content-Length` over 10 MB is not read (`Request body too large: {n} bytes`); a chunked body is read up to 10 MB, then logged as `Request body too large: over 10485760 bytes`. An empty body is logged as `Empty request body`.
-- Each response write goes to the client right away and is also copied into memory, so streaming still works, but the whole response body is held in memory until the request finishes. Use `[SkipResponseLogging]` on very large responses. Set status and headers before the first write.
-- If the pipeline throws, the middleware logs the captured request body with `Exception: {type}, Message: {message}` as the response body, passes the same context to the `UseHandler` handler, then rethrows.
-- `UseHandler` runs in addition to `UseLogger` when both are set.
+## Registering the middleware
 
----
+- `AddRequestResponseLogging` is an `IApplicationBuilder` extension. Call it on the built app, not on `builder.Services`.
+- Call it after `app.UseRouting()` when the app calls `UseRouting()` explicitly. Otherwise the skip attributes have no effect.
+- Without `UseLogger` or `UseHandler` nothing is written.
+- `UseLogger` has two overloads: `UseLogger(ILoggerFactory, LoggingOptions)` and `UseLogger(ILoggerFactory, Action<LoggingOptions>)`.
+- `UseHandler` and `UseLogger` can be combined; both run.
 
 ## Choosing fields
 
@@ -51,64 +63,75 @@ app.AddRequestResponseLogging(opt =>
 app.AddRequestResponseLogging(opt =>
     opt.UseLogger(app.Services.GetRequiredService<ILoggerFactory>(), logging =>
     {
-        logging.LoggingFields = [LogFields.Method, LogFields.Path, LogFields.ResponseTiming];
-        logging.HeaderKeys = ["X-Correlation-Id"];
-        logging.LoggingLevel = LogLevel.Debug;
-        logging.LoggerCategoryName = "Http";
+        logging.LoggingFields = [LogFields.Method, LogFields.Path, LogFields.ResponseTiming, LogFields.Headers];
+        logging.HeaderKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "X-Correlation-Id" };
+        logging.LoggingLevel = LogLevel.Debug;          // default Information
+        logging.LoggerCategoryName = "Http";            // default "RequestResponseLogger"
+        logging.UseSeparateContext = true;              // default true: one named placeholder per field
     }));
 ```
 
-`LogFields`: `Request`, `Response`, `HostName`, `Path`, `Method`, `QueryString`, `Headers`, `ResponseTiming`, `RequestLength`, `ResponseLength`. `LoggingOptions.CreateAllFields()` selects all of them; the default list is empty.
-
-- The `Headers` field writes only the request headers in `HeaderKeys` (`[{"X-Correlation-Id":"..."}]`, `[]` when none is present); with no keys it is empty, so credentials are not logged by default. Names are compared case-sensitively with the spelling received: standard names are normalized by Kestrel, a custom header must match as sent (HTTP/2 sends lower-case). Use `logging.HeaderKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "X-Correlation-Id" }` to ignore the case.
-- `UseSeparateContext` (default `true`) writes one named placeholder per field (`{Path}`, `{Method}`) for structured logging providers; `false` writes one formatted text.
-- `LoggingLevel` defaults to `Information` and `LoggerCategoryName` to `RequestResponseLogger`.
-- `RequestLength` and `ResponseLength` count characters of the logged text, not bytes; a request without a body reports the 18 characters of `Empty request body`.
-
----
+- `LogFields`: `Request`, `Response`, `HostName`, `Path`, `Method`, `QueryString`, `Headers`, `ResponseTiming`, `RequestLength`, `ResponseLength`.
+- `new LoggingOptions()` has no fields. Use `LoggingOptions.CreateAllFields()` or set `LoggingFields`.
+- `LoggingFields` is read once at registration. Changing it later has no effect.
+- `Headers` writes only names in `HeaderKeys`; the default set is empty and case-sensitive.
+- `RequestLength` and `ResponseLength` are character counts of the logged text, not bytes.
 
 ## Custom handler
 
-```csharp
+```csharp Program.cs
+// dotnet add package CSharpEssentials.RequestResponseLogging
+using CSharpEssentials.RequestResponseLogging;
+
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+WebApplication app = builder.Build();
+ILogger logger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Http");
+
+app.UseRouting();
 app.AddRequestResponseLogging(opt => opt.UseHandler(context =>
 {
-    Console.WriteLine($"{context.Url} {context.ResponseTime} {context.RequestLength} {context.ResponseLength}");
+    logger.LogInformation("{Url} {Time} req={RequestLength} res={ResponseLength}",
+        context.Url, context.ResponseTime, context.RequestLength, context.ResponseLength);
     return Task.CompletedTask;
 }));
+
+app.MapGet("/", () => "hello");
+app.Run();
 ```
 
-`RequestResponseContext` exposes `RequestBody`, `ResponseBody`, `ResponseCreationTime` (`TimeSpan?`), `ResponseTime` (`mm:ss.fff` text), `RequestLength`, `ResponseLength` and `Url`. The handler runs after the rest of the pipeline has completed or thrown.
+`RequestResponseContext` members: `Url`, `RequestBody`, `ResponseBody`, `ResponseCreationTime` (`TimeSpan?`), `ResponseTime` (`mm:ss.fff` string), `RequestLength` (`int?`), `ResponseLength` (`int?`). The constructor is internal; you only receive instances. The handler must return a `Task`.
 
----
+## Skipping bodies
 
-## Per-endpoint opt-out
-
-The middleware reads the attributes from endpoint metadata:
-
-| Attribute | Effect |
+| Attribute | Logged instead of the body |
 |---|---|
-| `[SkipRequestLogging]` | Request body is not captured |
-| `[SkipResponseLogging]` | Response body is not captured |
-| `[SkipRequestResponseLogging]` | Neither body is captured |
+| `[SkipRequestLogging]` | `Skipped logging request body` |
+| `[SkipResponseLogging]` | `Skipped logging response body` |
+| `[SkipRequestResponseLogging]` | both texts |
 
 ```csharp
-[ApiController]
-[Route("auth")]
-public sealed class AuthController : ControllerBase
-{
-    [HttpPost("login")]
-    [SkipRequestLogging] // passwords
-    public IActionResult Login(LoginRequest request) => Ok();
-}
+[HttpPost("login")]
+[SkipRequestLogging]
+public IActionResult Login(LoginRequest request) => Ok();
 
-// Minimal APIs
 app.MapGet("/export", () => Results.Ok()).WithMetadata(new SkipResponseLoggingAttribute());
 ```
 
----
+## Rules
 
-## Best practices
+- Do: skip health and metrics endpoints with `IgnorePaths("/health", "/metrics")`. Matching is by prefix and case-insensitive.
+- Do: mark endpoints that receive passwords or tokens with `[SkipRequestLogging]`.
+- Do: mark endpoints with large or streamed responses with `[SkipResponseLogging]`; the full response copy stays in memory until the request ends.
+- Do: set status code and headers before the first write to `Response.Body`, and write asynchronously.
+- Don't: call `builder.Services.AddRequestResponseLogging(...)`; it does not exist.
+- Don't: add `Authorization` or `Cookie` to `HeaderKeys`.
+- Don't: implement `ILogWriter`; it is internal. Use `UseHandler`.
+- Don't: expect the status code in the entry; it is not a logged field.
 
-- Skip request bodies on endpoints that receive passwords, tokens or other PII.
-- Add health check and metrics paths to `IgnorePaths`; they are high-frequency and low-value.
-- If you call `UseRouting()` explicitly, add the middleware after it, so endpoint metadata (and the skip attributes) is available.
+## Behavior
+
+- A thrown exception is logged with `Exception: {type}, Message: {message}` as the response body, passed to the handler, then rethrown.
+- A request over 10 MB is not read: `Request body too large: {n} bytes` (or `over 10485760 bytes` for chunked bodies).
+- Empty bodies are logged as `Empty request body` and `Empty response body`.
+
+This package reports no diagnostics (CSExxxx).

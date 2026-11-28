@@ -2,39 +2,34 @@
 title: "CSharpEssentials.Results example"
 ---
 
-Console app that runs the `CSharpEssentials.Results` API.
+A console app that runs the `CSharpEssentials.Results` API section by section and prints what each call returns. It needs no database or network.
 
-## Features demonstrated
-
-| Feature | Description |
-|---------|-------------|
-| Result creation | `Result.Success()`, `Result.Failure()` and the implicit conversions from a value or an `Error` |
-| Ensure / EnsureNotNull | Guard a value and fail with a given error |
-| MapError | Rewrite the errors of a failed result |
-| Try / TryAsync | Wrap code that can throw into a `Result` |
-| ElseDo | Run a side effect for the errors of a failed result |
-| TapError / TapErrorIf | Observe errors without changing the result |
-| Deconstruct | `(bool isSuccess, int value, Error[] errors) = result` |
-| SuccessIf / FailureIf | Build a result from a condition |
-| Compensate | Turn a failure back into a success |
-| ThenEnsure | Validate the value with a `Result`-returning validator |
-| Then | Chain operations that skip the rest after a failure |
-| Match | Handle success and failure in one expression |
-| Map | Transform the value of a successful result |
-| Bind | Chain operations that return a `Result` |
-| Tap | Run a side effect on success |
-| Else | Provide fallback values or errors when a result fails |
-| Finally | Receive the whole result and return a value |
-| GetValueOrDefault / GetValueOrThrow | Extract the value with a fallback, or throw |
-| Unwrap / UnwrapOrDefault | Extract the value or throw `ResultUnwrapException` |
-| Recover / RecoverFirst | Recover from errors of a given `ErrorType` |
-| BindIf / FailIf | Conditional bind and the inverse of `Ensure` |
-| TryCatch | Run a function on a successful result and turn exceptions into errors |
-| Collection extensions | `Sequence`, `Traverse`, `Partition` and `FirstFailureOrSuccesses` |
-
-## Running
+## Run
 
 ```bash
 cd examples/Examples.Results
 dotnet run
 ```
+
+The project targets net10.0. It gets `LangVersion` 15 from the repository's `Directory.Build.props`, so the switch expressions over typed results compile. It references `CSharpEssentials.Results.Generators` as an analyzer, which registers the typed result JSON converter and runs the CSE5001-CSE5006 analyzers.
+
+## What each section shows
+
+| Section | Members |
+|---|---|
+| Creating results | `Result.Success()`, implicit conversions from a value, an `Error`, an `Error[]` and a `bool`, deconstruction, `ToString()` |
+| Chaining | `Then`, `Bind`, `Tap`, `BindIf`, `Map`, and how a failure skips the rest |
+| Ensuring | `Ensure` with an error and with an error factory, `FailIf`, `ThenEnsure` |
+| Matching | `Match`, `MatchFirst`, `MatchLast`, `Switch` |
+| Handling failures | `Else`, `Compensate`, `CompensateFirst`, `Recover`, `RecoverFirst`, `TapError`, `TapErrorFirst`, `TapErrorIf`, `ElseDo`, `ElseDoFirst`, `MapError` |
+| Safe execution | `Result.Try`, `Result.TryAsync`, `TryCatch` |
+| Getting the value out | `GetValueOrDefault`, `UnwrapOrDefault`, `Finally`, `Unwrap` (`ResultUnwrapException`), `GetValueOrThrow` |
+| Combining | `Result.And`, `CombineAll`, `Result.Or`, `Result<T>.Combine`, `SuccessIf`, `FailureIf`, LINQ query syntax |
+| Collections | `Sequence`, `Traverse`, `Partition`, `FirstFailureOrSuccesses`, `TraverseAsync`, `SequenceAsync` |
+| Async chains | `EnsureAsync`, `TapAsync`, `MapAsync`, `BindAsync`, `MatchAsync` on a `Task<Result<T>>` |
+| More members | `LastError`, `ErrorsOrEmptyArray`, `TryGet`, `ValueOrDefault` and the `\|` operator (.NET 10), `Result.From`, `ToResult` extensions, `SwitchFirst`, `SwitchLast`, `ThenDo`, `TapIf`, `Select`, `SelectMany`, `EnsureNotNull` on a null read from JSON, `IResultBase`, `ResultComparer<T>`, `TrimStart`, `TrimEnd` |
+| More async members | `ElseAsync`, `CompensateAsync`, `FailIfAsync`, `ThenAsync`, `ThenEnsureAsync`, `MapErrorAsync`, `MatchFirstAsync`, `GetValueOrDefaultAsync`, `TapErrorAsync`, `SwitchAsync`, `FinallyAsync` |
+| Typed results | `Result<T, E1, E2>` with an exhaustive switch expression, `Match`, `ToResult`, `BindWiden`, `Recover`, `TryCatch<TOut, TException>`, `TapError`, `Traverse`, `GetValueOr`, `HasValue`, `GetValueOrAsync`, `BindWidenAsync` |
+| Typed result JSON | the `{"case": ..., "value": ...}` envelope through a source-generated `JsonSerializerContext`, and `TypedResultJsonConverterFactory.Register` |
+
+See the [package Readme](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.Results/Readme.MD) for the full API.

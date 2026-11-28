@@ -2,122 +2,122 @@
   "skills": [
     {
       "name": "csharpessentials-any",
-      "description": "Use when a method can return one of several distinct types. Covers Any<T0,T1> through Any<T0,…,T7> as a type-safe discriminated union, implicit assignment from any branch type, Match()/Switch() with one handler per branch, IsFirst/GetFirst, Is/As/TryAs, and Partition/Traverse for sequences.",
+      "description": "Use when a method returns one of several distinct types (typed outcomes, polymorphic results without a base class). Any<T0,T1> to Any<T0,...,T7> is a discriminated union. Covers implicit creation, First/Second factories, Any.Create, Match (AnyActionResult) and Switch (AnyActionStatus), IsFirst/GetFirst, Is/As/TryAs, Deconstruct/ToTuple, Partition/Traverse and JSON.",
       "files": ["SKILL.md"]
     },
     {
       "name": "csharpessentials-aspnetcore",
-      "description": "Use when wiring CSharpEssentials into ASP.NET Core. Covers AddEnhancedProblemDetails/UseEnhancedProblemDetails with GlobalExceptionHandler (secure 4.0 ProblemDetails defaults), ToProblemResult/ToActionResult, ResultEndpointFilter with IResultErrorMapper, AddEnumConventions/UseEnumBinding/WithEnumWireFormat for [StringEnum] route/query/header/form values and output format, ConfigureInvalidModelStateResponse, the Idempotency-Key middleware (AddIdempotency, UseIdempotency, WithIdempotency, [Idempotent]), MapVersionedGroup, versioned Swagger (CSharpEssentials.AspNetCore.Swashbuckle) and enum schemas for Microsoft.AspNetCore.OpenApi (CSharpEssentials.AspNetCore.OpenApi).",
+      "description": "Use when wiring CSharpEssentials into ASP.NET Core. Covers AddEnhancedProblemDetails/UseEnhancedProblemDetails with GlobalExceptionHandler, ToProblemResult/ToActionResult/ToProblemDetails, typed ToHttpResult/ToCreated, ResultEndpointFilter, WithValidation, AddIdempotency/UseIdempotency/WithIdempotency/[Idempotent], WithConditionalGet/WithIfMatch, AddEnumConventions/UseEnumBinding/WithEnumWireFormat, AddAndConfigureApiVersioning/MapVersionedGroup, and the OpenAPI helpers AddEnumConventions, AddIdempotencyConventions and AddBearerSecurityScheme.",
       "files": ["SKILL.md"]
     },
     {
       "name": "csharpessentials-clone",
-      "description": "Use when entities need deep-copy semantics. Implement ICloneable<T> on domain objects, then call .Clone() on IEnumerable<T> or IQueryable<T> collections to produce independent deep copies of every element.",
+      "description": "Use when domain objects need a typed copy method. Implement ICloneable<T> (T Clone()) from CSharpEssentials.Clone on a class, then call Clone() on an IEnumerable<T> or IQueryable<T> to copy every item. The copy depth is whatever your Clone() does.",
       "files": ["SKILL.md"]
     },
     {
       "name": "csharpessentials-core",
-      "description": "Use when you need low-level C# helpers. Covers string case conversions (ToPascalCase/ToSnakeCase/ToKebabCase), Guider.NewGuid and URL-safe GUID strings, IsBetween/IsBetweenExclusive range checks, collection helpers (IfAdd, WhereIf, WithoutNulls), IfNotNull/IfTrue statements and WithCancellation for tasks.",
+      "description": "Use for small C# helpers from CSharpEssentials.Core. String case conversion (ToSnakeCase, ToPascalCase, ToKebabCase), GUIDs (Guider.NewGuid version 7, NewMonotonicGuid, NewSqlServerGuid, NewGuidV5, ToStringFromGuid/ToGuidFromString), collection helpers (IfAdd, WhereIf, WithoutNulls, HasSameElements, GetRandomItems), null and bool helpers (IsEmpty, IfNotNull, IfTrue), IsBetween, WithCancellation, HttpCodes and the ITransactionRunner/ITransactionCallbacks interfaces.",
       "files": ["SKILL.md"]
     },
     {
       "name": "csharpessentials-dependencyinjection",
-      "description": "Use when registering services by attribute instead of manual AddScoped calls or Scrutor scanning. Covers [RegisterScoped]/[RegisterSingleton]/[RegisterTransient] (Key, As = ServiceAs.*, Strategy = RegistrationStrategy.*), [Decorates] and services.Decorate/TryDecorate, [ExcludeFromRegistration], the source-generated services.Add{Assembly}Services()/AddAllServices() registry, the AddServicesFromAssemblies reflection fallback, and CSE2001-CSE2009 diagnostics.",
+      "description": "Use when registering services by attribute instead of manual AddScoped calls or Scrutor scanning. Covers [RegisterSingleton], [RegisterScoped], [RegisterTransient] (Key, As = ServiceAs.*, Strategy = RegistrationStrategy.*), [Decorates] and services.Decorate/TryDecorate, [ExcludeFromRegistration], the generated services.AddAllServices() and services.Add{Asm}Services() registry, AddServicesFromAssemblies, and diagnostics CSE2001 to CSE2009.",
       "files": ["SKILL.md"]
     },
     {
       "name": "csharpessentials-efcore",
-      "description": "Use when wiring EF Core with CSharpEssentials domain models. Covers AuditInterceptor/DomainEventInterceptor/SlowQueryInterceptor registered via DI, BaseDbContext (InterceptorsFromServices, DispatchDomainEventsOnSaveChanges), PaginateAsync/Paginate, KeysetPaginateAsync (composite keyset pagination with opaque cursors), batch SoftDeleteAsync, Result queries (FirstOrDefaultAsResultAsync, SaveChangesAsResultAsync), ConfigureEnumConventions for [StringEnum] storage, Maybe<T>? nullable columns (HasNullableMaybeConversion, ConfigureNullableMaybeConventions), the transactional idempotency store (AddIdempotencyRecords, EfCoreIdempotencyRecordStore, AddEfCoreIdempotencyRecordStore) and AddCqrsDbContexts.",
+      "description": "Use when writing EF Core code with CSharpEssentials. Covers AddAuditInterceptor, BaseDbContext (InterceptorsFromServices, DispatchDomainEventsOnSaveChanges), DomainEventInterceptor, soft delete filters and SoftDeleteAsync, PaginateAsync and KeysetPaginateAsync, *AsResultAsync, AddEfCoreTransactionRunner, the outbox (AddEfCoreOutbox, AddOutboxProcessor), DbErrorTranslation, Maybe<T>? and [StringEnum] columns, plus the HealthChecks (AddMigrationsCheck), Hosting (AddOutboxProcessorHostedService) and Locking (AddRelationalResourceLock) packages.",
       "files": ["SKILL.md"]
     },
     {
       "name": "csharpessentials-endpoints",
-      "description": "Use when organizing ASP.NET Core Minimal API endpoints into classes. Covers IEndpoint/IEndpointGroup with a static Map, [EndpointGroup<T>] nesting, the source-generated Map{Assembly}Endpoints/MapAllEndpoints registry (AOT-safe), EndpointMappingOptions, RouteOf<T>, RequireRoles/RequirePolicies/RequireAuthSchemes, the MapEndpointsFromAssemblies reflection fallback and analyzers CSE1001-CSE1012.",
+      "description": "Use when organizing ASP.NET Core Minimal API endpoints into classes with CSharpEssentials.Endpoints. Covers IEndpoint and IEndpointGroup with static members, [EndpointGroup<T>] nesting, [ExcludeFromMapping], the generated app.MapAllEndpoints() and app.Map{Asm}Endpoints() registry, EndpointMappingOptions (Filter, ConfigureEach, OperationNaming, AutoTagFromGroup), RouteOf<T>, RequireRoles, RequirePolicies, RequireAuthSchemes, MapEndpointsFromAssemblies, and diagnostics CSE1001 to CSE1013.",
       "files": ["SKILL.md"]
     },
     {
       "name": "csharpessentials-entity",
-      "description": "Use when building DDD domain models. Covers EntityBase<TId> for aggregate roots with audit fields and domain events (Raise/DomainEvents/ClearDomainEvents), SoftDeletableEntityBase<TId> for the MarkAsDeleted/Restore/MarkAsHardDeleted lifecycle, and IDomainEvent with [DomainEventTiming] for publish timing.",
+      "description": "Use when writing DDD entities or aggregate roots. Covers EntityBase/EntityBase<TId> (audit fields via SetCreatedInfo/SetUpdatedInfo, domain events via Raise/DomainEvents/ClearDomainEvents), SoftDeletableEntityBase<TId> (MarkAsDeleted/Restore/MarkAsHardDeleted, HardDelete()), the DomainEvent record (EventId, OccurredAt from a TimeProvider), IDomainEvent and [DomainEventTiming(BeforeSave|AfterSave)].",
       "files": ["SKILL.md"]
     },
     {
       "name": "csharpessentials-enums",
-      "description": "Use when an enum must have one string spelling across JSON, ASP.NET Core binding, OpenAPI, EF Core and outgoing HTTP, or when you need reflection-free enum helpers. Covers [StringEnum], [EnumAlias], [EnumFallback], wire-name naming, the generated ToWireName/TryParseWire/ParseWire/IsDefined/GetNames/GetValues helpers, EnumConventions, EnumValueParser/EnumValueFormatter/EnumMetadata, flags, renaming members safely, AOT/trimming and the CSE0002-CSE0016 analyzers.",
+      "description": "Use when an enum crosses a boundary (JSON, ASP.NET Core binding, OpenAPI, EF Core, HTTP) and needs one string spelling, or for reflection-free enum helpers. Covers [StringEnum], [EnumAlias], [EnumFallback], EnumNaming, the generated {Enum}Extensions (ToWireName, TryParseWire, ParseWire, IsDefined, ToDescription, Names, Values), EnumConventions, EnumReadMode, EnumValueParser, EnumValueFormatter, EnumMetadata, flags, safe renames and analyzers CSE0002-CSE0016.",
       "files": ["SKILL.md"]
     },
     {
       "name": "csharpessentials-errors",
-      "description": "Use when creating structured error values. Covers Error factory methods (Failure/Validation/NotFound/Conflict/Unauthorized/Forbidden/Unexpected), ErrorMetadata for contextual data, HTTP status mapping, and domain-specific static error class hierarchies.",
+      "description": "Use when creating error values for Result returns, error catalogs or HTTP status mapping. Covers Error factories (Validation, NotFound, Conflict, Unauthorized, Forbidden, Domain, Failure, Unexpected, Exception, Create), ErrorMetadata.AddMetadata, ErrorType.ToHttpStatusCode/ToErrorType, typed kinds (NotFoundError, ConflictError, ValidationError, ...) with ToError and [ErrorKind], and DomainException/EnhancedValidationException.",
       "files": ["SKILL.md"]
     },
     {
       "name": "csharpessentials-gcpsecretmanager",
-      "description": "Use when loading Google Cloud Secret Manager secrets into IConfiguration at startup. Covers builder.Configuration.AddGcpSecretManager(o => o.AddProject(new ProjectSecretConfiguration { ProjectId, SecretIds, PrefixFilters, RawSecretIds, Region })) or the \"GoogleSecretManager\" appsettings section, with `__` to `:` key mapping, JSON secret flattening, LoggerFactory diagnostics and transient gRPC retries.",
+      "description": "Use when loading Google Cloud Secret Manager secrets into IConfiguration at startup. Covers builder.Configuration.AddGcpSecretManager with AddProject(new ProjectSecretConfiguration { ProjectId, PrefixFilters, SecretIds, RawSecretIds, RawSecretPrefixes, Region }) or the \"GoogleSecretManager\" appsettings section, SecretManagerConfigurationOptions (CredentialsPath, BatchSize, PageSize, LoggerFactory, Loader), the __ to : key mapping, JSON secret flattening, custom ISecretManagerConfigurationLoader and transient gRPC retries.",
       "files": ["SKILL.md"]
     },
     {
       "name": "csharpessentials-http",
-      "description": "Use when making HTTP calls that should return Result/Result<T> instead of throwing. Covers GetFromJsonAsResultAsync, PostAsJsonAsResultAsync, PutAsJsonAsResultAsync, PatchAsJsonAsResultAsync, DeleteAsResultAsync, SendAsResultAsync on HttpClient, the fluent HttpRequestBuilder (WithHeader, WithQuery, WithJsonContent, FollowRedirects, AsResultAsync), WithQueryString/ToQueryString, HttpStatusCodeMapper, Polly.Core-based retry/timeout/circuit-breaker policies, and Idempotency-Key client helpers (SetIdempotencyKey, WithIdempotencyKey, AddIdempotencyKeys, RetryUnsafeMethodsOnlyWithIdempotencyKey).",
+      "description": "Use when calling HTTP APIs that should return Result or Result<T> instead of throwing. Covers GetFromJsonAsResultAsync, PostAsJsonAsResultAsync, PutAsJsonAsResultAsync, PatchAsJsonAsResultAsync, DeleteAsResultAsync, SendAsResultAsync, HttpRequestBuilder, WithQueryString, HttpStatusCodeMapper, SendWithRedirectsAsResultAsync, CreateResiliencePolicy, Idempotency-Key helpers (SetIdempotencyKey, WithIdempotencyKey, IdempotencyKeyHandler, RetryUnsafeMethodsOnlyWithIdempotencyKey) and the AddSsrfGuard client for user-supplied URLs.",
       "files": ["SKILL.md"]
     },
     {
       "name": "csharpessentials-idempotency",
-      "description": "Use when an operation must run once per key and caller, or a retry or redelivery must not repeat a side effect. Covers IIdempotencyRecordStore (in-memory, distributed cache, EF Core, contract-test kit), IIdempotencyExecutor with profiles and codecs, IdempotencyInbox for message consumers, IdempotencyScope factories, IdempotencyKeys.For/FromMessage/ToUuidV5 deterministic keys, lease versus transactional guarantee modes, Observe to Enforce rollout and the v6 to v7 migration.",
+      "description": "Use when an operation must run once per key and caller, or a retry or message redelivery must not repeat a side effect, outside HTTP and Mediator or under them. Covers AddIdempotencyExecutor, IIdempotencyExecutor.ExecuteAsync with IdempotencyRecordKey, codecs and profiles, IdempotencyInbox.ProcessAsync, IIdempotencyRecordStore (in-memory, distributed cache, EF Core, custom), IdempotencyScope and IdempotencyScopes, IdempotencyKeys.For/FromMessage/ToUuidV5, Observe to Enforce rollout and the idempotency.decisions counter.",
       "files": ["SKILL.md"]
     },
     {
       "name": "csharpessentials-json",
-      "description": "Use when configuring System.Text.Json. Covers EnhancedJsonSerializerOptions presets (DefaultOptions, StrictOptions, ApplyTo), ConvertToJson/ConvertFromJson helpers, AddEnumConventions for [StringEnum] enums (obsolete ConditionalStringEnumConverter and StringEnumNaming), polymorphism with [JsonTypeDiscriminator] and AddPolymorphism (source-generated, AOT safe) or AddPolymorphismWithReflection, the $type PolymorphicJsonConverterFactory for bases without attributes, MultiFormatDateTimeConverterFactory, JsonElement.ToClrObject() and the CSE4001-CSE4012 analyzers.",
+      "description": "Use when configuring System.Text.Json with CSharpEssentials.Json. EnhancedJsonSerializerOptions presets (DefaultOptions, StrictOptions, Create, ApplyTo), ConvertToJson/ConvertFromJson, AddEnumConventions for [StringEnum] enums, polymorphism with [JsonPolymorphic] + [JsonTypeDiscriminator] and AddPolymorphism (AOT safe) or AddPolymorphismWithReflection, [JsonPolymorphicProperty], RequireValueTypeConstructorParameters, MultiFormatDateTimeConverterFactory, JsonElement.ToClrObject and analyzers CSE4001-CSE4012.",
       "files": ["SKILL.md"]
     },
     {
       "name": "csharpessentials-logging",
-      "description": "Use when logging HTTP requests and responses in ASP.NET Core. Covers app.AddRequestResponseLogging(opt => …) with UseLogger(ILoggerFactory, LoggingOptions), UseHandler, IgnorePaths, LogFields selection, and [SkipRequestLogging] / [SkipResponseLogging] / [SkipRequestResponseLogging] endpoint metadata for per-endpoint opt-out.",
+      "description": "Use when logging HTTP request and response bodies in ASP.NET Core with CSharpEssentials.RequestResponseLogging. Covers app.AddRequestResponseLogging(opt => ...) with UseLogger(ILoggerFactory, LoggingOptions), LoggingOptions.CreateAllFields(), LogFields, HeaderKeys, UseHandler(Func<RequestResponseContext, Task>), IgnorePaths, and the [SkipRequestLogging], [SkipResponseLogging] and [SkipRequestResponseLogging] attributes.",
       "files": ["SKILL.md"]
     },
     {
       "name": "csharpessentials-maybe",
-      "description": "Use when representing optional values explicitly. Covers Maybe<T> as a null-safe container, Maybe.From()/FromTry()/AsMaybe() for creation, HasValue/HasNoValue, Map/Bind chaining, TapNone for None-side effects, Match for consumption, and ToMaybeResult() to bridge into the Result pattern.",
+      "description": "Use when a value may be missing and callers must handle it (lookups, optional fields, first-or-none). Maybe<T> is an option type. Covers implicit creation, Maybe.None/From/FromTry, AsMaybe, HasValue, GetValueOrDefault, Map/Bind/Where/Or, LINQ syntax, Match, Tap/TapNone, ToResult(error)/ToMaybeResult, TryFirst/TryFind/Choose/Sequence/Traverse/Partition and the *Async chain.",
       "files": ["SKILL.md"]
     },
     {
       "name": "csharpessentials-mediator",
-      "description": "Use when adding cross-cutting pipeline behaviors to CQRS handlers. Covers ValidationBehavior (CSharpEssentials.Validation; modes Enforce/LogOnly/Off, failure observers; Result failure or EnhancedValidationException), LoggingBehavior (ILoggableRequest), ExceptionHandlingBehavior (converts exceptions to Result.Failure for Result-returning handlers), CachingBehavior (ICacheable with IDistributedCache), TransactionScopeBehavior and TransactionBehavior (ITransactionalRequest, commits only on success), LockBehavior (ILockedRequest) and IdempotencyBehavior (IIdempotentRequest over IIdempotencyExecutor; replays the stored Result for a repeated key).",
+      "description": "Use when adding pipeline behaviors to Mediator (martinothamar, source generator, not MediatR) CQRS handlers that return Result or Result<T>. Covers AddMediatorBehaviors, ValidationBehavior (Enforce/LogOnly/Off, IValidationFailureObserver), LoggingBehavior (IRequestLoggable), ExceptionHandlingBehavior, CachingBehavior (ICacheable), TransactionScopeBehavior and TransactionBehavior (ITransactionalRequest, ITransactionRunner), LockBehavior (ILockedRequest, IResourceLock) and IdempotencyBehavior (IIdempotentRequest, AddMediatorIdempotencyBehavior).",
       "files": ["SKILL.md"]
     },
     {
       "name": "csharpessentials-meta",
-      "description": "Use when deciding which CSharpEssentials package to use. Gives an overview of all 32 packages organized by concern, what the CSharpEssentials meta-package bundles, and a quick-reference table mapping problems to packages.",
+      "description": "Use when choosing which CSharpEssentials package solves a problem, or when a project references the CSharpEssentials meta-package. Maps all 32 packages to the problems they solve and their skills, lists what the meta-package bundles, and covers its own helpers JsonElement.TryGetProperty, JsonDocument.TryGetNestedProperty and long?.MsToDateTime.",
       "files": ["SKILL.md"]
     },
     {
       "name": "csharpessentials-resilience",
-      "description": "Use when adding transient fault handling around Result-based operations. Covers ResiliencePolicy/ResiliencePolicy<T> retry, timeout, circuit breaker and fallback on Polly.Core v8, RetryIfFailed with an optional shouldRetry predicate, Result-aware retry filtering and caller cancellation that throws OperationCanceledException.",
+      "description": "Use when adding retry, timeout, circuit breaker or fallback around code that returns Result or Result<T>. Covers ResiliencePolicy and ResiliencePolicy<T> (Create, WithRetry, WithTimeout, WithCircuitBreaker, WithFallback, ExecuteAsync, FromPipeline, ToPipeline), ResiliencePolicyOptions with RetryOptions, TimeoutOptions and CircuitBreakerOptions, RetryIfFailed with an optional shouldRetry predicate, which error types are retried, and caller cancellation that throws OperationCanceledException. Built on Polly.Core v8.",
       "files": ["SKILL.md"]
     },
     {
       "name": "csharpessentials-results",
-      "description": "Use when handling operation outcomes without exceptions. Covers Result and Result<T> for success/failure, railway-oriented chaining with Then/ThenAsync/Ensure, Match for consumption, and Result.And/Or for combining multiple results.",
+      "description": "Use when a method can fail in expected ways and should return the failure instead of throwing. Covers Result and Result<T> (implicit returns, Then/Map/Bind/Ensure chains, Match/Switch, Else/Compensate/Recover, Result.Try, Combine/CombineAll/Traverse), the *Async forms on Task and ValueTask sources, and typed Result<T, E1..E3> with Match, BindWiden, JSON and the CSE5001-CSE5006 analyzers.",
       "files": ["SKILL.md"]
     },
     {
       "name": "csharpessentials-rules",
-      "description": "Use when composing business validation logic. Define rules as classes, Func fields, or inline lambdas; combine with .And()/.Or()/.Linear()/.Next(); evaluate with RuleEngine.Evaluate(), or await RuleEngine.EvaluateAsync() when the tree contains async rules; branch with RuleEngine.If().",
+      "description": "Use when composing business rules that return Result or Result<T>. Covers IRule<T>/IAsyncRule<T> classes, Func rules, RuleEngine.FromPredicate/FromPredicateAsync, .ToRule(), .And()/.Or()/.Linear()/.Next(), RuleEngine.If, the static RuleEngine.And/Or/Linear shortcuts, RuleEngine.Evaluate and EvaluateAsync, value rules (IRule<TContext,TResult>) and custom ILinearRule/IConditionalRule/IAndRule/IOrRule nodes.",
       "files": ["SKILL.md"]
     },
     {
       "name": "csharpessentials-these",
-      "description": "Use when modeling partial success. These<TError, TValue> holds Left (error only), Right (value only), or Both (error + value), enabling scenarios where a result can partially succeed while carrying warnings. Use FromResult to bridge from Result<T>, ToResult/ToResultLenient to bridge back, and Partition to split collections.",
+      "description": "Use when a result can succeed with a warning (partial success, capped values, batch imports). These<TError, TValue> is Left (error), Right (value) or Both. Covers the Left/Right/Both factories, IsLeft/IsRight/IsBoth, Match, Map, MapLeft, FlatMap, Tap, TapLeft, GetRight/GetLeft (Maybe<T>), TheseExtensions.FromResult, ToResult/ToResultLenient and Partition.",
       "files": ["SKILL.md"]
     },
     {
       "name": "csharpessentials-time",
-      "description": "Use when you need testable time. Inject IDateTimeProvider (DateTimeProvider over TimeProvider in production, FakeDateTimeProvider with Advance/SetTime in tests), plus DateTime/DateOnly extensions ToDateOnly/ToTimeOnly, NextDayOfWeek/PreviousDayOfWeek and GetAge.",
+      "description": "Use when code needs a testable clock. Inject IDateTimeProvider from CSharpEssentials.Time (DateTimeProvider over TimeProvider.System in production; FakeDateTimeProvider with Advance/SetTime, or DateTimeProvider over FakeTimeProvider, in tests). Also TimeZones.Find/TryFind for IANA or Windows ids, NowIn/TodayIn for a user's zone, GetAge, NextDayOfWeek/PreviousDayOfWeek and ToDateOnly/ToTimeOnly.",
       "files": ["SKILL.md"]
     },
     {
       "name": "csharpessentials-validation",
-      "description": "Use when writing model validation that returns Result<T>. Covers Validator<T> with Configure(model, rules, ct), rules.For(() => model.X).NotEmpty()/MaxLength()/GreaterThan() chains, Must/MustAsync, SetValidatorAsync for nested objects, ForEach/ForEachAsync for collections, native if/switch for conditional rules, Include and Order for composition, AddValidator/AddValidatorsFromAssembly (idempotent), ValidateWith/ValidateWithAsync railway bindings. Also use when migrating from FluentValidation.",
+      "description": "Use when writing model validation that returns Result<T>, or migrating from FluentValidation. Covers Validator<T>.Configure(model, rules, ct), rules.For(() => model.X) with NotEmpty/MaxLength/EmailAddress/GreaterThan/InclusiveBetween/IsDefinedEnum/MinCount, Must/MustAsync, SetValidatorAsync, ForEach/ForEachAsync, CascadeMode, Include, Order, AddValidator/AddValidatorsFromAssembly and ValidateWith/ValidateWithAsync.",
       "files": ["SKILL.md"]
     }
   ]

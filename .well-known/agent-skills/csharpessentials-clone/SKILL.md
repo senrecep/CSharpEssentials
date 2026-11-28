@@ -1,80 +1,70 @@
 ---
 name: csharpessentials-clone
-description: Use when entities need deep-copy semantics. Implement ICloneable<T> on domain objects, then call .Clone() on IEnumerable<T> or IQueryable<T> collections to produce independent deep copies of every element.
+description: Use when domain objects need a typed copy method. Implement ICloneable<T> (T Clone()) from CSharpEssentials.Clone on a class, then call Clone() on an IEnumerable<T> or IQueryable<T> to copy every item. The copy depth is whatever your Clone() does.
 ---
 
 # CSharpEssentials.Clone
-
-Typed copy contract for domain objects. `ICloneable<out T>.Clone()` returns `T`, unlike `System.ICloneable`, which returns `object`. The library only calls `Clone()`; your implementation decides how deep the copy goes.
 
 ```bash
 dotnet add package CSharpEssentials.Clone
 ```
 
 ```csharp
-using CSharpEssentials.Clone;
+using CSharpEssentials.Clone;   // ICloneable<T>, Extensions.Clone
 ```
 
----
+## Quick start
 
-## Implement ICloneable\<T\>
+```csharp Program.cs
+// dotnet add package CSharpEssentials.Clone
+using CSharpEssentials.Clone;
 
-```csharp
-public class Product : ICloneable<Product>
+var product = new Product { Id = 1, Name = "Pen", Tags = [new Tag { Value = "office" }] };
+Product copy = product.Clone();
+copy.Tags[0].Value = "school";
+Console.WriteLine($"{product.Tags[0].Value} {copy.Tags[0].Value}"); // office school
+
+List<Product> products = [product];
+List<Product> copies = products.Clone().ToList();
+Console.WriteLine(ReferenceEquals(products[0], copies[0]));         // False
+
+public sealed class Product : ICloneable<Product>
 {
-    public int Id       { get; init; }
-    public string Name  { get; init; } = "";
-    public List<Tag> Tags { get; init; } = new();
+    public int Id { get; init; }
+    public string Name { get; set; } = "";
+    public List<Tag> Tags { get; init; } = [];
 
     public Product Clone() => new()
     {
-        Id   = Id,
+        Id = Id,
         Name = Name,
-        Tags = Tags.Select(t => t.Clone()).ToList()  // deep-copy child collections too
+        Tags = Tags.Select(t => t.Clone()).ToList(),
     };
 }
 
-public class Tag : ICloneable<Tag>
+public sealed class Tag : ICloneable<Tag>
 {
-    public string Value { get; init; } = "";
+    public string Value { get; set; } = "";
     public Tag Clone() => new() { Value = Value };
 }
 ```
 
----
+## Implementing `Clone()`
 
-## Clone collections
+- The interface is `ICloneable<T>` with one method `T Clone()`. It is not `System.ICloneable`.
+- Copy child objects with their own `Clone()` and child lists with `list.Select(x => x.Clone()).ToList()`. The library never walks your object graph.
 
-```csharp
-List<Product> products = [new() { Id = 1, Name = "Pen" }];
-
-// IEnumerable<T> where T : ICloneable<T>: lazily clones each element
-IEnumerable<Product> copies = products.Clone();
-
-// IQueryable<T> where T : ICloneable<T>: clones in memory, not translated to SQL;
-// marked [RequiresUnreferencedCode]/[RequiresDynamicCode], so use the IEnumerable<T> overload under AOT
-IQueryable<Product> projected = products.AsQueryable().Clone();
-```
-
----
-
-## Typical use
-
-Snapshot EF Core results before applying in-memory transformations, without mutating tracked entities:
+## Cloning a sequence
 
 ```csharp
-List<Product> snapshot = await db.Products
-    .Where(p => p.Name.StartsWith("P"))
-    .ToListAsync();
-
-List<Product> working = snapshot.Clone().ToList();  // independent deep copies; mutations don't affect EF tracking
+List<Product> copies = products.Clone().ToList();       // IEnumerable<T>, lazy until ToList
+List<Product> fromDb = (await db.Products.ToListAsync()).Clone().ToList(); // snapshot of tracked entities
 ```
 
----
+## Rules
 
-## Guidance
-
-- Deep-copy nested collections inside `Clone()`; the extensions do not.
-- `ICloneable<T>` is covariant (`out T`): a `Product : ICloneable<Product>` is also an `ICloneable<object>`.
-- `Clone()` on a sequence is lazy; call `ToList()` to materialize the copies once. There is no array overload: `Clone()` on a `T[]` variable binds to `Array.Clone()` (shallow, returns `object`).
-- For immutable value objects, `record` types with `with` expressions are simpler than `ICloneable<T>`.
+- `T` must implement `ICloneable<T>`; the extension does not exist otherwise.
+- The sequence overloads are lazy. Materialize once with `ToList()`/`ToArray()`, or every enumeration clones again.
+- On a `T[]` variable, `array.Clone()` is `Array.Clone()` (shallow, returns `object`). Write `((IEnumerable<T>)array).Clone().ToArray()`.
+- `IQueryable<T>.Clone()` is not translated to SQL; it reads the rows and clones in memory. It is marked `[RequiresUnreferencedCode]` and `[RequiresDynamicCode]`, so in Native AOT apps call `.AsEnumerable().Clone()` or clone a materialized list.
+- For immutable value objects use a `record` and `with` instead.

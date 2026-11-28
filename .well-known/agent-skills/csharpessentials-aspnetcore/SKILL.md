@@ -1,279 +1,257 @@
 ---
 name: csharpessentials-aspnetcore
-description: Use when wiring CSharpEssentials into ASP.NET Core. Covers AddEnhancedProblemDetails/UseEnhancedProblemDetails with GlobalExceptionHandler (secure 4.0 ProblemDetails defaults), ToProblemResult/ToActionResult, ResultEndpointFilter with IResultErrorMapper, AddEnumConventions/UseEnumBinding/WithEnumWireFormat for [StringEnum] route/query/header/form values and output format, ConfigureInvalidModelStateResponse, the Idempotency-Key middleware (AddIdempotency, UseIdempotency, WithIdempotency, [Idempotent]), MapVersionedGroup, versioned Swagger (CSharpEssentials.AspNetCore.Swashbuckle) and enum schemas for Microsoft.AspNetCore.OpenApi (CSharpEssentials.AspNetCore.OpenApi).
+description: Use when wiring CSharpEssentials into ASP.NET Core. Covers AddEnhancedProblemDetails/UseEnhancedProblemDetails with GlobalExceptionHandler, ToProblemResult/ToActionResult/ToProblemDetails, typed ToHttpResult/ToCreated, ResultEndpointFilter, WithValidation, AddIdempotency/UseIdempotency/WithIdempotency/[Idempotent], WithConditionalGet/WithIfMatch, AddEnumConventions/UseEnumBinding/WithEnumWireFormat, AddAndConfigureApiVersioning/MapVersionedGroup, and the OpenAPI helpers AddEnumConventions, AddIdempotencyConventions and AddBearerSecurityScheme.
 ---
 
 # CSharpEssentials.AspNetCore
 
-ASP.NET Core integration: one ProblemDetails pipeline for `Error`/`Result` values and exceptions, automatic `Result<T>`-to-HTTP conversion, enum binding, API versioning and Swagger.
+Turns `Error`/`Result` values and exceptions into RFC 9457 problem responses, and adds typed HTTP results, request validation, `Idempotency-Key` handling, `ETag`/`If-Match`, `[StringEnum]` binding and API versioning.
 
-## Installation
+## Install
 
 ```bash
 dotnet add package CSharpEssentials.AspNetCore
+# OpenAPI, pick one:
+dotnet add package CSharpEssentials.AspNetCore.OpenApi        # Microsoft.AspNetCore.OpenApi, net10.0
+dotnet add package CSharpEssentials.AspNetCore.Swashbuckle    # Swashbuckle 10
 ```
 
-Depends on `Asp.Versioning.*` 8.1+. Swagger (`AddSwagger`, `UseVersionableSwagger`) lives in `CSharpEssentials.AspNetCore.Swashbuckle`, which needs `Swashbuckle.AspNetCore` `[10.2.3, 11)` and `Microsoft.OpenApi` 2.x on every target.
+## Namespaces
 
-## Namespace
+| Types | Namespace |
+|---|---|
+| Every AspNetCore, OpenApi and Swashbuckle extension and type below | `CSharpEssentials.AspNetCore` |
+| `Error`, `ErrorType`, `ErrorMetadata`, `NotFoundError`, `ConflictError`, `ValidationError` | `CSharpEssentials.Errors` |
+| `Result`, `Result<T>`, `Result<T, E1>` | `CSharpEssentials.ResultPattern` |
+| `IdempotencyMode`, `IdempotencyScopes`, `UnscopedKeyBehavior`, `IdempotencyErrorCodes`, `IIdempotencyRecordStore` | `CSharpEssentials.Idempotency` |
+| `[StringEnum]`, `EnumWireFormat`, `EnumConventions` | `CSharpEssentials.Enums` |
+| `Validator<T>`, `RuleContext<T>` / `NotEmpty()` etc. / `AddValidator` | `CSharpEssentials.Validation` / `.Validators` / `.Extensions` |
+| `EntityTagHeaderValue` | `Microsoft.Net.Http.Headers` |
+| `SwashbuckleSchemaIdFactory`, `EnumSchemaFilter` | `CSharpEssentials.AspNetCore.Swagger.Filters` |
+| `SwaggerGenOptions` | `Swashbuckle.AspNetCore.SwaggerGen` |
 
-```csharp
+## Quick start
+
+```csharp Program.cs
+// dotnet add package CSharpEssentials.AspNetCore
 using CSharpEssentials.AspNetCore;
+using CSharpEssentials.Errors;
+using CSharpEssentials.ResultPattern;
+
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddEnhancedProblemDetails(o => o.ExposeExceptionDetails = builder.Environment.IsDevelopment());
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+
+WebApplication app = builder.Build();
+app.UseEnhancedProblemDetails();
+
+app.MapGet("/users/{id:int}", (int id) => FindUser(id).ToHttpResult());          // 200 or 404 problem
+
+RouteGroupBuilder api = app.MapGroup("/api").AddEndpointFilter<ResultEndpointFilter>();
+api.MapGet("/orders/{id:int}", Result<string> (int id) =>
+    id > 0 ? $"order {id}" : Error.Validation("order.id", "The id must be positive."));  // 200 or 400 problem
+
+app.MapGet("/legacy/{id:int}", (int id) =>
+    Error.NotFound("item.not_found", $"Item {id} was not found.").ToProblemResult());
+
+app.Run();
+
+static Result<User, NotFoundError> FindUser(int id) =>
+    id == 1 ? new User(1, "Ada") : new NotFoundError("user.not_found", $"User {id} was not found.");
+
+public sealed record User(int Id, string Name);
 ```
 
----
+Problem JSON outside a request (default options, no `instance` or `traceId`):
 
-## ProblemDetails and GlobalExceptionHandler
+```csharp Program.cs
+// dotnet add package CSharpEssentials.AspNetCore
+using System.Text.Json;
+using CSharpEssentials.AspNetCore;
+using CSharpEssentials.Errors;
+using CSharpEssentials.ResultPattern;
 
-`AddEnhancedProblemDetails` configures one ProblemDetails pipeline (RFC 9457) shared by `ToProblemResult` (Minimal API), `ToActionResult` (MVC), `GlobalExceptionHandler`, status code pages and framework 404/405 responses.
+Result<int> failed = Error.Domain("order.closed", "The order is closed.");
+EnhancedProblemDetails problem = failed.ToProblemDetails();
+Console.WriteLine(JsonSerializer.Serialize(problem));
+// {"type":"https://tools.ietf.org/html/rfc9110#section-15.5.21","title":"Domain Error","status":422,"detail":"The order is closed.","errorCodes":["order.closed"]}
+```
+
+## Problem details
 
 ```csharp
 builder.Services.AddEnhancedProblemDetails(o =>
 {
-    o.ExposeExceptionDetails = builder.Environment.IsDevelopment(); // default false
-    // o.UseLegacyDefaults();  // restore the 3.x output
+    o.ExposeExceptionDetails = builder.Environment.IsDevelopment();  // default false
+    o.ValidationErrorsFormat = ValidationErrorsFormat.ByField;       // default List
+    o.ErrorFields = ProblemErrorFields.Codes | ProblemErrorFields.ValidationErrors; // default
 });
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
-
-app.UseEnhancedProblemDetails(); // UseExceptionHandler() + UseStatusCodePages()
+app.UseEnhancedProblemDetails();   // = UseExceptionHandler() + UseStatusCodePages()
 ```
 
-### Secure defaults (4.0)
+Options: `TraceId` (`TraceIdFormat.W3CTraceId`), `IncludeRequestId`/`IncludeUser`/`IncludeSpanIds` (false), `Instance` (`ProblemInstanceFormat.Path`), `ErrorFields`, `ValidationErrorsFormat` (`List`, `Dictionary`, `ByField`), `TypeUriResolver` (`ProblemTypeUris.Rfc9110`), `ExposeExceptionDetails`. `o.UseLegacyDefaults()` turns on the older verbose output: `TraceparentHeader`, every `Include*` flag, `MethodAndPath`, `ProblemErrorFields.All` and `ProblemTypeUris.Rfc7231`.
 
-| Option | Default | 3.x (`UseLegacyDefaults()`) |
+Status by `ErrorType`: Validation 400, Unauthorized 401, Forbidden 403, NotFound 404, Conflict 409, Domain 422, Failure/Unexpected/Unknown 500. The highest status among several errors wins. `Http.PreconditionFailed` maps to 412 and the `Idempotency.*` codes to 400/409/422 whatever their type.
+
+Responses with status 500 or more hide the description and exception metadata unless `ExposeExceptionDetails` is true.
+
+### Returning problems
+
+| Call | Returns | Use in |
 |---|---|---|
-| `TraceId` | `TraceIdFormat.W3CTraceId` (32-hex trace id) | `TraceparentHeader` |
-| `IncludeRequestId` / `IncludeUser` / `IncludeSpanIds` | `false` | `true` |
-| `Instance` | `ProblemInstanceFormat.Path` (`"/path"`) | `MethodAndPath` |
-| `ErrorFields` | `ProblemErrorFields.Codes \| ValidationErrors` | `All` |
-| `TypeUriResolver` | `ProblemTypeUris.Rfc9110` | `Rfc7231` |
-| `ExposeExceptionDetails` | `false` | N/A |
+| `error.ToProblemResult(extensions?, statusCode?)` | `IResult` | Minimal API |
+| `error.ToActionResult(httpContext?, extensions?, statusCode?)` | `IActionResult` | MVC |
+| `this.Problem(error)` | `IActionResult` | `ControllerBase` |
+| `error.ToProblemDetails(extensions?, statusCode?)` | `EnhancedProblemDetails` | Anywhere (default options) |
+| `.ProducesProblem(404)` / `.ProducesProblem<TProblem>(404)` | `RouteHandlerBuilder` | OpenAPI metadata |
 
-`errors` holds only `ErrorType.Validation` errors as `{ code, description }` (`ValidationErrorsFormat.List`, the default). `Dictionary` groups descriptions by code; `ByField` groups them by the `field` metadata entry (`{ "name": ["..."] }`, the `ValidationProblemDetails` shape, each path segment run through the HTTP JSON `PropertyNamingPolicy`), falling back to the code.
-
-### Status codes
-
-Default `IErrorStatusCodeMapper`: Validation → 400, Unauthorized → 401, Forbidden → 403, NotFound → 404, Conflict → 409, Domain → 422, Failure / Unexpected / Unknown → 500. With several errors the highest status wins (5xx, then 422, 409, 404, 403, 401, 400).
-
-`DefaultExceptionProblemMapper` (always last): `OperationCanceledException` from an aborted request → 499, `BadHttpRequestException` → its status, `EnhancedValidationException` → 400, `DomainException` → status of its `ErrorType`, anything else → 500 with a generic detail (the message is logged, not returned).
+Each works on `Error`, `Error[]` and a failed `Result`/`Result<T>`. Calling them on a successful result throws `InvalidOperationException`.
 
 ### Extension points
 
 ```csharp
-public sealed class TenantEnricher : IProblemDetailsEnricher
-{
-    public void Enrich(ProblemDetailsContext context) =>
-        context.ProblemDetails.Extensions["tenant"] = context.HttpContext.Request.Headers["X-Tenant"].ToString();
-}
-
-public sealed class AuthAwareStatusMapper : DefaultErrorStatusCodeMapper
-{
-    public override int GetStatusCode(Error error) =>
-        error.Code == "auth.expired" ? StatusCodes.Status401Unauthorized : base.GetStatusCode(error);
-}
-
-public sealed class TimeoutExceptionMapper : IExceptionProblemMapper
-{
-    public bool TryMap(HttpContext httpContext, Exception exception, [NotNullWhen(true)] out ExceptionProblem? problem)
-    {
-        problem = exception is TimeoutException
-            ? new ExceptionProblem(StatusCodes.Status504GatewayTimeout, Detail: "The upstream service timed out.")
-            : null;
-        return problem is not null;
-    }
-}
+builder.Services.AddProblemDetailsEnricher<TenantEnricher>();          // IProblemDetailsEnricher.Enrich(ProblemDetailsContext)
+builder.Services.AddErrorStatusCodeMapper<AuthAwareStatusMapper>();    // replaces IErrorStatusCodeMapper; derive from DefaultErrorStatusCodeMapper
+builder.Services.AddExceptionProblemMapper<TimeoutExceptionMapper>();  // IExceptionProblemMapper.TryMap(HttpContext, Exception, out ExceptionProblem?)
+builder.Services.AddEnhancedProblemDetails((problem, http) => problem.Extensions["region"] = "eu");  // delegate enricher
 ```
+
+Each `Add*` takes an optional `ServiceLifetime` (default `Singleton`). `DefaultErrorStatusCodeMapper` virtuals: `GetStatusCode`, `SelectPrimaryError`, `GetTitle`, `GetDeclaredStatusCodes`. `ExceptionProblem(StatusCode?, Title?, Detail?, Errors?)`.
+
+### MVC model state
 
 ```csharp
-builder.Services.AddProblemDetailsEnricher<TenantEnricher>();          // runs after the built-in enrichment
-builder.Services.AddErrorStatusCodeMapper<AuthAwareStatusMapper>();    // replaces the default mapper
-builder.Services.AddExceptionProblemMapper<TimeoutExceptionMapper>();  // tried before DefaultExceptionProblemMapper
+builder.Services.AddControllers();
+builder.Services.ConfigureInvalidModelStateResponse();   // [ApiController] 400 as an enhanced problem, code = model state key
 ```
 
-### Results to responses
+`ConfigureModelValidatorResponse()` is the alternative: it disables the automatic 400 and adds `[ValidateModel]` (code `validation.{key}`). Never call both.
+
+## Typed results
 
 ```csharp
-Error error = Error.NotFound("user.not_found", "User not found");
-IResult minimalApi = error.ToProblemResult();   // EnhancedProblemHttpResult
-IActionResult mvc  = error.ToActionResult();    // EnhancedProblemObjectResult
+app.MapGet("/orders/{id:int}", async (int id, IOrderService orders, CancellationToken ct) =>
+    await orders.GetAsync(id, ct).ToHttpResult());               // Task<Result<OrderDto, NotFoundError>>
 
-error.ToProblemResult(statusCode: 422);         // override the mapped status; also an optional ErrorMetadata for extra fields
-// inside a controller: this.Problem(error)    // ControllerBase extension; also on Error[] and on a failed Result
-EnhancedProblemDetails details = error.ToProblemDetails();   // the object, without writing it
-app.MapGet("/users/{id}", GetUser).ProducesProblem(404);    // OpenAPI: application/problem+json
+app.MapPost("/orders", (CreateOrder command, IOrderService orders) =>
+    orders.Create(command).ToCreated(o => $"/orders/{o.Id}"));
 ```
 
-`[ValidateModel]` (an MVC filter attribute) and `ConfigureModelValidatorResponse()` return the invalid model state through `ToActionResult` with the code `validation.{key}`. `services.ConfigureSystemTextJson()` applies the `CSharpEssentials.Json` options to the MVC and Minimal API JSON options and calls `AddControllers()`.
-
----
+`ToHttpResult()`, `ToOk()`, `ToHttpResult(v => TypedResults.Accepted(uri, v))`, `ToCreated(v => location)`, `ToNoContent()`. They exist only for `Result<T, E1>`, `Result<T, E1, E2>` and `Result<T, E1, E2, E3>` (and their `Task`/`ValueTask`); a plain `Result<T>` uses `ResultEndpointFilter` or `ToProblemResult()`. Error slots must implement `IError`. The OpenAPI document gets one problem response per slot with `[ErrorKind]` (`NotFoundError`, `ConflictError`, ...).
 
 ## ResultEndpointFilter
 
-Converts `Result` / `Result<T>` returns from Minimal API handlers: success → 200 (with the value), failure → ProblemDetails (4.0; 3.x returned 400 with raw `Error[]`).
-
 ```csharp
 RouteGroupBuilder api = app.MapGroup("/api").AddEndpointFilter<ResultEndpointFilter>();
-
-api.MapGet("/users/{id:guid}", Result<User> (Guid id) =>
-    id == Guid.Empty ? Error.NotFound("user.not_found", "User not found") : new User());
+api.MapGet("/users/{id:guid}", Result<User> (Guid id) => Error.NotFound("user.not_found", "User not found."));
 ```
 
-A registered `IResultErrorMapper` (resolved from the request services, so any lifetime works) replaces the ProblemDetails response:
+Success writes 200 with the value (an empty 200 for a plain `Result`); failure writes a problem. Register `IResultErrorMapper` (`IResult Map(Error[] errors)`, any lifetime) to replace the problem response.
+
+## Validation
 
 ```csharp
-public sealed class LegacyErrorMapper : IResultErrorMapper
-{
-    public IResult Map(Error[] errors) =>
-        errors[0].Type == ErrorType.NotFound ? Results.NotFound() : errors.ToProblemResult();
-}
+builder.Services.AddValidator<CreateUser, CreateUserValidator>();   // CSharpEssentials.Validation.Extensions
+app.MapPost("/users", (CreateUser request) => Results.Ok(request)).WithValidation<CreateUser>();
+// group: group.AddEndpointFilter<ValidationEndpointFilter<CreateUser>>()
 ```
 
-```csharp
-builder.Services.AddScoped<IResultErrorMapper, LegacyErrorMapper>();
-```
-
----
-
-## Validation endpoint filter
-
-```csharp
-using CSharpEssentials.Validation.Extensions; // AddValidator
-
-builder.Services.AddValidator<CreateUserRequest, CreateUserRequestValidator>();   // IValidator<T> from CSharpEssentials.Validation
-
-app.MapPost("/users", (CreateUserRequest request) => CreateUser(request)).WithValidation<CreateUserRequest>();
-```
-
-Every registered `IValidator<T>` runs in ascending `Order` on each non-null `T` argument; failures return a 400 ProblemDetails response and the handler does not run. A `null` argument passes through. With no registered validator the request throws `InvalidOperationException`; a handler without a `T` parameter throws when the endpoint is built. `ValidationEndpointFilter<T>` can be added directly with `AddEndpointFilter<ValidationEndpointFilter<T>>()` (for a group).
-
----
+Runs every `IValidator<T>`; failure returns 400 before the handler. If no `IValidator<T>` is registered, the request throws `InvalidOperationException`.
 
 ## Idempotency
 
 ```csharp
-builder.Services.AddIdempotency(o => { o.RetentionPeriod = TimeSpan.FromHours(24); o.RequireKey = true; });
+builder.Services.AddIdempotency(o => { o.RequireKey = true; o.ScopeResolver = IdempotencyScopes.User; });
 
+app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseIdempotency();                      // after auth: keys are scoped to the user
+app.UseIdempotency();        // after auth
 
-app.MapPost("/orders", CreateOrder).WithIdempotency();   // or [Idempotent] on an MVC action, or on a group
+app.MapPost("/orders", CreateOrder).WithIdempotency();
+app.MapPost("/payments", Pay).WithIdempotency("payments");                       // profile: o.AddProfile("payments", p => ...)
+app.MapPost("/imports", Import).WithIdempotency(o => o.InFlightTimeout = TimeSpan.FromMinutes(10));
+// MVC: [HttpPost, Idempotent(Profile = "payments", LeaseSeconds = 300)]
 ```
 
-- Scope: endpoints with `IdempotentAttribute` metadata, POST and PATCH by default (`Methods`).
-- Same `Idempotency-Key`, method, path, query and body: the stored response is replayed with `Idempotency-Replayed: true`. Same key, different request: 422. Still running: 409 with `Retry-After`. Missing key: passes through (400 with `RequireKey`).
-- Keys are scoped by `ScopeResolver` (default `IdempotencyScopes.User`: `NameIdentifier`, then `sub`; also `Tenant`, `UserAndTenant`, `Client`, `Custom(kind, resolve)` and `Global`; the kinds `user`, `tenant`, `client` and `global` are reserved in any casing). Scopes read `user:{id}`, `tenant:{id}`, `client:{id}`, `{kind}:{value}` and `global`; a custom `IIdempotencyScopeResolver` returns an `IdempotencyScope?` built only with the `IdempotencyScope.User/Tenant/Client/UserAndTenant/Custom(kind, value)/Global` factories. Records go to `Namespace` (default `http`).
-- A request whose scope cannot be resolved follows `UnscopedKeyBehavior`: `Skip` (default, warns `Idempotency.UnscopedKeySkipped`), `Reject` (400 `Idempotency.ScopeRequired`) or `Global`.
-- `.WithIdempotency()` and `[Idempotent]` install a filter that marks the handler as started. The key is released when the handler did not start; it stays in flight until `InFlightTimeout` after a 503/504 (`NeverStoreStatusCodes`), an exception or abort mid-handler, or a non-4xx response that cannot be stored; otherwise `ShouldStore` decides (`IdempotencyStorePolicies.Default`: 2xx and 3xx stored for `RetentionPeriod`, 5xx for `ServerErrorRetention` = 10 min, 4xx released; `SuccessOnly`: 2xx only). An endpoint without the filter stores only 2xx, releases everything else and warns once (`RequireExecutionFilter = true` throws).
-- Per endpoint: `.WithIdempotency(o => { o.InFlightTimeout = ...; o.StoreKey = "payments"; })`, `.WithIdempotency("profile")` with `AddIdempotency(o => o.AddProfile("profile", p => ...))`, or `[Idempotent(Profile = "...", RetentionSeconds = ..., LeaseSeconds = ..., ServerErrorRetentionSeconds = ..., RequireKey = ..., UnscopedKeyBehavior = ..., StoreKey = "...")]`. `RetentionPeriod`, `InFlightTimeout`, `ServerErrorRetention`, `RequireKey`, `ShouldStore` (profile or Minimal API only), `UnscopedKeyBehavior` and `StoreKey` (a keyed `IIdempotencyRecordStore`) resolve endpoint > profile > global; an endpoint overrides its group or controller. An unregistered profile or invalid merged settings throw `InvalidOperationException` on the endpoint's requests; invalid profiles throw in `AddIdempotency`.
-- Stores implement `IIdempotencyRecordStore` from `CSharpEssentials.Idempotency`: in-memory (default, single instance), `o.UseDistributedCacheStore()` (best effort, needs `IDistributedCache`) or your own with `o.UseStore<TStore>(lifetime)`. `Retry-After` is replayed.
-- `AddIdempotency` also registers `IHttpContextAccessor` and an `IIdempotencyScopeAccessor` that reads `HttpContext.User`, so the Mediator `IdempotencyBehavior` scopes keys to the request user.
-- A failed `Result` carrying an idempotency code gets the middleware status and a top-level `code` in both `ToProblemResult` and `ToActionResult`, whatever its `ErrorType` (`DefaultErrorStatusCodeMapper`): `Idempotency.InFlight` 409 with `Retry-After` (`IdempotencyOptions.RetryAfter`, 1 second without `AddIdempotency`), `Idempotency.KeyReused` 422, `Idempotency.KeyMissing`/`KeyInvalid`/`ScopeRequired` 400.
-
-Rollout:
-
-- `IdempotencyOptions.Mode` (`Enforce` default), overridden by `IdempotencyEndpointOptions.Mode`, a profile's `Mode` or `[Idempotent(Mode = ...)]` (endpoint > profile > global). It is separate from `IdempotencyExecutorOptions.Mode` (Mediator, inbox).
-- `Off` ignores the header (no scope resolver, no store call). `Observe` answers exactly as `Off` (no replay, no `Idempotency-Replayed`, no 400/409/422, no `Retry-After`), stores new keys as `Enforce` and logs and counts what `Enforce` would have done. It does not prevent duplicates, so keep it short for payments. Switching to `Enforce` replays what `Observe` stored and returns 409 for a key in flight.
-- Options are read per request through `IOptionsMonitor<IdempotencyOptions>`, so `services.Configure<IdempotencyOptions>(configuration.GetSection("Idempotency:Http"))` switches the mode on reload without a restart. The store is fixed at `AddIdempotency`, an invalid reload throws `OptionsValidationException` per request, and `IdempotencyOptions` from DI is the transient current value.
-- In `Observe` a throwing scope resolver, keyed store or fingerprint logs `Idempotency.Observe.ResolutionFailed` (a throwing reserve `Idempotency.Observe.ReserveFailed`) and runs the request once without idempotency; in `Enforce` or after a client abort it propagates.
-- Decisions go to counter `idempotency.decisions` on meter `CSharpEssentials.Idempotency` (`IdempotencyTelemetry`) with tags `decision`, `mode`, `source` = `http`, `target` = route template. Logs (event ids 7001-7017) carry a key hash, never the key or the scope.
-
-The middleware is always lease mode (reserve before, complete after, outside your transaction). For money movement, parse the header with `IdempotencyKeyHeader.TryParse(header, out string? key)` (or `TryParse(header, maxKeyLength, out key)`; the middleware's own normalization: it unquotes a structured-field `"abc"` to `abc` and validates with `IdempotencyKeys.IsValid`), answer `Idempotency.KeyInvalid` when it fails, and pass that key, never the raw header, to a Mediator command that is `ITransactionalRequest` and `IIdempotentRequest`, backed by the EF Core store; send external providers a deterministic key (`IdempotencyKeys.For`). `DistributedCacheIdempotencyRecordStore` is best effort across instances. The lease must cover the longest server timeout and the client retry budget. Migrating from 6.x: `docs/migration/v6-to-v7-idempotency.md`. See the `csharpessentials-idempotency` skill.
-
-Idempotent endpoints are described in the OpenAPI document by `o.AddIdempotencyConventions()` (`OpenApiOptions` in `CSharpEssentials.AspNetCore.OpenApi`; `SwaggerGenOptions` in `CSharpEssentials.AspNetCore.Swashbuckle`, which `AddSwagger` already calls): the key header (required with `RequireKey`), `Idempotency-Replayed` on 2xx, and 400, 409 (`Retry-After`) and 422 problem+json with `code` enums. Methods in `IdempotencyOptions.Methods` only; `Enforce` endpoints get all of this, `Observe` endpoints only the key header with `required: false`, `Off` endpoints nothing. An endpoint's own 400, 409 or 422 keeps its description and gets the idempotency one appended.
-
----
+- Only endpoints with `WithIdempotency()`/`[Idempotent]` and a method in `Methods` (POST, PATCH by default) take part. PUT and DELETE need `o.Methods.Add("PUT")`.
+- Replay: same key and request returns the stored response with `Idempotency-Replayed: true`. In flight: 409 `Idempotency.InFlight`. Other request body: 422 `Idempotency.KeyReused`. Missing key with `RequireKey`: 400 `Idempotency.KeyMissing`.
+- Anonymous callers have no scope. With the default `UnscopedKeyBehavior.Skip` they run without idempotency. Use `IdempotencyScopes.Client` for client-credential callers, `UnscopedKeyBehavior.Global` or `Reject` otherwise.
+- Stores: in-memory by default, `o.UseDistributedCacheStore()`, `o.UseStore<TStore>()`. Use an atomic store with more than one instance.
+- Modes: `IdempotencyMode.Enforce` (default), `Observe` (stores and logs, never blocks), `Off`.
+- Parse the header yourself with `IdempotencyKeyHeader.TryParse(header, out string? key)`.
 
 ## Conditional requests
 
 ```csharp
-using Microsoft.Net.Http.Headers;   // EntityTagHeaderValue
+builder.Services.AddConditionalRequests();                       // o => o.UseBodyHashFallback = true for non-IVersioned values
+builder.Services.AddETagSource<Article, ArticleETagSource>();    // optional IETagSource<T>
 
-builder.Services.AddConditionalRequests();
-builder.Services.AddETagSource<Article, ArticleETagSource>();   // optional IETagSource<T>
+app.MapGet("/articles/{id:int}", GetArticle).AddEndpointFilter<ResultEndpointFilter>().WithConditionalGet();
+app.MapPut("/articles/{id:int}", UpdateArticle).AddEndpointFilter<ResultEndpointFilter>().WithIfMatch(required: true);
 
-app.MapGet("/orders/{id}", GetOrder).AddEndpointFilter<ResultEndpointFilter>().WithConditionalGet();   // ETag/Last-Modified, 304
-app.MapPut("/orders/{id}", UpdateOrder).AddEndpointFilter<ResultEndpointFilter>().WithIfMatch(required: true); // 428 without If-Match
-
-// in the handler
-Preconditions preconditions = http.GetPreconditions();
-if (!preconditions.Matches(order))
+// In the PUT handler:
+if (!http.GetPreconditions().Matches(current))       // current : IVersioned
     return ConditionalRequestErrors.PreconditionFailed;   // 412
 ```
 
-Entities that implement `IVersioned` (`string Version`) get a strong ETag `"{Version}"` (versions with characters not allowed in an ETag are hashed); `IETagSource<T>` overrides that per type and `AddConditionalRequests(o => o.UseBodyHashFallback = true)` adds a weak ETag from the JSON body for other values. `If-Match` is evaluated only for POST, PUT, PATCH and DELETE; a malformed header returns 400. MVC uses `[ConditionalGet]` and `[IfMatch(Required = true)]`, or `MapControllers().WithConditionalGet()` / `.WithIfMatch()`. A registered `IResultErrorMapper` decides the `ResultEndpointFilter` response itself, so it must return 412 for `ConditionalRequestErrors.PreconditionFailed`; a custom `IErrorStatusCodeMapper` must map `ConditionalRequestErrors.PreconditionFailedCode` to 412.
+- `IVersioned { string Version { get; } }` gives a strong ETag `"{Version}"`.
+- Missing `If-Match` with `required: true`: 428. Malformed `If-Match`: 400. Matching `If-None-Match` on GET: 304.
+- MVC: `[ConditionalGet]`, `[IfMatch(Required = true)]`.
+- OpenAPI: `WithIfMatch`/`[IfMatch]` declare 400, 412 and (when required) 428.
 
----
-
-## Enum conventions and binding
+## Enums
 
 ```csharp
-builder.Services.AddEnumConventions(c => c with { AcceptNumbers = false })   // required by UseEnumBinding
+builder.Services.AddEnumConventions()                                   // required by UseEnumBinding
     .ConfigureErrors((error, key) => Error.Validation($"validation.{key}", error.Message));
-
-app.UseEnumBinding();                  // after routing has selected the endpoint
-
-app.MapGroup("/api/v1").WithEnumWireFormat(EnumWireFormat.Number);   // legacy numeric output
+app.UseEnumBinding();                                                   // after UseRouting and auth
+app.MapGroup("/api/v1").WithEnumWireFormat(EnumWireFormat.Number);      // output as numbers for this group
 ```
 
-`[StringEnum]` enums in route, query, header and form values (Minimal API incl. `[AsParameters]`, and MVC) accept the same spellings as a JSON body. Invalid values return a 400 ProblemDetails response listing the allowed values; the same error is used for Minimal API JSON body errors. Enums without generated metadata keep the framework's behavior unless `AddEnumConventionsWithReflection` opts them in. Use a typed enum parameter instead of a string parameter + action filter + scoped holder (`EnumData<T>`). `[EnumWireFormat]` sets the output format of an MVC controller or action (action > controller > group > `WriteAs`). `AddEnumBinding` is an obsolete forwarder.
+`[StringEnum]` enums bind from route, query, header and form with the JSON spellings (`pending_approval`, `PendingApproval`, `1`). Bad values return 400 listing allowed values. The enum must have `[StringEnum]` and the CSharpEssentials.Enums generator must run.
 
-## MVC invalid model state
+## API versioning
 
 ```csharp
-builder.Services.AddControllers();
-builder.Services.ConfigureInvalidModelStateResponse(); // [ApiController] 400s become enhanced ProblemDetails
-
-// Custom error per model state entry:
-// builder.Services.ConfigureInvalidModelStateResponse((key, modelError) =>
-//     Error.Validation($"validation.{key}", modelError.ErrorMessage));
+builder.Services.AddAndConfigureApiVersioning();             // default 1.0, URL segment or x-api-version header
+RouteGroupBuilder v1 = app.MapVersionedGroup(1);             // /v1
+RouteGroupBuilder users = app.CreateVersionedGroup("users", version: 2);   // /v2/users
 ```
 
-Do not combine with `ConfigureModelValidatorResponse()`, which turns the automatic 400 off.
-
----
-
-## API versioning and Swagger
+## OpenAPI
 
 ```csharp
-builder.Services.AddAndConfigureApiVersioning();   // v1 default, URL segment or x-api-version header
-builder.Services.AddSwagger<DefaultConfigureSwaggerOptions>(  // CSharpEssentials.AspNetCore.Swashbuckle
-    SecuritySchemes.JwtBearerSchemeName,            // 6.0: the scheme id is an argument
-    SecuritySchemes.JwtBearerTokenSecurity);
+// CSharpEssentials.AspNetCore.OpenApi (also add a direct Microsoft.AspNetCore.OpenApi reference, else CS9137)
+builder.Services.AddOpenApi("v1", o => o
+    .AddEnumConventions()
+    .AddIdempotencyConventions()
+    .AddOptionalRouteParameters()
+    .AddBearerSecurityScheme());
 
-app.UseVersionableSwagger();                        // one Swagger UI endpoint per API version
-
-// 4.1: "v{version:apiVersion}" route group bound to API version 2
-RouteGroupBuilder v2 = app.MapVersionedGroup(2);
-v2.MapGet("/health", () => Results.Ok());          // GET /v2/health
+// CSharpEssentials.AspNetCore.Swashbuckle
+builder.Services.AddSwagger<DefaultConfigureSwaggerOptions>();           // enum + idempotency conventions included
+builder.Services.Configure<SwaggerGenOptions>(o => o.AddBearerSecurityScheme());
+app.UseVersionableSwagger();
 ```
 
-`CreateVersionedGroup("orders", version: 1)` builds `v{version:apiVersion}/orders` in one call.
+`AddBearerSecurityScheme()` marks only operations with `[Authorize]`/`RequireAuthorization()` and no `AllowAnonymous`. `AddSwagger<T>(SecuritySchemes.JwtBearerSchemeName, SecuritySchemes.JwtBearerTokenSecurity)` instead marks every operation.
 
-The overload above requires the scheme on every operation, anonymous ones included. To require it only on operations with `[Authorize]` or `.RequireAuthorization()` and no `[AllowAnonymous]`, call `AddSwagger<DefaultConfigureSwaggerOptions>()` without a scheme and `services.Configure<SwaggerGenOptions>(o => o.AddBearerSecurityScheme())` (9.0). `CSharpEssentials.AspNetCore.OpenApi` has the same method on `OpenApiOptions` and writes the same document.
+## Rules
 
-Optional route parameters (`{id?}`, `{id:int?}`, `{page=1}`) are described as one path per form (`/orders` + `/orders/{id}`, every path parameter required); the shorter form's operationId is `{operationId}Without{Param}` and a duplicate throws at document generation. `o.AddOptionalRouteParameters(OptionalRouteParameterMode.RequiredOnly)` (on `SwaggerGenOptions`, after `AddSwagger`) keeps one path per operation; avoid the obsolete `LegacyNonCompliant`, it emits invalid OpenAPI. With `Microsoft.AspNetCore.OpenApi` (`CSharpEssentials.AspNetCore.OpenApi`, 6.2.0) the same behavior is opt-in: `services.AddOpenApi("v1", o => o.AddOptionalRouteParameters())` (`OpenApiOptionalRouteParameterMode.SplitPaths` or `RequiredOnly`).
+- Use `AddEnhancedProblemDetails()`, not only `AddProblemDetails()`, and call `app.UseEnhancedProblemDetails()`.
+- `Error` has `Code` and `Description`. There is no `Error.Message`.
+- `Error.NotFound(code, description)` takes the code first. `Error.NotFound("User not found")` sets the code, not the description, and the response shows a default description.
+- `ToActionResult` reads the registered options when MVC executes it. Pass `HttpContext` (`error.ToActionResult(HttpContext)`) so the result's `Value` is already the final problem before execution, for example in filters or tests.
+- `ToHttpResult()` does not exist on `Result<T>`. Return `Result<T>` with `ResultEndpointFilter`, or use a typed `Result<T, NotFoundError>`.
+- Return a typed `Result<T, E>` through `ToHttpResult()`. Without it and without `ResultEndpointFilter`, writing it throws at runtime and the Endpoints analyzer reports `CSE1013`. With the filter it works, but OpenAPI only sees the return type.
+- `UseEnumBinding()` throws without `AddEnumConventions()`. `UseIdempotency()` and `UseEnumBinding()` go after `UseRouting()` and auth.
+- `WithValidation<T>()` throws when no `IValidator<T>` is registered.
+- Reference one OpenAPI package, never both.
+- Keep `ExposeExceptionDetails` off outside development.
 
----
+## Diagnostics
 
-## OpenAPI enum schemas
-
-A host references one OpenAPI package, never both: `CSharpEssentials.AspNetCore.Swashbuckle` (Swashbuckle) or `CSharpEssentials.AspNetCore.OpenApi` (`Microsoft.AspNetCore.OpenApi`, net10.0 only). Both describe `[StringEnum]` enums the way they are written (wire names, `x-enum-varnames`).
-
-```csharp
-builder.Services.AddEnumConventions();                              // CSharpEssentials.AspNetCore
-builder.Services.AddOpenApi("v1", o => o.AddEnumConventions());     // CSharpEssentials.AspNetCore.OpenApi, once per document
-app.MapOpenApi();
-
-builder.Services.AddSwaggerGen(o => o.AddEnumConventions());        // CSharpEssentials.AspNetCore.Swashbuckle; AddSwagger already calls it
-```
-
----
-
-## Best practices
-
-- Call `AddEnhancedProblemDetails()` (not plain `AddProblemDetails()`) and `app.UseEnhancedProblemDetails()`.
-- Keep `ExposeExceptionDetails` off outside development; never put raw exception messages in `ExceptionProblem.Detail`
-- `ToProblemResult` / `ToActionResult` return `EnhancedProblemHttpResult` / `EnhancedProblemObjectResult`, not `ProblemHttpResult` / `BadRequestObjectResult`
-- Apply `ResultEndpointFilter` at the group level, not per endpoint
-- `Error` has `Code` and `Description` (there is no `Error.Message`); binding errors use the model key as the code
+This package reports no diagnostics of its own. `CSE1013` (an endpoint returns a typed result without `ToHttpResult()`) comes from CSharpEssentials.Endpoints.

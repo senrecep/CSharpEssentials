@@ -1,6 +1,6 @@
 ---
 title: "CSharpEssentials"
-description: "CSharpEssentials is a modular .NET NuGet ecosystem that bridges object-oriented and functional programming in C#."
+description: "CSharpEssentials is a set of small .NET packages for writing C# in a functional style: results instead of exceptions, explicit optionals, unions and rules, plus ASP.NET Core, EF Core, Mediator and source-generated endpoint and service registration. Each package ships on its own, so you install only what you use."
 ---
 
 [![Build](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml/badge.svg)](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml)
@@ -12,303 +12,211 @@ description: "CSharpEssentials is a modular .NET NuGet ecosystem that bridges ob
 [![.NET](https://img.shields.io/badge/.NET-8%20%7C%209%20%7C%2010%20%7C%2011%20%7C%20ns2.0%20%7C%20ns2.1-512BD4)](https://dotnet.microsoft.com)
 [![Packages](https://img.shields.io/badge/packages-32-blue)](https://www.nuget.org/profiles/recepsen)
 
-CSharpEssentials is a modular .NET NuGet ecosystem that bridges object-oriented and functional programming in C#.
-
-## Packages
-
-| Package | Description | Docs | NuGet |
-|---------|-------------|------|-------|
-| `CSharpEssentials` | Meta-package: Results, Errors, Maybe, Any, These, Rules, Core, Enums, Entity, Clone, Json, Http, Time | [Docs](/examples/main) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials) |
-| `CSharpEssentials.Results` | `Result<T>`: railway-oriented error handling without exceptions; `Result<T, E1..E3>` with the error types in the signature for exhaustive matching (C# 15) | [Docs](/examples/results) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Results.svg)](https://www.nuget.org/packages/CSharpEssentials.Results) |
-| `CSharpEssentials.Errors` | Structured `Error` values with type, code, description, metadata; `TypedError` kinds (`NotFoundError`, `ConflictError`, ...) for typed results | [Docs](/examples/errors) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Errors.svg)](https://www.nuget.org/packages/CSharpEssentials.Errors) |
-| `CSharpEssentials.Maybe` | `Maybe<T>`: explicit optionals, no null reference exceptions | [Docs](/examples/maybe) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Maybe.svg)](https://www.nuget.org/packages/CSharpEssentials.Maybe) |
-| `CSharpEssentials.Any` | `Any<T1,T2,...>`: type-safe discriminated unions | [Docs](/examples/any) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Any.svg)](https://www.nuget.org/packages/CSharpEssentials.Any) |
-| `CSharpEssentials.These` | `These<TError,TValue>`: 3-state union with Left, Right, Both (error + value simultaneously) | [Docs](/libraries/these) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.These.svg)](https://www.nuget.org/packages/CSharpEssentials.These) |
-| `CSharpEssentials.Core` | String/GUID/collection utilities | [Docs](/examples/core) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Core.svg)](https://www.nuget.org/packages/CSharpEssentials.Core) |
-| `CSharpEssentials.Enums` | `[StringEnum]` source generator, AOT-safe enum to string and back | [Docs](/libraries/enums) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Enums.svg)](https://www.nuget.org/packages/CSharpEssentials.Enums) |
-| `CSharpEssentials.Rules` | Composable rule engine with `.And()/.Or()/.Linear()/.Next()` | [Docs](/examples/rules) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Rules.svg)](https://www.nuget.org/packages/CSharpEssentials.Rules) |
-| `CSharpEssentials.Mediator` | CQRS pipeline behaviors for the Mediator source generator: validation, logging, exception handling, caching, locking, transactions, idempotency | [Docs](/libraries/mediator) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Mediator.svg)](https://www.nuget.org/packages/CSharpEssentials.Mediator) |
-| `CSharpEssentials.Mediator.Testing` | Contract scenarios for `IResourceLock` implementations, for any test framework, and `RecordingResourceLock`, a recording fake | [Docs](/libraries/mediator-testing) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Mediator.Testing.svg)](https://www.nuget.org/packages/CSharpEssentials.Mediator.Testing) |
-| `CSharpEssentials.Results.Testing` | Assertion helpers for `Result`, `Result<T>`, typed results, `Maybe<T>` and problem details responses, for any test framework | [Docs](/libraries/results-testing) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Results.Testing.svg)](https://www.nuget.org/packages/CSharpEssentials.Results.Testing) |
-| `CSharpEssentials.Entity` | `EntityBase<TId>`, soft deletion, domain events | [Docs](/examples/entity) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Entity.svg)](https://www.nuget.org/packages/CSharpEssentials.Entity) |
-| `CSharpEssentials.EntityFrameworkCore` | EF Core interceptors (audit, events, slow queries), offset and keyset pagination, enum storage | [Docs](/examples/entityframeworkcore) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.EntityFrameworkCore.svg)](https://www.nuget.org/packages/CSharpEssentials.EntityFrameworkCore) |
-| `CSharpEssentials.EntityFrameworkCore.HealthChecks` | Readiness health check that fails while a `DbContext` has pending migrations | [Docs](/libraries/entityframeworkcore-healthchecks) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.EntityFrameworkCore.HealthChecks.svg)](https://www.nuget.org/packages/CSharpEssentials.EntityFrameworkCore.HealthChecks) |
-| `CSharpEssentials.EntityFrameworkCore.Hosting` | Hosted service that drains the EF Core outbox through `IOutboxProcessor` | [Docs](/libraries/entityframeworkcore-hosting) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.EntityFrameworkCore.Hosting.svg)](https://www.nuget.org/packages/CSharpEssentials.EntityFrameworkCore.Hosting) |
-| `CSharpEssentials.EntityFrameworkCore.Locking` | Distributed `IResourceLock` for Mediator over an EF Core connection: PostgreSQL advisory locks, SQL Server `sp_getapplock` or your own SQL | [Docs](/libraries/entityframeworkcore-locking) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.EntityFrameworkCore.Locking.svg)](https://www.nuget.org/packages/CSharpEssentials.EntityFrameworkCore.Locking) |
-| `CSharpEssentials.AspNetCore` | `GlobalExceptionHandler`, `ResultEndpointFilter`, enum binding, API versioning, `Idempotency-Key` middleware, ETag and `If-Match` | [Docs](/examples/aspnetcore) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.AspNetCore.svg)](https://www.nuget.org/packages/CSharpEssentials.AspNetCore) |
-| `CSharpEssentials.AspNetCore.OpenApi` | Enum convention schemas for `Microsoft.AspNetCore.OpenApi` (net10.0+, Microsoft.OpenApi 2.x); one OpenAPI package per host | [Docs](/libraries/aspnetcore-openapi) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.AspNetCore.OpenApi.svg)](https://www.nuget.org/packages/CSharpEssentials.AspNetCore.OpenApi) |
-| `CSharpEssentials.AspNetCore.Swashbuckle` | Swagger versioning, schema ids, security schemes and enum convention schemas for Swashbuckle 10 (net8.0+, Microsoft.OpenApi 2.x); one OpenAPI package per host | [Docs](/libraries/aspnetcore-swashbuckle) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.AspNetCore.Swashbuckle.svg)](https://www.nuget.org/packages/CSharpEssentials.AspNetCore.Swashbuckle) |
-| `CSharpEssentials.Endpoints` | Source-generated Minimal API endpoint discovery (`IEndpoint`, `IEndpointGroup`), AOT-safe, analyzers CSE1001 to CSE1012 | [Docs](/libraries/endpoints) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Endpoints.svg)](https://www.nuget.org/packages/CSharpEssentials.Endpoints) |
-| `CSharpEssentials.DependencyInjection` | Attribute-based, source-generated service registration and decoration (`[RegisterScoped]`, `[Decorates]`), analyzers CSE2001 to CSE2009 | [Docs](/libraries/dependencyinjection) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.DependencyInjection.svg)](https://www.nuget.org/packages/CSharpEssentials.DependencyInjection) |
-| `CSharpEssentials.Http` | `HttpClient` extensions returning `Result<T>` | [Docs](/libraries/http) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Http.svg)](https://www.nuget.org/packages/CSharpEssentials.Http) |
-| `CSharpEssentials.Idempotency` | Transport-independent idempotency: record store with reservation tokens, scoped record keys, scope resolvers, deterministic keys (UUIDv5) | [Docs](/libraries/idempotency) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Idempotency.svg)](https://www.nuget.org/packages/CSharpEssentials.Idempotency) |
-| `CSharpEssentials.Idempotency.Testing` | xUnit contract tests for custom `IIdempotencyRecordStore` implementations | [Docs](/libraries/idempotency-testing) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Idempotency.Testing.svg)](https://www.nuget.org/packages/CSharpEssentials.Idempotency.Testing) |
-| `CSharpEssentials.Resilience` | Transient fault handling: Retry, Timeout, Circuit Breaker, Fallback | [Docs](/libraries/resilience) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Resilience.svg)](https://www.nuget.org/packages/CSharpEssentials.Resilience) |
-| `CSharpEssentials.Json` | Pre-configured `System.Text.Json` options and converters | [Docs](/examples/json) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Json.svg)](https://www.nuget.org/packages/CSharpEssentials.Json) |
-| `CSharpEssentials.RequestResponseLogging` | Request/response body logging middleware | [Docs](/examples/requestresponselogging) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.RequestResponseLogging.svg)](https://www.nuget.org/packages/CSharpEssentials.RequestResponseLogging) |
-| `CSharpEssentials.GcpSecretManager` | `IConfiguration` provider for GCP Secret Manager | [Docs](/examples/gcpsecretmanager) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.GcpSecretManager.svg)](https://www.nuget.org/packages/CSharpEssentials.GcpSecretManager) |
-| `CSharpEssentials.Time` | Testable `IDateTimeProvider` wrapping `TimeProvider` | [Docs](/examples/time) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Time.svg)](https://www.nuget.org/packages/CSharpEssentials.Time) |
-| `CSharpEssentials.Validation` | Model-first validation with `Result<T>` integration | [Docs](/libraries/validation) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Validation.svg)](https://www.nuget.org/packages/CSharpEssentials.Validation) |
-| `CSharpEssentials.Clone` | `ICloneable<T>`: typed deep-copy for entity collections | [Docs](/examples/clone) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Clone.svg)](https://www.nuget.org/packages/CSharpEssentials.Clone) |
-
-## Documentation
-
-The [API reference](/API_REFERENCE) covers 29 of the 32 packages with method tables, code examples and cross-cutting patterns. `CSharpEssentials.Idempotency.Testing`, `CSharpEssentials.Mediator.Testing` and `CSharpEssentials.Results.Testing` are documented in their own Readmes.
+CSharpEssentials is a set of small .NET packages for writing C# in a functional style: results instead of exceptions, explicit optionals, unions and rules, plus ASP.NET Core, EF Core, Mediator and source-generated endpoint and service registration. Each package ships on its own, so you install only what you use.
 
 ## Installation
 
 ```bash
-dotnet add package CSharpEssentials            # meta-package with the core functional modules
+dotnet add package CSharpEssentials            # meta-package: Results, Errors, Maybe, Any, These, Rules, Core, Enums, Entity, Clone, Json, Http, Time
 dotnet add package CSharpEssentials.Mediator   # any other package on its own
+```
+
+## Quick start
+
+```csharp Program.cs
+// dotnet add package CSharpEssentials
+using CSharpEssentials.Errors;
+using CSharpEssentials.Maybe;
+using CSharpEssentials.ResultPattern;
+
+Dictionary<string, decimal> prices = new() { ["book"] = 12.5m, ["pen"] = 1.2m };
+
+foreach ((string product, int quantity) in new[] { ("book", 2), ("lamp", 1), ("pen", 0) })
+{
+    string line = PlaceOrder(product, quantity).Match(
+        onSuccess: total => $"{product} x{quantity}: {total}",
+        onError: errors => $"{product} x{quantity}: {errors[0].Code}");
+    Console.WriteLine(line);
+}
+// book x2: 25.0
+// lamp x1: Product.NotFound
+// pen x0: Order.Quantity
+
+Result<decimal> PlaceOrder(string product, int quantity) =>
+    FindPrice(product)
+        .ToResult(Error.NotFound("Product.NotFound", $"No product named '{product}'."))
+        .Ensure(_ => quantity > 0, Error.Validation("Order.Quantity", "Quantity must be positive."))
+        .Map(price => price * quantity);
+
+Maybe<decimal> FindPrice(string product) =>
+    prices.TryGetValue(product, out decimal price) ? price : Maybe.None;
 ```
 
 ## Core concepts
 
-### Result\<T\>: railway-oriented error handling
+### Result and Error
 
-Return expected failures as values instead of throwing exceptions, and chain operations that short-circuit on the first error.
+An operation that can fail returns `Result` or `Result<T>`. A value or an `Error` converts to it implicitly. `Map`, `Bind` and `Ensure` stop at the first failure, and every member that takes an async lambda ends in `Async` (`BindAsync`, `MapAsync`).
 
 ```csharp
-// Exceptions as control flow
-public User GetUserOrThrow(Guid id)
-{
-    var user = _db.Find(id);
-    if (user == null) throw new NotFoundException("User not found");
-    return user;
-}
-
-// Result<T>: explicit, composable error handling
-public Result<User> GetUser(Guid id)
-{
-    var user = _db.Find(id);
-    if (user is null) return Error.NotFound("User.NotFound", "User not found");
-    return user;
-}
-
-// Chain operations: stops at first failure, no try/catch needed
-Result<UserDto> result = GetUser(id)
-    .Bind(user => ValidateAge(user))
-    .Bind(user => CheckPermissions(user))
-    .Map(user => new UserDto(user));
+Result<User> GetUser(int id) =>
+    users.TryGetValue(id, out User? user) ? user : Error.NotFound("User.NotFound", $"User {id} was not found.");
 ```
 
-### Maybe\<T\>: explicit optionals
+`Result<T, NotFoundError, ConflictError>` puts the error kinds in the signature, and ASP.NET Core turns it into a typed HTTP result. See [Results](/libraries/results) and [Errors](/libraries/errors).
 
-Model the absence of a value without null references.
+### Maybe
+
+`Maybe<T>` holds a value or nothing, without `null`.
 
 ```csharp
-// Null checks everywhere, easy to miss
-string display = user?.Profile?.DisplayName?.Trim()?.ToUpper() ?? "ANONYMOUS";
-
-// Maybe<T>: a pipeline that handles absence at every step
-string displayName = Maybe.From(user)
-    .Bind(u  => Maybe.From(u.Profile))
-    .Bind(p  => Maybe.From(p.DisplayName))
-    .Map(n   => n.Trim().ToUpper())
-    .GetValueOrDefault("ANONYMOUS");
+string email = FindUser(id)
+    .Bind(user => Maybe.From(user.Email))
+    .Map(e => e.ToLowerInvariant())
+    .GetValueOrDefault("no email");
 ```
 
-### Any\<T1,T2,...\>: discriminated unions
+See [Maybe](/libraries/maybe).
 
-A value that is exactly one of several types, exhaustively matched at compile time.
+### Any and These
+
+`Any<T0, T1, ...>` is exactly one of several types. `Match` takes one handler per type. `These<TError, TValue>` adds a third state that carries an error and a value together, for partial success.
 
 ```csharp
-Any<Circle, Rectangle, Triangle> shape = new Circle(radius: 5);
-
-AnyActionResult<double> area = shape.Match(
-    circle    => Math.PI * circle.Radius * circle.Radius,
-    rectangle => rectangle.Width * rectangle.Height,
-    triangle  => 0.5 * triangle.Base * triangle.Height
-    // compiler error if any case is missing
-);
+Any<Order, OutOfStock> outcome = PlaceOrder(quantity);
+string text = outcome.Match(order => $"ordered {order.Quantity}", stock => $"only {stock.Available} left").Result!;
 ```
 
-### Rules: composable validation
+See [Any](/libraries/any) and [These](/libraries/these).
 
-Compose validation logic from small, reusable rules that return `Result`.
+### Rules and validation
 
-```csharp
-Func<User, Result> minAge     = u => u.Age >= 18            ? Result.Success() : Error.Validation("Age.MinAge", "Must be 18+");
-Func<User, Result> validEmail = u => u.Email.Contains('@') ? Result.Success() : Error.Validation("Email.Invalid", "Invalid email");
-Func<User, Result> verified   = u => u.IsVerified          ? Result.Success() : Error.Validation("Account.NotVerified", "Account not verified");
-
-// AND: all rules must pass; stops at the first failure and returns its errors
-Result result = RuleEngine.Evaluate(new[] { minAge, validEmail, verified }.And(), user);
-
-// OR: at least one rule must pass
-Result adminOrMod = RuleEngine.Evaluate(new[] { isAdmin, isModerator }.Or(), user);
-```
-
-### AspNetCore: Result to HTTP
-
-Map `Result<T>` failures to the matching HTTP status codes without writing the mapping yourself.
+Rules are functions or classes that return `Result`, combined with `And()`, `Or()` and `Linear()`. `Validator<T>` validates a model and returns `Result<T>` with one error per failed rule.
 
 ```csharp
-// Program.cs
-builder.Services.AddEnhancedProblemDetails(); // registers ProblemDetails (see "Migrating from 3.x to 4.0")
-
-// Controller: business logic returns Result<T>, HTTP mapping is automatic
-public class ProductsController(IProductService productService) : ControllerBase
+internal sealed class CreateUserValidator : Validator<CreateUser>
 {
-    [HttpGet("{id:guid}")]
-    public IActionResult GetProduct(Guid id)
-        => productService.GetProduct(id).Match(
-            onSuccess: product => Ok(product),
-            onError: errors  => errors.ToActionResult() // 404 / 400 / 409 based on ErrorType
-        );
+    protected override ValueTask Configure(CreateUser model, RuleContext<CreateUser> rules, CancellationToken ct = default)
+    {
+        rules.For(() => model.Email).NotEmpty().EmailAddress();
+        rules.For(() => model.Age).InclusiveBetween(18, 120);
+        return ValueTask.CompletedTask;
+    }
+}
+```
+
+See [Rules](/libraries/rules) and [Validation](/libraries/validation).
+
+### ASP.NET Core
+
+Failed results become problem details responses with the status that matches the error type (404 for `NotFound`, 409 for `Conflict`, 422 for `Domain`).
+
+```csharp
+builder.Services.AddEnhancedProblemDetails();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+// ...
+app.UseEnhancedProblemDetails();
+app.MapGet("/users/{id:int}", (int id) => LoadUser(id).ToHttpResult()); // 200 or a 404 problem, both in OpenAPI
+
+static Result<User, NotFoundError> LoadUser(int id) =>
+    id == 1 ? new User(1, "Ada") : new NotFoundError("user.not_found", $"User {id} was not found.");
+```
+
+See [AspNetCore](/libraries/aspnetcore).
+
+### Endpoints and dependency injection
+
+Source generators replace reflection scanning. An endpoint is a class with a static `Map` method, and a service is a class with a lifetime attribute. Both work with Native AOT.
+
+```csharp
+[EndpointGroup<TodosGroup>]
+public sealed class ListTodos : IEndpoint
+{
+    public static void Map(IEndpointRouteBuilder app) => app.MapGet("/", (ITodoStore store) => store.All());
 }
 
-// Service: chain multiple steps, first failure short-circuits
-public Result<Order> PlaceOrder(Guid productId, int quantity)
-    => _productService.GetProduct(productId)
-        .Then(p => ValidateStock(p, quantity))
-        .Then(p => ReserveStock(p, quantity))
-        .Then(p => CreateOrder(p, quantity));
-```
-
-### Endpoints: source-generated Minimal APIs
-
-Each endpoint is a type with a static `Map` method. A source generator collects them into one registry per assembly, so mapping uses no reflection and works with Native AOT.
-
-```csharp
-public sealed class ProductsGroup : IEndpointGroup
-{
-    public static string Prefix => "products";
-
-    public static void Configure(RouteGroupBuilder group) => group.WithTags("Products");
-}
-
-[EndpointGroup<ProductsGroup>]
-public sealed class GetProduct : IEndpoint
-{
-    public static void Map(IEndpointRouteBuilder app) =>
-        app.MapGet("/{id:guid}", (Guid id, IProductService service) =>
-            service.GetProduct(id).Match(product => Results.Ok(product), errors => errors.ToProblemResult()));
-}
+[RegisterScoped] // registered as ITodoStore
+public sealed class TodoStore : ITodoStore { /* ... */ }
 
 // Program.cs
-app.MapAllEndpoints(); // every generated registry of the app and its referenced assemblies
+builder.Services.AddAllServices();
+app.MapAllEndpoints();
 ```
 
-### DependencyInjection: attribute-based registration
+See [Endpoints](/libraries/endpoints) and [DependencyInjection](/libraries/dependencyinjection).
 
-Mark a class with its lifetime. A source generator writes the registrations, and decorators are applied in order.
+### Enums
 
-```csharp
-[RegisterScoped] // registered as IOrderService, by the I{TypeName} rule
-public sealed class OrderService : IOrderService { }
-
-[Decorates(typeof(IOrderService), Order = 1)]
-public sealed class LoggingOrderService(IOrderService inner) : IOrderService { }
-
-// Program.cs
-builder.Services.AddAllServices(); // every generated registry of the app and its referenced assemblies
-```
-
-## Enums end to end
-
-Mark an enum with `[StringEnum]` and every layer reads and writes it the same way, driven by one `EnumConventions` instance (`CSharpEssentials.Enums`). The wire name is snake_case by default (`PendingApproval` becomes `pending_approval`); change it per enum (`[StringEnum(Naming = ...)]`), per member (`[JsonStringEnumMemberName]`) or per project (the `CSharpEssentialsEnumNaming` MSBuild property). Enums without `[StringEnum]` keep the framework defaults.
+`[StringEnum]` makes an enum read and write the same wire name (`PendingApproval` is `pending_approval`) in JSON, ASP.NET Core binding, OpenAPI, EF Core and outgoing HTTP. A source generator writes the helpers, so it works with Native AOT.
 
 ```csharp
 [StringEnum]
-public enum OrderStatus
-{
-    Pending,
-    [EnumAlias("Approval")] PendingApproval,
-    [EnumFallback] Unknown = 99, // what tolerant readers map unknown values to
-}
+public enum OrderStatus { Pending, PendingApproval, [EnumFallback] Unknown = 99 }
+
+string wire = OrderStatus.PendingApproval.ToWireName(); // "pending_approval"
 ```
 
-| Layer | Package | Setup | Reads | Writes |
-|---|---|---|---|---|
-| JSON (System.Text.Json) | `CSharpEssentials.Json` | `options.AddEnumConventions(conventions)` | wire name, member name in any casing, alias, defined number; undefined numbers rejected | `"pending_approval"`, or `1` with `WriteAs = Number` |
-| Route, query, header, form | `CSharpEssentials.AspNetCore` | `AddEnumConventions()` + `UseEnumBinding()` | same rules as a JSON body, trimmed; invalid gives a 400 problem listing the allowed values | |
-| Responses | `CSharpEssentials.AspNetCore` | `WithEnumWireFormat(...)` per group, `[EnumWireFormat]` per controller | | string by default, number per group |
-| OpenAPI | `CSharpEssentials.AspNetCore.OpenApi` or `.Swashbuckle` (one per host) | `o.AddEnumConventions()` | | string or integer schema, value table, `x-enum-*` |
-| EF Core | `CSharpEssentials.EntityFrameworkCore` | `ConfigureEnumConventions(conventions)` | tolerant: any known spelling, unknown maps to the fallback member | `text` column + `ck_{table}_{column}_enum`; `[Flags]` as an integer bitmask |
-| Outgoing HTTP | `CSharpEssentials.Http` | `WithEnumConventions(conventions)` on `HttpRequestBuilder` | tolerant | wire names in route and query |
-| Validation | `CSharpEssentials.Validation` | `IsDefinedEnum()`, `IsOneOf(...)`, `HasOnlyDefinedFlags()` | | |
+Setup per layer, `[Flags]` rules and the diagnostics are in the [Enums Readme](/libraries/enums). [Examples.Enums.EndToEnd](/examples/enums-endtoend) wires every layer in one app.
 
-`CSharpEssentials.Enums` carries the source generator, the analyzers and the code fixes. Any CSharpEssentials package brings the generator and analyzers to your project: every package that depends on Enums, directly or through another CSharpEssentials package, passes them on. A direct `CSharpEssentials.Enums` reference is not required; add it only when the project uses no other CSharpEssentials package that depends on it (`.Core`, `.Clone`, `.Time`, `.DependencyInjection`, `.Endpoints`, `.RequestResponseLogging`, `.Idempotency` and `.Idempotency.Testing` do not depend on it).
+## Packages
 
-| Scenario | Packages |
+| Package | What it does |
 |---|---|
-| ASP.NET Core API | `CSharpEssentials.AspNetCore` |
-| + OpenAPI | `CSharpEssentials.AspNetCore.OpenApi` (net10.0) or `CSharpEssentials.AspNetCore.Swashbuckle`, never both |
-| + EF Core | `CSharpEssentials.EntityFrameworkCore` |
-| Worker or console with EF Core | `CSharpEssentials.EntityFrameworkCore` |
-| JSON only (message bus, client) | `CSharpEssentials.Json` |
-| Outgoing HTTP | `CSharpEssentials.Http` |
-| Generated helpers and `EnumMetadata` only | `CSharpEssentials.Enums` |
+| [CSharpEssentials](/libraries/csharpessentials) | Meta-package: Results, Errors, Maybe, Any, These, Rules, Core, Enums, Entity, Clone, Json, Http and Time |
+| [CSharpEssentials.Results](/libraries/results) | `Result` and `Result<T>` for errors as values; `Result<T, E1..E3>` with the error kinds in the signature |
+| [CSharpEssentials.Results.Testing](/libraries/results-testing) | Assertions for results, `Maybe<T>` and problem details responses, for any test framework |
+| [CSharpEssentials.Errors](/libraries/errors) | `Error` with type, code, description and metadata; typed kinds such as `NotFoundError` and `ConflictError` |
+| [CSharpEssentials.Maybe](/libraries/maybe) | `Maybe<T>` for values that may be missing |
+| [CSharpEssentials.Any](/libraries/any) | `Any<T0, ..., T7>` unions with exhaustive `Match` |
+| [CSharpEssentials.These](/libraries/these) | `These<TError, TValue>`: an error, a value, or both |
+| [CSharpEssentials.Rules](/libraries/rules) | Rules that return `Result`, combined with `And`, `Or`, `Linear` and `Next` |
+| [CSharpEssentials.Validation](/libraries/validation) | Model validators that return `Result<T>` |
+| [CSharpEssentials.Core](/libraries/core) | String case conversion, GUID v7 and v5, collection and null helpers, transaction interfaces |
+| [CSharpEssentials.Enums](/libraries/enums) | `[StringEnum]` source generator, analyzers and code fixes for enum wire names |
+| [CSharpEssentials.Json](/libraries/json) | Preset `System.Text.Json` options and converters, enum conventions |
+| [CSharpEssentials.Time](/libraries/time) | `IDateTimeProvider` over `TimeProvider` for testable clocks |
+| [CSharpEssentials.Clone](/libraries/clone) | `ICloneable<T>` and `Clone()` over collections |
+| [CSharpEssentials.Entity](/libraries/entity) | Entity base classes, soft delete and domain events |
+| [CSharpEssentials.EntityFrameworkCore](/libraries/entityframeworkcore) | Audit, domain event and slow query interceptors, offset and keyset pagination, enum storage, transactions |
+| [CSharpEssentials.EntityFrameworkCore.HealthChecks](/libraries/entityframeworkcore-healthchecks) | Readiness check that fails while a `DbContext` has pending migrations |
+| [CSharpEssentials.EntityFrameworkCore.Hosting](/libraries/entityframeworkcore-hosting) | Hosted service that drains the domain event outbox |
+| [CSharpEssentials.EntityFrameworkCore.Locking](/libraries/entityframeworkcore-locking) | Distributed `IResourceLock` over an EF Core connection (PostgreSQL, SQL Server or your own SQL) |
+| [CSharpEssentials.Mediator](/libraries/mediator) | Pipeline behaviors for the Mediator source generator: validation, logging, exceptions, caching, locking, transactions, idempotency |
+| [CSharpEssentials.Mediator.Testing](/libraries/mediator-testing) | Contract scenarios for `IResourceLock` and a recording fake lock |
+| [CSharpEssentials.Idempotency](/libraries/idempotency) | Run an operation once per key: record store, executor, scopes, deterministic keys |
+| [CSharpEssentials.Idempotency.Testing](/libraries/idempotency-testing) | xUnit contract tests for your own `IIdempotencyRecordStore` |
+| [CSharpEssentials.AspNetCore](/libraries/aspnetcore) | Problem details, result to HTTP mapping, enum binding, API versioning, `Idempotency-Key`, ETag and `If-Match` |
+| [CSharpEssentials.AspNetCore.OpenApi](/libraries/aspnetcore-openapi) | Enum schemas and security schemes for `Microsoft.AspNetCore.OpenApi` (net10.0+) |
+| [CSharpEssentials.AspNetCore.Swashbuckle](/libraries/aspnetcore-swashbuckle) | Versioned Swagger documents, schema ids, security schemes and enum schemas for Swashbuckle 10 |
+| [CSharpEssentials.Endpoints](/libraries/endpoints) | Source-generated Minimal API endpoint registration (`IEndpoint`, `IEndpointGroup`) |
+| [CSharpEssentials.DependencyInjection](/libraries/dependencyinjection) | Source-generated service registration and decorators (`[RegisterScoped]`, `[Decorates]`) |
+| [CSharpEssentials.Http](/libraries/http) | `HttpClient` calls that return `Result<T>`, idempotent retries and an SSRF guard |
+| [CSharpEssentials.Resilience](/libraries/resilience) | Retry, timeout, circuit breaker and fallback for `Result` |
+| [CSharpEssentials.RequestResponseLogging](/libraries/requestresponselogging) | Middleware that logs request and response bodies |
+| [CSharpEssentials.GcpSecretManager](/libraries/gcpsecretmanager) | `IConfiguration` provider for Google Cloud Secret Manager |
 
-One-time setup per host:
+Only one OpenAPI package goes in a host: `.AspNetCore.OpenApi` or `.AspNetCore.Swashbuckle`.
 
-```csharp
-// Minimal API: JSON options, binding, body errors and output in one call
-builder.Services.AddEnumConventions();
-app.UseEnumBinding(); // after routing, UseAuthentication and UseAuthorization
+## Documentation
 
-// Body errors as the same 400 problem: Minimal APIs throw a body error only with ThrowOnBadRequest,
-// and GlobalExceptionHandler maps it. Without these lines the framework writes its own 400 without a body.
-// MVC reports body errors through model state instead.
-builder.Services.Configure<RouteHandlerOptions>(o => o.ThrowOnBadRequest = true);
-builder.Services.AddEnhancedProblemDetails();
-builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
-app.UseEnhancedProblemDetails();
-app.MapGet("/orders", (OrderStatus? status) => Results.Ok(status)); // ?status=pending_approval, approval or 1
-
-// MVC: the same two calls; [FromQuery], [FromRoute], [FromHeader], [FromForm] and DTO properties bind
-builder.Services.AddControllers();
-builder.Services.AddEnumConventions();
-app.UseEnumBinding();
-
-// OpenAPI: one document per version, v1 keeps numbers for old clients
-builder.Services.AddOpenApi("v1", o => o.AddEnumConventions());          // or AddSwaggerGen(o => o.AddEnumConventions())
-builder.Services.AddOpenApi("v2", o => o.AddEnumConventions());
-app.MapGroup("/api/v1").WithGroupName("v1").WithEnumWireFormat(EnumWireFormat.Number);
-app.MapGroup("/api/v2").WithGroupName("v2");
-
-// EF Core only (worker, console): no ASP.NET Core package needed
-protected override void ConfigureConventions(ModelConfigurationBuilder builder) =>
-    builder.ConfigureEnumConventions(EnumConventions.Default);
-```
-
-There is no message bus package. A bus that serializes with System.Text.Json takes the JSON conventions in tolerant `Data` mode, for example MassTransit: `cfg.ConfigureJsonSerializerOptions(o => o.AddEnumConventions(conventions, EnumReadMode.Data, writeAs: EnumWireFormat.Number))`. Upgrade consumers first, then switch producers to strings.
-
-`[Flags]` enums are JSON arrays on the wire (`["read","write"]`), repeated or comma-separated query values, and an integer bitmask in the database. Give every member an explicit value and a `None = 0` member; the analyzers warn otherwise (CSE0005, CSE0006, and CSE0007 for a member that is neither a single bit nor a combination), and `[EnumFallback]` on flags is an error (CSE0008). Use them for a fixed, small set of independent on/off capabilities (permissions, feature toggles, days of week). Use `List<TEnum>` for a user-chosen multi-select, a set that grows often or past 64 members, or when a member needs data attached; use a single enum for one value at a time (statuses, types).
-
-The `v2` document of [the end-to-end sample](/examples/enums-endtoend) describes the enum like this (the `v1` document has `"type": "integer"` and `"enum": [0, 1, 2, 99]`):
-
-```json
-"OrderStatus": {
-  "enum": ["pending", "pending_approval", "shipped", "unknown"],
-  "type": "string",
-  "description": "Order lifecycle state.\n\n| value | number | description |\n|---|---|---|\n| `pending` | 0 | Created, waiting for payment. |\n| `pending_approval` | 1 | Paid, waiting for manual approval. |\n| `shipped` | 2 | Shipped to the customer. |\n| `unknown` | 99 | Response only: a value this API version does not know. |",
-  "x-enum-varnames": ["Pending", "PendingApproval", "Shipped", "Unknown"],
-  "x-enum-descriptions": ["Created, waiting for payment.", "Paid, waiting for manual approval.", "Shipped to the customer.", "Response only: a value this API version does not know."],
-  "x-enum-numeric-values": [0, 1, 2, 99]
-}
-```
-
-Details: [CSharpEssentials.Enums Readme](/libraries/enums) (generated API, diagnostics, renaming a member, AOT), [enum conventions design](/design/CSharpEssentials.Enums-DESIGN) (normative matrix, flags guidance, rollout) and [ADR-007](/adr/ADR-007-enum-conventions).
+- Each package Readme above covers every feature with code. They are also the NuGet readmes.
+- [API reference](/API_REFERENCE): every public type and method in one place.
+- [Examples](https://github.com/senrecep/CSharpEssentials/blob/main/examples/README.md): one runnable project per package.
+- [Design notes](https://github.com/senrecep/CSharpEssentials/blob/main/docs/design) and [ADRs](https://github.com/senrecep/CSharpEssentials/blob/main/docs/adr).
+- [CHANGELOG.md](https://github.com/senrecep/CSharpEssentials/blob/main/CHANGELOG.md) lists the changes in every release.
 
 ## Upgrading
 
-- [CHANGELOG.md](https://github.com/senrecep/CSharpEssentials/blob/main/CHANGELOG.md) lists the changes in every release.
-- Coming from 7.x and using `CSharpEssentials.Core`? Read [Upgrading to 8.0](/libraries/core#upgrading-to-80). `GetRandomItems` throws `ArgumentOutOfRangeException` for a negative `count`, `MsToDateTime` returns a `DateTime` with `Kind = Utc`, `ToSnakeCase` and the other case converters keep letters without case such as CJK, and `ToStringFromGuid` uses the RFC 4648 base64url alphabet, so short IDs stored by 7.x need a one-time `-`/`_` swap. `Guider.NewGuid` returns version 7 GUIDs on every target, including .NET 8 and .NET Framework.
-- Coming from 6.x with the `Idempotency-Key` middleware or a custom idempotency store? Read [Migrating idempotency from 6.x to 7.0](/migration/v6-to-v7-idempotency). 7.0 moves the store into `CSharpEssentials.Idempotency` and replaces `KeyScope` with `ScopeResolver`.
-- From 6.4.0, the task-returning members of `Result` and `Maybe` have `Async` names, and the unsuffixed names are obsolete. Read [Async naming and the async overload matrix](/migration/v6-async-naming).
-- Coming from 5.x? Read [Migrating from 5.x to 6.0](/migration/v5-to-v6). 6.0 moves the Swashbuckle support to Swashbuckle 10 and Microsoft.OpenApi 2.x on every target, makes the single-column cursor `PaginateAsync` obsolete in favor of `KeysetPaginateAsync` and caps the offset page size at 100 by default.
-- From 6.1.0, Swashbuckle documents describe optional route parameters (`{id?}`) as one path per form with required parameters. Read [Optional route parameters](/migration/v6-optional-route-parameters) for the new output and how to opt back. From 6.2.0, `CSharpEssentials.AspNetCore.OpenApi` offers the same output as an opt-in (`o.AddOptionalRouteParameters()`).
-- Coming from 4.x? Read [Migrating from 4.x to 5.0](/migration/v4-to-v5). 5.0 applies one set of enum conventions to JSON, binding, OpenAPI and EF Core, and moves the Swashbuckle support into its own package.
-- Coming from 3.x? Read [Migrating from 3.x to 4.0](/migration/v3-to-v4). 4.0 changed ProblemDetails defaults, enum naming and some package dependencies.
+- 8.x to 9.0: [v8-to-v9.md](/migration/v8-to-v9). `default(Result)` is now a failure, `Error.Exception` gives `Unexpected`, and `ErrorType.Domain` maps to 422.
+- 7.x to 8.0 with `CSharpEssentials.Core`: [Upgrading to 8.0](/libraries/core#upgrading-to-80). Short GUID strings use the RFC 4648 base64url alphabet, so IDs stored by 7.x need a one-time `-`/`_` swap.
+- 6.x to 7.0 with idempotency: [v6-to-v7-idempotency.md](/migration/v6-to-v7-idempotency).
+- 6.4 async names: [v6-async-naming.md](/migration/v6-async-naming).
+- Older: [5.x to 6.0](/migration/v5-to-v6), [optional route parameters](/migration/v6-optional-route-parameters), [4.x to 5.0](/migration/v4-to-v5), [3.x to 4.0](/migration/v3-to-v4).
 
 ## AI skills
-
-Install the agent skills:
 
 ```bash
 npx skills add senrecep/CSharpEssentials
 ```
 
-Each package has its own skill with API examples, the namespaces to import and common pitfalls. The same skill ships inside each NuGet package, at `skills/<name>/SKILL.md`. After `dotnet restore`, agent tools that read package skills find the version that matches the package you installed, with nothing else to set up. For example, `dotnet-package-skills install` copies them into your repo.
+Each package has a skill with runnable examples, the namespaces to import and the mistakes to avoid. The same skill ships inside the NuGet package at `skills/<name>/SKILL.md`, so tools that read package skills (for example `dotnet-package-skills install`) get the version that matches the installed package.

@@ -8,7 +8,7 @@ Use the Conventional Commits format: `type(scope): description`
 
 Allowed types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`, `ci`, `build`, `revert`. release-please reads them: `feat` gives a minor bump, `fix` and `perf` a patch, and `feat!`, `fix!` or a `BREAKING CHANGE:` footer a major.
 
-The scope matches the affected package or area: `core`, `results`, `errors`, `rules`, `efcore`, `json`, `http`, `maybe`, `any`, `these`, `entity`, `aspnetcore`, `openapi`, `swashbuckle`, `endpoints`, `di`, `mediator`, `validation`, `resilience`, `time`, `enums`, `clone`, `gcpsecretmanager`, `idempotency`, `logging`, `bench`, `aot`, `blog`, `examples`, `deps`.
+The scope matches the affected package or area: `core`, `results`, `errors`, `rules`, `efcore`, `json`, `http`, `maybe`, `any`, `these`, `entity`, `aspnetcore`, `openapi`, `swashbuckle`, `endpoints`, `di`, `mediator`, `validation`, `resilience`, `time`, `enums`, `clone`, `gcpsecretmanager`, `idempotency`, `logging`, `testing`, `codefixes`, `bench`, `aot`, `blog`, `examples`, `deps`.
 
 Examples:
 - `feat(results): add MapError overload for async chains`

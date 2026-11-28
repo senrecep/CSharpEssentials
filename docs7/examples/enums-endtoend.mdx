@@ -1,39 +1,12 @@
 ---
-title: "Enums end to end example"
+title: "Enums end-to-end example"
 ---
 
-One `[StringEnum]` enum and one `[Flags]` enum travel through every layer with a single `EnumConventions` instance: JSON bodies, route/query/header binding, response output, OpenAPI and an EF Core (PostgreSQL) column. See [Enums end to end](/index#enums-end-to-end) and the [design document](/design/CSharpEssentials.Enums-DESIGN).
+An ASP.NET Core API in which one `[StringEnum]` enum and one `[Flags]` enum pass through every layer under a single `EnumConventions` instance: JSON bodies, route, query and header binding, responses, OpenAPI and an EF Core column in PostgreSQL. Background: [CSharpEssentials.Enums](/libraries/enums#across-layers) and the [design document](/design/CSharpEssentials.Enums-DESIGN).
 
-## What it shows
+## Run
 
-| Feature | File | Description |
-|---------|------|-------------|
-| Enum metadata | `OrderStatus.cs` | `[StringEnum]`, `[Description]`, an `[EnumAlias]` and an `[EnumFallback]` member |
-| Flags | `Permissions.cs` | `[Flags]`: a JSON array on the wire, an integer bitmask in the database |
-| One registration | `Program.cs` | `AddEnumConventions()` + `UseEnumBinding()` |
-| EF Core storage | `ShopDbContext.cs` | `ConfigureEnumConventions(conventions)`: wire names in a `text` column plus check constraints |
-| Body, query, route, header | `OrderEndpoints.cs` | the same accept rules in every source; a rejected value returns a 400 problem |
-| Results | `OrderService.cs` | `Result<Order>` with implicit conversions from `Order` and `Error` |
-| Two API versions | `Program.cs` | `v1` writes numbers (`WithEnumWireFormat(EnumWireFormat.Number)`), `v2` writes wire names |
-| OpenAPI | `Program.cs` | `AddOpenApi("v1"/"v2", o => o.AddEnumConventions())`: an integer schema in `v1`, a string schema in `v2` |
-
-The sample uses `CSharpEssentials.AspNetCore.OpenApi` (net10.0). A Swashbuckle host references `CSharpEssentials.AspNetCore.Swashbuckle` instead and calls `o.AddEnumConventions()` on `SwaggerGenOptions` (`AddSwagger` does it for you). Reference one of the two packages per host, never both.
-
-## Package references
-
-The project uses `ProjectReference`s, including the generator project with `OutputItemType="Analyzer"`. That form only works inside this repository, because a `ProjectReference` does not carry the referenced project's generator output. The same app outside the repository references the packages:
-
-```xml
-<ItemGroup>
-  <PackageReference Include="CSharpEssentials.AspNetCore" Version="7.0.0" />
-  <PackageReference Include="CSharpEssentials.AspNetCore.OpenApi" Version="7.0.0" />
-  <PackageReference Include="CSharpEssentials.EntityFrameworkCore" Version="7.0.0" />
-</ItemGroup>
-```
-
-No direct `CSharpEssentials.Enums` reference is needed: each of these packages brings the generator, the analyzers and the code fixes.
-
-## Running
+The app needs PostgreSQL. Start one in Docker and pass the connection string:
 
 ```bash
 export PGPASSWORD='<choose-a-local-password>'
@@ -42,21 +15,46 @@ ConnectionStrings__Shop="Host=localhost;Port=5432;Database=shop;Username=postgre
   dotnet run --project examples/Examples.Enums.EndToEnd
 ```
 
-`appsettings.json` holds the connection string without a password; supply the full string through the `ConnectionStrings__Shop` environment variable or `dotnet user-secrets`. The app creates the table on startup.
+`appsettings.json` holds the connection string without a password; give the full string through `ConnectionStrings__Shop` or `dotnet user-secrets`. The app creates the table on startup.
+
+## Files
+
+| File | Shows |
+|---|---|
+| `OrderStatus.cs` | `[StringEnum]` with `[Description]` texts, an `[EnumAlias]` and an `[EnumFallback]` member |
+| `Permissions.cs` | `[Flags]`: a JSON array on the wire, an integer bitmask in the database |
+| `Program.cs` | `AddEnumConventions()` and `UseEnumBinding()`; `v1` writes numbers (`WithEnumWireFormat(EnumWireFormat.Number)`), `v2` writes wire names; `AddOpenApi(..., o => o.AddEnumConventions())` |
+| `ShopDbContext.cs` | `ConfigureEnumConventions(conventions)`: wire names in a `text` column, check constraints |
+| `OrderEndpoints.cs` | Route, query, header and body binding with the same accept rules; a rejected value returns a 400 problem |
+| `OrderService.cs` | `Result<Order>` with implicit conversions from `Order` and `Error` |
+
+The sample uses `CSharpEssentials.AspNetCore.OpenApi` (net10.0). A Swashbuckle host references `CSharpEssentials.AspNetCore.Swashbuckle` instead; use one of the two per host.
 
 ## Endpoints
 
 Each route exists under `/api/v1` (numbers out) and `/api/v2` (wire names out). Both accept wire names, member names in any casing, aliases and numbers.
 
-| Method | Route | Description |
-|--------|-------|-------------|
-| GET | `/orders/status/{status}` | Route value: `pending_approval`, `PendingApproval`, `approval` (alias) or `1` |
-| GET | `/orders?status=&permissions=` | Query: `status` is nullable, so `?status=` binds `null`; `permissions=read,write` or repeated keys |
-| GET | `/orders/{id}` | `Result<Order>` to 200 or a 404 problem |
+| Method | Route | Notes |
+|---|---|---|
+| GET | `/orders/status/{status}` | `pending_approval`, `PendingApproval`, `approval` (alias) or `1` |
+| GET | `/orders?status=&permissions=` | `status` is nullable, so `?status=` binds `null`; `permissions=read,write` or repeated keys |
+| GET | `/orders/{id}` | 200, or a 404 problem |
 | POST | `/orders` | Body `{ "customer": "ada", "status": "pending_approval", "permissions": ["read", "write"] }`, optional `X-Source-Status` header |
 | GET | `/openapi/v1.json`, `/openapi/v2.json` | The two OpenAPI documents |
 
 ```bash
 curl -i http://localhost:5000/api/v2/orders/status/xyz
 # 400: 'xyz' is not a valid OrderStatus. Allowed values: pending, pending_approval, shipped.
+```
+
+## Project references
+
+Inside this repository the project uses `ProjectReference`s, including `CSharpEssentials.Enums.Generators` with `OutputItemType="Analyzer"`. Outside it, reference the packages; each brings the enum generator:
+
+```xml
+<ItemGroup>
+  <PackageReference Include="CSharpEssentials.AspNetCore" Version="9.0.0" />
+  <PackageReference Include="CSharpEssentials.AspNetCore.OpenApi" Version="9.0.0" />
+  <PackageReference Include="CSharpEssentials.EntityFrameworkCore" Version="9.0.0" />
+</ItemGroup>
 ```

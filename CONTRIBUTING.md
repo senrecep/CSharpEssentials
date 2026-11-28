@@ -69,6 +69,7 @@ Report bugs in the [issue tracker](https://github.com/senrecep/CSharpEssentials/
 - When a public API changes, update the package `Readme.MD` and the matching `.well-known/agent-skills/<package>/SKILL.md`. The same file ships inside the package at `skills/<name>/SKILL.md`, so agents read the version that matches the installed package.
 - Do not bump the version or edit `CHANGELOG.md` in a feature pull request; release-please generates both.
 - Add examples for new features.
+- After changing docs, run `python3 scripts/check-doc-examples.py <files>`. It builds and runs every ```` ```csharp Program.cs ```` block in them.
 
 ## License
 

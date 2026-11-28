@@ -1,128 +1,116 @@
 ---
 name: csharpessentials-time
-description: Use when you need testable time. Inject IDateTimeProvider (DateTimeProvider over TimeProvider in production, DateTimeProvider over FakeTimeProvider or FakeDateTimeProvider with Advance/SetTime in tests), TimeZones.Find/TryFind for IANA and Windows ids, NowIn/TodayIn for a user's zone, plus DateTime/DateOnly extensions ToDateOnly/ToTimeOnly, NextDayOfWeek/PreviousDayOfWeek and GetAge.
+description: Use when code needs a testable clock. Inject IDateTimeProvider from CSharpEssentials.Time (DateTimeProvider over TimeProvider.System in production; FakeDateTimeProvider with Advance/SetTime, or DateTimeProvider over FakeTimeProvider, in tests). Also TimeZones.Find/TryFind for IANA or Windows ids, NowIn/TodayIn for a user's zone, GetAge, NextDayOfWeek/PreviousDayOfWeek and ToDateOnly/ToTimeOnly.
 ---
 
 # CSharpEssentials.Time
-
-Testable time abstraction built on .NET's `TimeProvider`. Inject `IDateTimeProvider` instead of calling `DateTime.UtcNow` in domain or service code.
 
 ```bash
 dotnet add package CSharpEssentials.Time
 ```
 
 ```csharp
-using CSharpEssentials.Time;
+using CSharpEssentials.Time;   // IDateTimeProvider, DateTimeProvider, FakeDateTimeProvider, TimeZones, Extensions
 ```
 
----
+## Quick start
 
-## IDateTimeProvider
+```csharp Program.cs
+// dotnet add package CSharpEssentials.Time
+using CSharpEssentials.Time;
 
-```csharp
-public interface IDateTimeProvider
+var clock = new FakeDateTimeProvider(new DateTimeOffset(2025, 1, 15, 10, 0, 0, TimeSpan.Zero));
+var sessions = new SessionService(clock);
+
+Session session = sessions.Start();
+Console.WriteLine(sessions.IsExpired(session));  // False
+clock.Advance(TimeSpan.FromMinutes(31));
+Console.WriteLine(sessions.IsExpired(session));  // True
+
+public sealed record Session(DateTimeOffset StartedAt);
+
+public sealed class SessionService(IDateTimeProvider clock)
 {
-    TimeZoneInfo TimeZone    { get; }   // DateTimeProvider: TimeProvider.LocalTimeZone
-    TimeZoneInfo TimeZoneUtc { get; }   // TimeZoneInfo.Utc
-
-    DateTime       UtcNowDateTime { get; }   // Kind == Utc
-    DateTimeOffset UtcNow         { get; }
-
-    // not in the netstandard2.1 build:
-    DateOnly UtcNowDate { get; }
-    TimeOnly UtcNowTime { get; }
+    public Session Start() => new(clock.UtcNow);
+    public bool IsExpired(Session session) => clock.UtcNow - session.StartedAt > TimeSpan.FromMinutes(30);
 }
 ```
 
----
-
-## Register in DI
-
-`DateTimeProvider` wraps a `TimeProvider`:
+## Registering the clock
 
 ```csharp
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
 ```
 
----
+`DateTimeProvider` has one constructor, `DateTimeProvider(TimeProvider timeProvider)`. There is no `AddDateTimeProvider()` extension.
 
-## Use in services
+## Reading the time
 
-```csharp
-public class OrderService(IDateTimeProvider time)
-{
-    public Order Create(Cart cart) => new()
-    {
-        UserId    = cart.UserId,
-        Total     = cart.Total,
-        CreatedAt = time.UtcNow,
-    };
-}
+| Member | Type |
+|---|---|
+| `UtcNow` | `DateTimeOffset` (offset zero) |
+| `UtcNowDateTime` | `DateTime` (`Kind = Utc`) |
+| `UtcNowDate` | `DateOnly` (UTC date) |
+| `UtcNowTime` | `TimeOnly` (UTC time of day) |
+| `TimeZone` | `TimeProvider.LocalTimeZone` for `DateTimeProvider`; UTC for `FakeDateTimeProvider` |
+| `TimeZoneUtc` | `TimeZoneInfo.Utc` |
+
+## Testing code that waits
+
+```csharp Program.cs
+// dotnet add package CSharpEssentials.Time
+// dotnet add package Microsoft.Extensions.TimeProvider.Testing
+using CSharpEssentials.Time;
+using Microsoft.Extensions.Time.Testing;
+
+var fake = new FakeTimeProvider(new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero));
+IDateTimeProvider clock = new DateTimeProvider(fake);
+
+Task wait = Task.Delay(TimeSpan.FromSeconds(10), fake);
+fake.Advance(TimeSpan.FromSeconds(10));
+await wait;
+Console.WriteLine($"{clock.UtcNow:HH:mm:ss}"); // 00:00:10
 ```
 
----
+`FakeDateTimeProvider` is not a `TimeProvider`; timers and `Task.Delay` cannot use it. Use `FakeTimeProvider` when the code under test waits.
 
-## Test with FakeDateTimeProvider
+## Handling user time zones
 
-`FakeDateTimeProvider` ships in this package. Its time zone is UTC, and it is thread-safe.
+```csharp Program.cs
+// dotnet add package CSharpEssentials.Time
+using CSharpEssentials.Time;
 
-```csharp
-var start = new DateTimeOffset(2025, 1, 15, 10, 0, 0, TimeSpan.Zero);
-var fake  = new FakeDateTimeProvider(start);
+var clock = new FakeDateTimeProvider(new DateTimeOffset(2024, 6, 15, 22, 30, 0, TimeSpan.Zero));
 
-var svc = new OrderService(fake);   // inject as IDateTimeProvider
+TimeZoneInfo zone = TimeZones.Find("Turkey Standard Time");  // Windows or IANA id, any OS
+DateTimeOffset localNow = clock.NowIn(zone);
+DateOnly localToday = clock.TodayIn(zone);
+Console.WriteLine($"{localNow:HH:mm zzz} {localToday:yyyy-MM-dd}"); // 01:30 +03:00 2024-06-16
 
-// Advance the clock without Thread.Sleep
-fake.Advance(TimeSpan.FromHours(2));
-DateTimeOffset now = fake.UtcNow;   // 2025-01-15 12:00:00 +00:00
+int age = new DateOnly(2000, 6, 16).GetAge(clock, zone);
+Console.WriteLine(age);                                       // 24
 
-// Jump to a specific instant
-fake.SetTime(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
-
-DateOnly date = fake.UtcNowDate;
-TimeOnly time = fake.UtcNowTime;
+if (!TimeZones.TryFind("Not/AZone", out TimeZoneInfo? userZone))
+    Console.WriteLine("unknown zone, fall back to UTC");
 ```
 
----
-
-## Date extensions
+## Date helpers
 
 ```csharp
-DateTime dt = DateTime.UtcNow;
-DateOnly date = dt.ToDateOnly();
-TimeOnly time = dt.ToTimeOnly();
-
-// Next/previous weekday; the current day counts only with includeCurrent: true
-DateTime nextMonday = dt.NextDayOfWeek(DayOfWeek.Monday);
-DateOnly lastFriday = date.PreviousDayOfWeek(DayOfWeek.Friday, includeCurrent: true);
-
-// Age in whole years
-var birthDate = new DateOnly(1990, 5, 20);
-int age      = birthDate.GetAge(new DateOnly(2025, 5, 19));   // 34
-int ageToday = birthDate.GetAge(dateTimeProvider);            // "today" in the IDateTimeProvider's time zone
+DateOnly nextMonday = date.NextDayOfWeek(DayOfWeek.Monday);                    // skips today
+DateOnly thisOrNext = date.NextDayOfWeek(DayOfWeek.Monday, includeCurrent: true);
+DateTime lastFriday = dateTime.PreviousDayOfWeek(DayOfWeek.Friday);
+DateOnly d = dateTime.ToDateOnly();
+TimeOnly t = dateTime.ToTimeOnly();
+int age = birthDate.GetAge(new DateOnly(2025, 5, 19));   // or GetAge(clock), GetAge(clock, zone)
 ```
 
-`GetAge` throws `ArgumentOutOfRangeException` when the birth date is after the reference date.
+## Rules
 
----
-
-## User time zones
-
-```csharp
-TimeZoneInfo zone = TimeZones.Find("Europe/Istanbul");   // IANA or Windows id; TimeZoneNotFoundException names the id
-bool ok = TimeZones.TryFind(user.TimeZoneId, out TimeZoneInfo? userZone);
-
-DateTimeOffset localNow = time.NowIn(zone);
-DateOnly today = time.TodayIn(zone);                       // not in netstandard2.1
-int age = birthDate.GetAge(time, zone);
-```
-
----
-
-## Guidance
-
-- Register `TimeProvider.System` and `DateTimeProvider` as singletons.
-- In tests of code that waits or uses timers, use `new DateTimeProvider(new FakeTimeProvider(...))` so one fake drives both; `FakeDateTimeProvider` is not a `TimeProvider`.
-- The `DateOnly`/`TimeOnly` members (`UtcNowDate`, `UtcNowTime`, `ToDateOnly`, `ToTimeOnly`, the `DateOnly` weekday overloads, `GetAge`) are not in the `netstandard2.1` build.
-- Use `GetAge(IDateTimeProvider)` instead of `DateTime.Today` so age checks are testable.
+- Inject `IDateTimeProvider`; never call `DateTime.Now`, `DateTime.UtcNow` or `DateTime.Today` in services.
+- The fake's methods are `Advance(TimeSpan)` and `SetTime(DateTimeOffset)`. There is no `SetUtcNow` on `FakeDateTimeProvider` (that one is on `FakeTimeProvider`).
+- `GetAge` throws `ArgumentOutOfRangeException` when the birth date is after the reference date.
+- `TimeZones.Find` throws `TimeZoneNotFoundException`; use `TryFind` for user input. With `InvariantGlobalization` only the system's own id style resolves.
+- `UtcNowDate`, `UtcNowTime`, `ToDateOnly`, `ToTimeOnly`, `TodayIn`, `GetAge` and the `DateOnly` weekday overloads are missing from the `netstandard2.1` build.
+- Since 9.0, `DateTimeProvider.TimeZone` follows `TimeProvider.LocalTimeZone`; over `FakeTimeProvider` it is UTC until `SetLocalTimeZone`.

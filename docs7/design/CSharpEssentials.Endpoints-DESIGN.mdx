@@ -2,9 +2,9 @@
 title: "CSharpEssentials.Endpoints: design document"
 ---
 
-> **Date:** 2026-10-06 | **Status:** Implemented in 4.1, kept current through 7.0
-> **Issues:** #48 (epic), #49 (docs), #50 (infra), #51 (contracts), #52 (generator), #53 (analyzer), #54 (fallback + versioned group), #57 (docs/AOT example), #58 (P3)
-> **Related:** [ADR-006](/adr/ADR-006-source-generators-in-separate-projects), [DependencyInjection design](/design/CSharpEssentials.DependencyInjection-DESIGN)
+> Date: 2026-10-06 | Status: Implemented in 4.1, kept current through 9.0
+> Issues: #48 (epic), #49 (docs), #50 (infra), #51 (contracts), #52 (generator), #53 (analyzer), #54 (fallback + versioned group), #57 (docs/AOT example), #58 (P3)
+> Related: [ADR-006](/adr/ADR-006-source-generators-in-separate-projects), [DependencyInjection design](/design/CSharpEssentials.DependencyInjection-DESIGN)
 
 ---
 
@@ -403,6 +403,7 @@ Reported by `EndpointsAnalyzer` (`DiagnosticAnalyzer`) in `CSharpEssentials.Endp
 | CSE1010 | The same constant endpoint name is set at two call sites (`WithName`, or `EndpointNameAttribute`/`EndpointNameMetadata`/`RouteNameMetadata` in `WithMetadata`) | Warning | Duplicate operationIds and ambiguous link generation by name. Endpoint names and route names are compared separately, so one endpoint that sets both kinds through two `WithMetadata` calls is not reported. Reported on each call site at compilation end. |
 | CSE1011 | An explicit endpoint name outside an `IEndpoint`/`IEndpointGroup` type is not a compile-time constant | Info | The generated registry cannot reserve it, so `TypeName` can generate the same name. Names inside endpoint and group types are seen at runtime by the naming registry. |
 | CSE1012 | A non-partial endpoint class inherits `Map` from a base class and does not declare it | Warning | The generator leaves it out of the registry (§5.1). Fix: make the class `partial`, or declare `public static new void Map(IEndpointRouteBuilder app) => Base.Map(app);` on it. |
+| CSE1013 | A `Map*` handler returns `Result<T, E1..E3>` (or a `Task`/`ValueTask` of it) without converting it to an HTTP result (added in 9.0) | Warning | It would serialize as a 200 with the error in the body. Fix: `.ToHttpResult()` from `CSharpEssentials.AspNetCore`; the code fix appends it. |
 
 CSE1007 exists because the `typeof` form cannot carry the `IEndpointGroup` constraint of the generic form; without it, the error would surface in generated code.
 
@@ -455,7 +456,7 @@ Every ID has a positive and a negative test and an entry in `AnalyzerReleases.*.
 | Generator snapshots (#52) | Registry, nested groups, empty assembly (no output), `EndpointRegistryName`, sanitized names, aggregate on/off (Exe, library, test project, opt-in, opt-out), Verify.SourceGenerators |
 | Incremental caching | Second run with an unrelated edit → tracked steps `Cached`/`Unchanged` |
 | Behavior (`TestServer`) | `MapGroup("")` yields an identical `RoutePattern`, ApiExplorer group, tags and operationId vs. direct mapping; convention order (§5.5); filters and `RequireAuthorization` in `Map` still apply; nested groups; aggregate across two fixture assemblies (`tests/CSharpEssentials.Tests.Fixtures.EndpointsA/B`); no duplicate mapping with module + aggregate; MVC controllers coexist |
-| Analyzer (#53, #58) | Positive and negative per ID (CSE1001 to CSE1012) |
+| Analyzer (#53, #58) | Positive and negative per ID (CSE1001 to CSE1013) |
 | Fallback (#54) | Parity with generated registry; `ReflectionTypeLoadException` logging; versioned group routing + ApiExplorer; AspNetCore has no Endpoints reference |
 | Pack | Generator dll is under `analyzers/dotnet/cs` in `CSharpEssentials.Endpoints.nupkg`, with no `*.Generators` package |
 | AOT (#57) | `examples/Examples.Endpoints` publishes with `PublishAot=true` and zero trim/AOT warnings (CI `aot` job) |

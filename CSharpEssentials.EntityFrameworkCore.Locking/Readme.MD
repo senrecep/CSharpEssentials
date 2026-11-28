@@ -1,10 +1,8 @@
 # CSharpEssentials.EntityFrameworkCore.Locking
 
-A distributed `IResourceLock` for the `LockBehavior` of `CSharpEssentials.Mediator`. The lock is held by a database session, so requests with the same `LockKey` run one at a time across every instance of the application, not only within one process.
+A distributed `IResourceLock` for the `LockBehavior` of `CSharpEssentials.Mediator`. The lock is held by a database session, so requests with the same lock key run one at a time across every instance of the application, not only inside one process.
 
-It runs plain SQL through EF Core on the connection of a `DbContext` you already have, so it references no database provider package. PostgreSQL and SQL Server statements are built in; any other database works with two statements of your own.
-
-It is a separate package because it depends on both `CSharpEssentials.EntityFrameworkCore` and `CSharpEssentials.Mediator`.
+It runs plain SQL through the connection of a `DbContext` you already have and references no database provider package. PostgreSQL and SQL Server statements are built in; any other database works with two statements of your own. It is a separate package because it depends on both `CSharpEssentials.EntityFrameworkCore` and `CSharpEssentials.Mediator`.
 
 ## Install
 
@@ -12,44 +10,125 @@ It is a separate package because it depends on both `CSharpEssentials.EntityFram
 dotnet add package CSharpEssentials.EntityFrameworkCore.Locking
 ```
 
-Targets net10.0, net9.0 and net8.0, each on the EF Core major of `CSharpEssentials.EntityFrameworkCore`.
+Targets `net10.0`, `net9.0` and `net8.0`, each with the EF Core major of `CSharpEssentials.EntityFrameworkCore`.
 
-## Usage
+## Registration
 
 ```csharp
 using CSharpEssentials.EntityFrameworkCore.Locking;
 
 builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
-builder.Services.AddMediatorLockBehavior();                // LockPlacement.OutsideTransaction
+builder.Services.AddMediatorLockBehavior();   // LockPlacement.OutsideTransaction by default
 builder.Services.AddRelationalResourceLock<AppDbContext>(ResourceLockSqlDialect.PostgreSql);
 ```
 
-`AddRelationalResourceLock` replaces the `InProcessResourceLock` that `AddMediatorLockBehavior` registers, in either call order.
+`AddRelationalResourceLock` registers `RelationalResourceLock<TContext>` as the singleton `IResourceLock` and replaces the `InProcessResourceLock` that `AddMediatorLockBehavior` adds, in either call order. A request opts in by implementing `ILockedRequest` and returning its key from `LockKey`; see the [Mediator README](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.Mediator/Readme.MD).
+
+## Quick start
+
+SQLite has no session locks, so this program uses a table-based dialect. Use it for tests and demos only (see [Custom dialects](#custom-dialects)).
+
+```csharp Program.cs
+// dotnet add package CSharpEssentials.EntityFrameworkCore.Locking
+// dotnet add package Microsoft.EntityFrameworkCore.Sqlite --version 10.0.1
+using CSharpEssentials.EntityFrameworkCore.Locking;
+using CSharpEssentials.Locking;
+using CSharpEssentials.Maybe;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+
+// Each lock opens its own connection, so the database must be shared between connections.
+const string Db = "Data Source=lock-demo;Mode=Memory;Cache=Shared";
+using SqliteConnection keepAlive = new(Db);
+keepAlive.Open();
+
+ServiceCollection services = new();
+services.AddDbContext<LockDb>(options => options.UseSqlite(Db));
+services.AddRelationalResourceLock<LockDb>(LockDb.TableDialect, options => options.PollInterval = TimeSpan.FromMilliseconds(20));
+
+await using ServiceProvider provider = services.BuildServiceProvider();
+await using (AsyncServiceScope scope = provider.CreateAsyncScope())
+    await scope.ServiceProvider.GetRequiredService<LockDb>().Database.EnsureCreatedAsync();
+
+IResourceLock locks = provider.GetRequiredService<IResourceLock>();
+
+await using (IAsyncDisposable held = await locks.AcquireAsync("order:42", TimeSpan.FromSeconds(5)))
+{
+    Maybe<IAsyncDisposable> other = await locks.TryAcquireAsync("order:42");
+    Console.WriteLine($"While held: {(other.HasValue ? "acquired" : "busy")}");   // While held: busy
+
+    try
+    {
+        await locks.AcquireAsync("order:42", TimeSpan.FromMilliseconds(100));
+    }
+    catch (TimeoutException)
+    {
+        Console.WriteLine("AcquireAsync timed out");                                // AcquireAsync timed out
+    }
+}
+
+Maybe<IAsyncDisposable> after = await locks.TryAcquireAsync("order:42");
+Console.WriteLine($"After release: {(after.HasValue ? "acquired" : "busy")}");      // After release: acquired
+if (after.HasValue)
+    await after.Value.DisposeAsync();
+
+public sealed class LockRow
+{
+    public string Key { get; set; } = "";
+}
+
+public sealed class LockDb(DbContextOptions<LockDb> options) : DbContext(options)
+{
+    public static readonly ResourceLockSqlDialect TableDialect = new(
+        "INSERT INTO \"locks\" (\"Key\") VALUES ({0}) ON CONFLICT DO NOTHING RETURNING 1 AS \"Value\"",
+        "DELETE FROM \"locks\" WHERE \"Key\" = {0}");
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder) =>
+        modelBuilder.Entity<LockRow>(b =>
+        {
+            b.ToTable("locks");
+            b.HasKey(x => x.Key);
+        });
+}
+```
+
+## API
 
 | Member | What it does |
-|--------|-------------|
-| `AddRelationalResourceLock<TContext>(dialect, configure?)` | Registers `RelationalResourceLock<TContext>` as the singleton `IResourceLock`. `RelationalResourceLockOptions.PollInterval` (100 ms) sets how often a waiting `AcquireAsync` tries again |
-| `ResourceLockSqlDialect.PostgreSql` | `pg_try_advisory_lock` / `pg_advisory_unlock` on `hashtextextended(key, 0)` (PostgreSQL 11 or later). Keys with the same 64-bit hash share a lock |
-| `ResourceLockSqlDialect.SqlServer` | `sp_getapplock` with `@LockOwner = 'Session'` and `@LockTimeout = 0`, and `sp_releaseapplock`. Keys are resource names of at most 255 characters |
-| `new ResourceLockSqlDialect(tryAcquireSql, releaseSql)` | Your own statements. The key is the `{0}` placeholder. `tryAcquireSql` must not wait and must return one row with an integer column `Value` that is 1 when the lock was taken (0 or no row otherwise) |
+|---|---|
+| `AddRelationalResourceLock<TContext>(ResourceLockSqlDialect dialect, Action<RelationalResourceLockOptions>? configure = null)` | Registers the lock. `TContext` must be registered. A registered `TimeProvider` drives timeouts and polling. Throws `ArgumentException` when `PollInterval` is not positive. |
+| `RelationalResourceLockOptions.PollInterval` | How often a waiting `AcquireAsync` tries again. Default 100 ms. |
+| `ResourceLockSqlDialect.PostgreSql` | `pg_try_advisory_lock` and `pg_advisory_unlock` on `hashtextextended(key, 0)` (PostgreSQL 11 or later). Two keys with the same 64-bit hash share a lock. |
+| `ResourceLockSqlDialect.SqlServer` | `sp_getapplock` with `@LockOwner = 'Session'` and `@LockTimeout = 0`, and `sp_releaseapplock`. A key is a resource name of at most 255 characters. |
+| `new ResourceLockSqlDialect(tryAcquireSql, releaseSql)` | Your own statements. Throws `ArgumentException` when one is empty. |
+| `IResourceLock.AcquireAsync(key, timeout, ct)` | Waits for the lock. Throws `TimeoutException` when the timeout passes. A `null` timeout waits forever. |
+| `IResourceLock.TryAcquireAsync(key, ct)` | One attempt. Returns `Maybe<IAsyncDisposable>`: a handle, or `None` when the lock is held elsewhere. |
+
+Dispose the handle to release the lock. Disposing twice does nothing. An empty key throws `ArgumentException`.
 
 ## How it works
 
-- Each acquire creates a service scope, resolves `TContext`, opens its connection and runs the try-acquire statement through `SqlQueryRaw<int>`. When the lock is taken, the handle keeps that scope and connection. Disposing the handle runs the release statement and closes the connection. When the lock is not taken, the connection is closed at once.
-- `AcquireAsync` polls the try-acquire statement every `PollInterval` until it gets the lock, the timeout passes (`TimeoutException`) or the token is cancelled. Waiters are not served in arrival order.
-- The lock uses its own connection, separate from the request's context and transactions. Keep `LockPlacement.OutsideTransaction` (the default).
-- The lock belongs to the database session. If the connection drops, the database releases the lock while the handle is still held, and another instance can take it.
+- Each acquire creates a service scope, resolves `TContext`, opens its connection and runs the try-acquire statement through `SqlQueryRaw<int>`. A taken lock keeps that scope and connection until the handle is disposed: the release statement runs, then the connection closes. A busy lock closes the connection at once.
+- `AcquireAsync` polls every `PollInterval`. Waiters are not served in arrival order.
+- The lock uses its own connection, separate from the request's `DbContext` and transaction. Keep `LockPlacement.OutsideTransaction` (the default).
+- The lock belongs to the database session. If the connection drops, the database releases the lock while your handle still exists, and another instance can take it.
 - Each held lock uses one pooled connection. Size the pool for the number of locks held at the same time.
-- The lock is not reentrant: acquiring a key you already hold waits for yourself.
-- When an acquire fails or is cancelled after its statement was sent, the release statement runs once and its error is ignored, because the lock may have been taken. So `releaseSql` must release only a lock held by the same connection and do nothing when that connection holds none. The PostgreSQL and SQL Server statements behave this way.
-- When the release of a held lock throws, the connection is still closed and the error is thrown from `DisposeAsync`, so `LockBehavior` reports it. A pooled connection keeps its session, and so the lock, until the pool reuses or drops it, which can take minutes. If a failed release must not block other instances that long, give the lock context a connection string with pooling off, or one whose provider resets the session when the connection goes back to the pool.
+- The lock is not reentrant. Acquiring a key you already hold waits for yourself.
 
-The PostgreSQL and SQL Server statements are checked as text in the test suite. The lock itself runs the `ResourceLockContract` scenarios of `CSharpEssentials.Mediator.Testing` against SQLite, with a table-based dialect:
+## Custom dialects
 
-```csharp
-new ResourceLockSqlDialect(
-    "INSERT INTO \"locks\" (\"Key\") VALUES ({0}) ON CONFLICT DO NOTHING RETURNING 1 AS \"Value\"",
-    "DELETE FROM \"locks\" WHERE \"Key\" = {0}");
-```
+Both statements get the key as the `FromSqlRaw` placeholder `{0}`.
 
-A table-based lock like this one is not released when a process dies, and its release deletes the row whoever holds it, so use it only for tests.
+- `tryAcquireSql` must not wait. It returns one row with an integer column named `Value`: 1 when the lock was taken, 0 (or no row) otherwise.
+- `releaseSql` releases only a lock held by the same connection and does nothing when the connection holds none. It also runs after an acquire that failed or was cancelled once its statement was sent, because the lock may have been taken; its error is then ignored.
+
+When the release of a held lock throws, the connection is still closed and the error is thrown from `DisposeAsync`, so `LockBehavior` reports it. A pooled connection keeps its session, and so the lock, until the pool reuses or drops it. If that delay matters, give the lock context a connection string with pooling off, or a provider that resets the session when a connection returns to the pool.
+
+A table-based dialect like the one in the quick start is not released when a process dies, and its release deletes the row whoever holds it. Use it only in tests.
+
+## Links
+
+- Agent skill: [csharpessentials-efcore](https://github.com/senrecep/CSharpEssentials/blob/main/.well-known/agent-skills/csharpessentials-efcore/SKILL.md)
+- Example project: [examples/Examples.EntityFrameworkCore.Operations](https://github.com/senrecep/CSharpEssentials/tree/main/examples/Examples.EntityFrameworkCore.Operations)
+- `LockBehavior` and `IResourceLock`: [CSharpEssentials.Mediator](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.Mediator/Readme.MD)

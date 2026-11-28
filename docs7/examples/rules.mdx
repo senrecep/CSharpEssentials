@@ -2,22 +2,24 @@
 title: "CSharpEssentials.Rules example"
 ---
 
-Console application for the rule engine in `CSharpEssentials.Rules`.
+A console app that checks car rental applicants with `CSharpEssentials.Rules`. It needs no external services.
 
-| Feature | What the sample does |
-|---------|----------------------|
-| Simple rules | Builds rules with `Func<T, Result>.ToRule()` and runs them with `IRule<T>.Evaluate` |
-| And | `RuleEngine.Evaluate(rules.And(), value)`: all rules must pass; a `Result` rule array stops at the first failure and returns its errors |
-| Or | `rules.Or()`: at least one rule must pass |
-| Conditional | `RuleEngine.If(condition, success, failure, value)` branches on a rule |
-| Linear | `RuleEngine.Linear(rules, value)` runs rules in order and stops at the first failure |
-| Rules with values | `IRule<TContext, TResult>` returns a `Result<TResult>` (a grade from a score) |
-| Async rules | `IAsyncRule<T>` from a `Func<T, CancellationToken, ValueTask<Result>>` |
-| Next | `rule.Next(other)` runs `other` only after `rule` passes |
-
-## Running
+## Run
 
 ```bash
 cd examples/Examples.Rules
 dotnet run
 ```
+
+## What each part shows
+
+1. The three ways to write a rule: a class (`MinimumAgeRule`), a `Func` and `RuleEngine.FromPredicate`.
+2. `.And()`: all rules must pass and evaluation stops at the first failure.
+3. `.Or()`: one rule must pass. When all fail, every error is returned.
+4. `.Linear()` and `.Next()`, plus the `EMPTY_RULE_ARRAY` error for an empty array.
+5. The static `RuleEngine.And`, `RuleEngine.Or` and `RuleEngine.Linear` shortcuts.
+6. `RuleEngine.If` with a rule, a `bool` and three `Func` arguments.
+7. Rules that return a value: `Or` returns the first success, `And` collects all errors or returns the first value.
+8. Async rules (`FromPredicateAsync`, a converted `Func`, a class implementing `IAsyncRule`) evaluated with `RuleEngine.EvaluateAsync`.
+9. A throwing rule turned into an `Unexpected` error.
+10. A custom `ILinearRule` that runs its `Next` rule only on success.

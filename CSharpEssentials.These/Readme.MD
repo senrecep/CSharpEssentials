@@ -1,156 +1,209 @@
 # CSharpEssentials.These
 
-`These<TError, TValue>` is a three-state discriminated union: `Left` (error only), `Right` (value only), or `Both` (error and value together). Unlike `Result<T>`, it does not treat the presence of an error as an automatic failure. Use it when partial success carries a meaningful value alongside a warning or non-fatal error.
-
-Benchmarks against a hand-written record (match, a Map/FlatMap/Match pipeline, partition and JSON) are in [BENCHMARKS.md](./BENCHMARKS.md).
-
-Targets `net11.0`, `net10.0`, `net9.0` and `netstandard2.1`. Depends on `CSharpEssentials.Results`, `CSharpEssentials.Maybe` and `CSharpEssentials.Errors`. `These<TError, TValue>` is a `readonly record struct` in the `CSharpEssentials.These` namespace.
-
-## Installation
+`These<TError, TValue>` holds an error, a value, or both at once. Use it when an operation can succeed with a warning, so the value and the problem travel together instead of the error turning the whole result into a failure.
 
 ```bash
 dotnet add package CSharpEssentials.These
 ```
 
-## Usage
+Targets `net11.0`, `net10.0`, `net9.0` and `netstandard2.1`. Depends on `CSharpEssentials.Results`, `CSharpEssentials.Maybe` and `CSharpEssentials.Errors`. The type is a `readonly record struct` in the `CSharpEssentials.These` namespace.
 
-### Creating These
+## Quick start
 
-```csharp
+```csharp Program.cs
+// dotnet add package CSharpEssentials.These
 using CSharpEssentials.These;
 
-// Error only: no value produced
-These<string, int> left  = These<string, int>.Left("something went wrong");
+string[] input = ["10", "abc", "250"];
 
-// Value only: clean success
+foreach (string text in input)
+{
+    These<string, int> parsed = ParseQuantity(text);
+    string line = parsed.Match(
+        onLeft: error => $"rejected: {error}",
+        onRight: value => $"accepted: {value}",
+        onBoth: (warning, value) => $"accepted: {value} (warning: {warning})");
+    Console.WriteLine(line);
+}
+
+static These<string, int> ParseQuantity(string text)
+{
+    if (!int.TryParse(text, out int n))
+        return These<string, int>.Left($"'{text}' is not a number");
+    if (n > 100)
+        return These<string, int>.Both($"{n} capped at 100", 100);
+    return These<string, int>.Right(n);
+}
+```
+
+Output:
+
+```text
+accepted: 10
+rejected: 'abc' is not a number
+accepted: 100 (warning: 250 capped at 100)
+```
+
+## States
+
+| Factory | `IsLeft` | `IsRight` | `IsBoth` | `HasLeft` | `HasRight` |
+|---|---|---|---|---|---|
+| `These<E, A>.Left(error)` | true | false | false | true | false |
+| `These<E, A>.Right(value)` | false | true | false | false | true |
+| `These<E, A>.Both(error, value)` | false | false | true | true | true |
+
+`LeftOrDefault` and `RightOrDefault` return the raw payloads, or `default` when that side is missing.
+
+Always create values through the three factories. `default(These<E, A>)` has both flags `false`, so it is none of the three states: `Match` sends it to `onBoth` with default values.
+
+## Match
+
+`Match` takes one handler per state and returns a value. All three handlers are required.
+
+```csharp
+These<string, int> both = These<string, int>.Both("rounded down", 7);
+
+string text = both.Match(
+    onLeft: e => $"Left({e})",
+    onRight: v => $"Right({v})",
+    onBoth: (e, v) => $"Both({e}, {v})");   // "Both(rounded down, 7)"
+```
+
+## Map and MapLeft
+
+`Map` changes the value. A `Left` passes through and a `Both` keeps its error. `MapLeft` changes the error the same way and leaves a `Right` alone.
+
+```csharp
 These<string, int> right = These<string, int>.Right(42);
+These<string, int> both = These<string, int>.Both("rounded down", 7);
+These<string, int> left = These<string, int>.Left("not a number");
 
-// Both: value produced but a warning accompanies it
-These<string, int> both  = These<string, int>.Both("partial failure", 42);
+These<string, int> doubled = right.Map(n => n * 2);        // Right(84)
+These<string, int> stillWarned = both.Map(n => n * 2);     // Both("rounded down", 14)
+These<int, int> errorLength = left.MapLeft(e => e.Length); // Left(12)
 ```
 
-### State flags
+## FlatMap
+
+`FlatMap` chains a function that returns another `These`.
+
+| Source | Mapper returns | Result |
+|---|---|---|
+| `Left(e)` | not called | `Left(e)` |
+| `Right(v)` | anything | what the mapper returned |
+| `Both(e, v)` | `Right(x)` or `Both(e2, x)` | `Both(e, x)` |
+| `Both(e, v)` | `Left(e2)` | `Left(e2)` |
+
+From a `Both`, the original error wins and the mapper's error inside a `Both` is dropped, because `TError` has no way to combine two errors.
 
 ```csharp
-bool isLeft  = these.IsLeft;  // true when Left only
-bool isRight = these.IsRight; // true when Right only
-bool isBoth  = these.IsBoth;  // true when Both
+These<string, int> Half(int n) => n % 2 == 0
+    ? These<string, int>.Right(n / 2)
+    : These<string, int>.Both("odd value halved", n / 2);
+
+These<string, int> a = These<string, int>.Right(42).FlatMap(Half);              // Right(21)
+These<string, int> b = These<string, int>.Both("rounded down", 7).FlatMap(Half); // Both("rounded down", 3)
 ```
 
-`HasLeft` is `true` for `Left` and `Both`, `HasRight` is `true` for `Right` and `Both`, and `LeftOrDefault` and `RightOrDefault` give the raw payloads (`default` when that side is absent). `default(These<TError, TValue>)` is none of the three states, and `Match` routes it to `onBoth` with default values, so create instances through `Left`, `Right` or `Both`.
+## Tap and TapLeft
 
-JSON round-trips these four properties as `{"isLeft":true,"isRight":true,"left":...,"right":...}` (`isLeft` holds `HasLeft`, `isRight` holds `HasRight`).
-
-### Map: transform the value
-
-`Map` applies a function to the value. Left passes through unchanged; Both transforms the value while keeping the error.
+Side effects that return the same `These`. `Tap` runs on `Right` and `Both`. `TapLeft` runs on `Left` and `Both`.
 
 ```csharp
-These<string, int> result = These<string, int>.Right(10)
-    .Map(n => n * 2);   // Right(20)
+These<string, int> both = These<string, int>.Both("rounded down", 7);
 
-These<string, int> both = These<string, int>.Both("warn", 10)
-    .Map(n => n * 2);   // Both("warn", 20)
+both
+    .Tap(v => Console.WriteLine($"value: {v}"))
+    .TapLeft(e => Console.WriteLine($"warning: {e}"));
 ```
 
-### MapLeft: transform the error
+## GetRight and GetLeft
 
-```csharp
-These<int, string> result = These<string, string>.Left("err")
-    .MapLeft(e => e.Length);  // Left(3)
-```
-
-### FlatMap: chain These
-
-`FlatMap` sequences operations that return `These`. When chaining from `Both`, the original error is kept: a mapper result of `Right` or `Both` yields `Both(originalError, newValue)` (the mapper's own error in a `Both` is dropped because `TError` has no combine operator), and a mapper result of `Left` yields that `Left`.
-
-```csharp
-These<string, int> result = These<string, int>.Right(5)
-    .FlatMap(n => n > 0
-        ? These<string, int>.Right(n * 10)
-        : These<string, int>.Left("non-positive"));
-```
-
-### Tap / TapLeft: side effects
-
-```csharp
-these
-    .Tap(v => logger.LogInformation("Value: {V}", v))      // fires on Right or Both
-    .TapLeft(e => logger.LogWarning("Error: {E}", e));      // fires on Left or Both
-```
-
-### Match: exhaustive pattern match
-
-```csharp
-string message = these.Match(
-    onLeft:  error        => $"Failed: {error}",
-    onRight: value        => $"OK: {value}",
-    onBoth:  (error, val) => $"Partial: {val} (warning: {error})");
-```
-
-### GetRight / GetLeft
-
-Both return `Maybe<T>` and do not throw on the wrong state.
+Both return a `Maybe<T>` (from `CSharpEssentials.Maybe`) and never throw. `GetRight()` has a value for `Right` and `Both`. `GetLeft()` has a value for `Left` and `Both`. A `null` payload gives `None`.
 
 ```csharp
 using CSharpEssentials.Maybe;
 
-Maybe<int>    value = these.GetRight();  // Some(42) or None
-Maybe<string> error = these.GetLeft();   // Some("msg") or None
+These<string, int> both = These<string, int>.Both("rounded down", 7);
+
+Maybe<int> value = both.GetRight();    // Some(7)
+Maybe<string> error = both.GetLeft();  // Some(rounded down)
 ```
 
-`GetRight()` is `Some` for `Right` and `Both`, `GetLeft()` is `Some` for `Left` and `Both`. A `null` payload gives `None`.
+## Converting to and from Result
 
-## Result bridge
+The bridge works with `These<Error, TValue>` and `Result<TValue>` from `CSharpEssentials.Results`.
 
-```csharp
+```csharp Program.cs
+// dotnet add package CSharpEssentials.These
 using CSharpEssentials.Errors;
 using CSharpEssentials.ResultPattern;
 using CSharpEssentials.These;
 
-// From Result<T>: a success becomes Right, a failure becomes Left with its first error only
-Result<int> result = GetSomeResult();
-These<Error, int> these = TheseExtensions.FromResult(result);
+Result<int> ok = 5;
+Result<int> failed = Error.Validation("Qty.Invalid", "Quantity is invalid.");
 
-// To Result<T> (strict): Both is treated as failure (Left wins)
-Result<int> strict = these.ToResult();
+These<Error, int> fromOk = TheseExtensions.FromResult(ok);
+These<Error, int> fromFailed = TheseExtensions.FromResult(failed);
+Console.WriteLine($"{fromOk.IsRight} {fromFailed.IsLeft}");   // True True
 
-// To Result<T> (lenient): Both is treated as success (value wins)
-Result<int> lenient = these.ToResultLenient();
+These<Error, int> partial = These<Error, int>.Both(
+    Error.Validation("Qty.Capped", "Quantity capped at 10."), 10);
+
+Result<int> strict = partial.ToResult();          // Both counts as failure
+Result<int> lenient = partial.ToResultLenient();  // Both counts as success
+Console.WriteLine($"{strict.IsFailure} {strict.FirstError.Code}");  // True Qty.Capped
+Console.WriteLine($"{lenient.IsSuccess} {lenient.Value}");          // True 10
 ```
 
-| Conversion | Left | Right | Both |
-|------------|------|-------|------|
-| `ToResult()` | Failure | Success | Failure |
-| `ToResultLenient()` | Failure | Success | Success |
+| Method | Left | Right | Both |
+|---|---|---|---|
+| `ToResult()` | failure | success | failure with the error |
+| `ToResultLenient()` | failure | success | success with the value, error dropped |
 
-`FromResult` never produces `Both`, and it keeps only the first error of a failed result. Both `ToResult` methods are defined only for `These<Error, TValue>`.
+- `FromResult` is a static method on `TheseExtensions`, not an extension method. Call it as `TheseExtensions.FromResult(result)`.
+- `FromResult` never returns `Both`. A failed result becomes `Left` with its first error only.
+- `ToResult()` on `default(These<Error, T>)` throws `InvalidOperationException`.
 
-## Collection extensions
+## Partition
 
-Partition a sequence into its three buckets in one pass.
+`Partition` splits a sequence into its three buckets in one pass.
 
 ```csharp
-IEnumerable<These<string, int>> items = GetItems();
+These<string, int>[] items =
+[
+    These<string, int>.Right(10),
+    These<string, int>.Left("bad row"),
+    These<string, int>.Both("capped", 100),
+];
 
 var (lefts, rights, boths) = items.Partition();
-
-// lefts  : IReadOnlyList<string>
-// rights : IReadOnlyList<int>
-// boths  : IReadOnlyList<(string, int)>
-
-foreach (string error in lefts)
-    Console.WriteLine($"Error: {error}");
-
-foreach ((string warning, int value) in boths)
-    Console.WriteLine($"Value {value} with warning: {warning}");
+// lefts:  IReadOnlyList<string>        ["bad row"]
+// rights: IReadOnlyList<int>           [10]
+// boths:  IReadOnlyList<(string, int)> [("capped", 100)]
 ```
 
-## When to use These vs Result
+## JSON
 
-| Scenario | Use |
-|----------|-----|
-| Operation either succeeds or fails | `Result<T>` |
-| Partial success with a non-fatal warning | `These<TError, TValue>` |
-| Accumulating errors while still producing a value | `These<TError, TValue>` |
-| Enrichment pipelines (value + audit log) | `These<TError, TValue>` |
+`System.Text.Json` writes the four stored properties and reads them back to the same state:
+
+```json
+{"isLeft":true,"isRight":true,"left":"rounded down","right":7}
+```
+
+`isLeft` holds `HasLeft` and `isRight` holds `HasRight`, so a `Both` has both set to `true`.
+
+## These, Result or Maybe
+
+| Situation | Type |
+|---|---|
+| The operation either works or fails | `Result<T>` |
+| The value may be missing, with no reason attached | `Maybe<T>` |
+| A value was produced but something needs reporting | `These<TError, TValue>` |
+
+## Links
+
+- Agent skill: [csharpessentials-these](https://github.com/senrecep/CSharpEssentials/blob/main/.well-known/agent-skills/csharpessentials-these/SKILL.md)
+- Example project: [examples/Examples.These](https://github.com/senrecep/CSharpEssentials/tree/main/examples/Examples.These)
+- Benchmarks: [BENCHMARKS.md](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.These/BENCHMARKS.md)
+- Related: [CSharpEssentials.Results](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.Results/Readme.MD), [CSharpEssentials.Maybe](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.Maybe/Readme.MD)

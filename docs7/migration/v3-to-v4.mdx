@@ -75,7 +75,7 @@ Other ProblemDetails changes:
 
 Names with a single word or plain PascalCase did not change. Enums with acronyms or digits in member names did. When reading, the new EF converter also accepts the old stored values, so existing rows still load.
 
-> **Warning:** loading is the only part that is tolerant. Queries, joins, unique indexes and `GroupBy` compare against the new spelling, so `Where(x => x.Status == Status.HTTPStatus)` does not match a row stored as `httpstatus`. If an enum changed spelling, either migrate the stored values (`UPDATE … SET status = 'http_status' WHERE status = 'httpstatus'`) or keep `UseLegacySnakeCase = true`.
+> Warning: loading is the only part that is tolerant. Queries, joins, unique indexes and `GroupBy` compare against the new spelling, so `Where(x => x.Status == Status.HTTPStatus)` does not match a row stored as `httpstatus`. If an enum changed spelling, either migrate the stored values (`UPDATE … SET status = 'http_status' WHERE status = 'httpstatus'`) or keep `UseLegacySnakeCase = true`.
 
 ## New in 4.0: enum query/route binding
 

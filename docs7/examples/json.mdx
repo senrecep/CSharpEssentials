@@ -2,24 +2,33 @@
 title: "CSharpEssentials.Json example"
 ---
 
-A console application that runs the `CSharpEssentials.Json` helpers. Full documentation: [CSharpEssentials.Json Readme](/libraries/json).
+A console app for [CSharpEssentials.Json](/libraries/json). Each section prints the JSON it writes or the value it reads.
 
-## Features demonstrated
-
-| Feature | Description |
-|---------|-------------|
-| Default options | `EnhancedJsonSerializerOptions.DefaultOptions` and `DefaultOptionsWithoutConverters`, with `Create`, `ApplyTo` and `ApplyFrom` |
-| Polymorphic serialization | Serialize/deserialize derived types, collections and nested objects with the `$type` discriminator, plus missing and unknown `$type` errors |
-| JSON extensions | `ConvertToJson<T>()`, `ConvertFromJson<T>()`, `ConvertToJsonDocument<T>()` |
-| DateTime conversion | Multi-format date parsing with `MultiFormatDateTimeConverterFactory`, Unix timestamps and `DateTime?` |
-| Enum conventions | `[StringEnum]` enums written as strings, plain enums written as numbers |
-| JsonDocument navigation | `TryGetNestedProperty`, which comes from the `CSharpEssentials` meta-package (`Result<JsonElement?>`), not from `CSharpEssentials.Json` |
-| Malformed JSON | `JsonException` from `ConvertFromJson` for invalid input |
-| JsonElement extraction | Reading values with `GetProperty`, `GetInt32`, `EnumerateArray` and related members |
-
-## Running
+## Run
 
 ```bash
-cd examples/Examples.Json
-dotnet run
+dotnet run --project examples/Examples.Json
+```
+
+## What each section shows
+
+| Section | Shows |
+|---|---|
+| Option presets | `DefaultOptions`, `DefaultOptionsWithoutConverters`, `Create`, `CreateOptionsWithConverters`, `ApplyTo`, `ApplyFrom`, and `StrictOptions` rejecting an unknown property |
+| Extensions | `ConvertToJson`, both `ConvertFromJson` overloads, both `ConvertToJsonDocument` overloads, `JsonException` for malformed input |
+| `JsonElement.ToClrObject` | The CLR type each JSON value becomes |
+| Required value-type constructor parameters | `RequireValueTypeConstructorParameters` turning a missing `quantity` into a `JsonException` |
+| Enum conventions | `AddEnumConventions` in Data and Input mode, `writeAs: EnumWireFormat.Number`, enum dictionary keys, a plain enum staying a number, `EnumValueJsonException` |
+| Polymorphism with `[JsonTypeDiscriminator]` | `AddPolymorphism`, a discriminator that is not the first property, `[JsonPolymorphicProperty]`, an unknown value |
+| Source-generated context | `AddPolymorphism` over a `JsonSerializerContext`, the Native AOT path |
+| `[JsonAcceptClrTypeNames]` | Reading a `$type` CLR name and writing the new value |
+| Bases without attributes | `$type` with the CLR name from `PolymorphicJsonConverterFactory`, and the error for a missing `$type` |
+| Multi-format DateTime | Several input formats, all returned as UTC, `DateTime?`, a custom format, an unknown format |
+
+## Project references
+
+Inside this repository the project references `CSharpEssentials.Json.Generators` and `CSharpEssentials.Enums.Generators` with `OutputItemType="Analyzer"`, because a `ProjectReference` does not carry a project's generator. A project that uses the NuGet package needs only:
+
+```xml
+<PackageReference Include="CSharpEssentials.Json" Version="9.0.0" />
 ```

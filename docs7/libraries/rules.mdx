@@ -2,335 +2,286 @@
 title: "CSharpEssentials.Rules"
 ---
 
-A rule engine for .NET built on `CSharpEssentials.Results`. Rules are classes, `Func` delegates or inline lambdas that return `Result` or `Result<T>`, combined with And, Or, Linear (stop on first failure) and if/then/else. Trees with `IAsyncRule` rules are awaited with `RuleEngine.EvaluateAsync`.
-
-> Benchmarks (sync and async trees, prebuilt vs rebuilt chains, short-circuit vs hand-written if/else, NRules and RulesEngine as reference columns): [BENCHMARKS.md](/benchmarks/rules).
-
-## Installation
+A small rule engine on top of `CSharpEssentials.Results`. A rule is a class, a `Func` or a predicate that returns `Result` or `Result<T>`. You combine rules with And, Or, Linear (stop at the first failure) and If, then evaluate the tree with `RuleEngine`. Use it when business checks need to be reusable and composable instead of nested `if` blocks.
 
 ```bash
 dotnet add package CSharpEssentials.Rules
 ```
 
-## Namespaces
+Targets `net11.0`, `net10.0`, `net9.0` and `netstandard2.1`. Depends on `CSharpEssentials.Results` and `CSharpEssentials.Errors`.
 
 ```csharp
-using CSharpEssentials.Rules;         // IRule<T>, IAsyncRule<T>, RuleEngine, .And() / .Or() / .Linear() / .Next() / .ToRule()
+using CSharpEssentials.Rules;         // IRule<T>, IAsyncRule<T>, RuleEngine, And/Or/Linear/Next/ToRule
 using CSharpEssentials.ResultPattern; // Result, Result<T>
 using CSharpEssentials.Errors;        // Error
 ```
 
-The samples below assume these usings.
+## Quick start
 
-## Rule definition styles
+```csharp Program.cs
+// dotnet add package CSharpEssentials.Rules
+using CSharpEssentials.Errors;
+using CSharpEssentials.ResultPattern;
+using CSharpEssentials.Rules;
 
-The three styles can be mixed when composing.
+IRule<Applicant> age = new MinimumAgeRule(18);
+Func<Applicant, Result> license = a => a.HasLicense
+    ? Result.Success()
+    : Error.Validation("Applicant.NoLicense", "A driver's license is required.");
+IRule<Applicant> country = RuleEngine.FromPredicate<Applicant>(
+    a => a.Country is "TR" or "DE",
+    a => Error.Forbidden("Applicant.Country", $"Country '{a.Country}' is not supported."));
 
-### 1. Class
+IRuleBase<Applicant> canRent = new IRuleBase<Applicant>[] { age, license.ToRule(), country }.And();
 
-Implement `IRule<TContext>` when a rule needs injected dependencies, state, or a name of its own.
-
-```csharp
-public sealed class AgeRule : IRule<UserContext>
+foreach (Applicant applicant in new[] { new Applicant("Ada", 30, true, "TR"), new Applicant("Bo", 16, false, "TR") })
 {
-    public Result Evaluate(UserContext ctx, CancellationToken ct = default) =>
-        ctx.Age >= 18 ? Result.Success() : Error.Validation("Age.Underage", "Must be at least 18.");
+    Result result = RuleEngine.Evaluate(canRent, applicant);
+    Console.WriteLine(result.IsSuccess
+        ? $"{applicant.Name}: approved"
+        : $"{applicant.Name}: {result.FirstError.Description}");
 }
 
-public sealed class LicenseRule : IRule<UserContext>
+internal sealed record Applicant(string Name, int Age, bool HasLicense, string Country);
+
+internal sealed class MinimumAgeRule(int minimum) : IRule<Applicant>
 {
-    private readonly ILicenseRepository _repo;
-
-    public LicenseRule(ILicenseRepository repo) => _repo = repo;
-
-    public Result Evaluate(UserContext ctx, CancellationToken ct = default) =>
-        _repo.IsValid(ctx.LicenseId) ? Result.Success() : Error.Validation("License.Invalid", "License not found.");
+    public Result Evaluate(Applicant context, CancellationToken cancellationToken = default) =>
+        context.Age >= minimum
+            ? Result.Success()
+            : Error.Validation("Applicant.Underage", $"Applicant must be at least {minimum}.");
 }
 ```
 
-### 2. `Func` field or method
+Output:
 
-A `Func<TContext, Result>` field, variable or method group can be passed wherever the engine takes a rule.
-
-```csharp
-// Defined once, reused anywhere
-Func<UserContext, Result> regionRule = ctx =>
-    ctx.IsAllowedRegion ? Result.Success() : Error.Forbidden("Region.Blocked", "Not available in your region.");
-
-// Named method: method group works too
-static Result CheckEmail(UserContext ctx) =>
-    ctx.Email.Contains('@') ? Result.Success() : Error.Validation("Email.Invalid", "Invalid email address.");
+```text
+Ada: approved
+Bo: Applicant must be at least 18.
 ```
 
-### 3. Inline lambda
+## Writing rules
+
+The snippets below reuse the quick start: `applicant` is an `Applicant`, and `age`, `license` and `country` are the rules defined there. `GrantRule` and `DenyRule` stand for any `IRule<Applicant>` classes.
+
+### As a class
+
+Implement `IRule<TContext>` when the rule needs dependencies, state or a name.
 
 ```csharp
-Result result = RuleEngine.Evaluate(
-    (UserContext ctx) => ctx.Age >= 18 ? Result.Success() : Error.Validation("Age.Underage", "Must be at least 18."),
-    userCtx);
+public sealed class MinimumAgeRule(int minimum) : IRule<Applicant>
+{
+    public Result Evaluate(Applicant context, CancellationToken cancellationToken = default) =>
+        context.Age >= minimum ? Result.Success() : Error.Validation("Applicant.Underage", "Too young.");
+}
 ```
 
----
+### As a Func
 
-## Passing rules without explicit conversion
-
-`RuleEngine.Evaluate`, `.And()`, `.Or()` and `.Next()` accept `Func` delegates directly. `.ToRule()` is needed to put a `Func` into an `IRuleBase<TContext>[]` next to class instances, to call `.Linear()` (there is no `Func[]` overload), and to turn an async `Func` into an `IAsyncRule`.
+`RuleEngine.Evaluate`, `RuleEngine.If`, the static `And`/`Or`/`Linear` shortcuts, the `.And()` and `.Or()` extensions on `Func[]` and `.Next()` all accept a `Func<TContext, Result>` (or `Func<TContext, CancellationToken, Result>`) directly. A lambda or a method group works.
 
 ```csharp
-var ctx = new UserContext { Age = 20, HasLicense = true, IsAllowedRegion = true };
+Func<Applicant, Result> license = a => a.HasLicense ? Result.Success() : Error.Validation("Applicant.NoLicense", "License required.");
 
-// Class instance
-Result r1 = RuleEngine.Evaluate(new AgeRule(), ctx);
-
-// Func variable: no .ToRule() needed
-Result r2 = RuleEngine.Evaluate(regionRule, ctx);
-
-// Inline lambda: no .ToRule() needed
-Result r3 = RuleEngine.Evaluate(
-    (UserContext c) => c.HasLicense ? Result.Success() : Error.Validation("License.Missing", "License required."),
-    ctx);
-
-// Named method group: works directly
-Result r4 = RuleEngine.Evaluate(CheckEmail, ctx);
+Result r1 = RuleEngine.Evaluate(license, applicant);
+Result r2 = RuleEngine.Evaluate((Applicant a) => a.Age > 0 ? Result.Success() : Error.Validation("Age", "Invalid age."), applicant);
 ```
 
----
+`.ToRule()` turns a `Func` into an `IRule`. You need it to put a `Func` into an `IRuleBase<T>[]` next to class rules, to call the `.Linear()` extension (it has no `Func[]` overload) and to turn an async `Func` into an `IAsyncRule`.
+
+### From a predicate
+
+`FromPredicate` builds a rule from a `bool` check and an error, or an error factory that sees the context.
+
+```csharp
+IRule<int> positive = RuleEngine.FromPredicate<int>(x => x > 0, Error.Validation("Value.Negative", "Must be positive."));
+IRule<int> inRange = RuleEngine.FromPredicate<int>(
+    x => x is >= 1 and <= 100,
+    x => Error.Validation("Value.OutOfRange", $"{x} must be between 1 and 100."));
+```
+
+`FromPredicateAsync` does the same with a `Func<TContext, Task<bool>>` and returns an `IAsyncRule<TContext>`. The predicate does not receive a cancellation token.
 
 ## Combining rules
 
-### And: all must pass
+### And
 
-`Result` rules stop at the first failure and return its errors; `Result<T>` rules evaluate every child and aggregate all errors.
-
-```csharp
-// Using class instances
-Result andResult = RuleEngine.Evaluate(
-    new IRuleBase<UserContext>[] { new AgeRule(), new LicenseRule(repo) }.And(),
-    ctx);
-
-// Using Func array: no .ToRule() needed at all
-Result andResult2 = RuleEngine.Evaluate(
-    new Func<UserContext, Result>[] { regionRule, CheckEmail }.And(),
-    ctx);
-
-// Mixed: class + lambda
-Result andResult3 = RuleEngine.Evaluate(
-    new IRuleBase<UserContext>[]
-    {
-        new AgeRule(),
-        regionRule.ToRule(),
-        ((Func<UserContext, Result>)(c => c.HasLicense ? Result.Success() : Error.Validation("License.Missing", "License required."))).ToRule()
-    }.And(),
-    ctx);
-```
-
-### Or: at least one must pass
+All rules must pass.
 
 ```csharp
-// Func array: direct, no conversion
-Result orResult = RuleEngine.Evaluate(
-    new Func<UserContext, Result>[] { regionRule, CheckEmail }.Or(),
-    ctx);
+IRuleBase<Applicant> all = new IRuleBase<Applicant>[] { age, license.ToRule(), country }.And();
+IRuleBase<Applicant> fromFuncs = new Func<Applicant, Result>[] { license, a => Result.Success() }.And();
+Result result = RuleEngine.Evaluate(all, applicant);
 ```
 
-`Or` succeeds as soon as one rule passes. When every rule fails, the result carries the errors of all of them.
+For `Result` rules, `And` stops at the first failure and returns its errors. For `Result<T>` rules, see [Rules that return a value](#rules-that-return-a-value).
 
-### Linear: stop on first failure
+### Or
+
+At least one rule must pass. `Or` returns success at the first passing rule. When every rule fails, the result carries the errors of all of them, in order.
 
 ```csharp
-// Class instances
-Result linear = RuleEngine.Evaluate(
-    new IRule<UserContext>[] { new AgeRule(), new LicenseRule(repo) }.Linear(),
-    ctx);
-
-// .Next() runs the second rule only when the first one passes
-Result pipeline = RuleEngine.Evaluate(
-    ((Func<UserContext, Result>)CheckEmail).Next(regionRule),
-    ctx);
-
-// Longer sequences: keep chaining Next, or use Linear()
-Result longer = RuleEngine.Evaluate(
-    ((Func<UserContext, Result>)CheckEmail).Next(regionRule).Next(c => c.Age >= 18 ? Result.Success() : Error.Validation("Age.Underage", "Must be at least 18.")),
-    ctx);
+IRuleBase<Applicant> any = new IRuleBase<Applicant>[] { age, license.ToRule() }.Or();
 ```
 
-`Next` links one rule to the rule after it. `a.Next(b).Next(c)` appends `c` to the end of the chain, so it behaves the same as `a.Next(b.Next(c))` and `new[] { a, b, c }.Linear()`: a failing `b` stops the chain and `c` is not evaluated. An empty array gives a rule that fails with `EMPTY_RULE_ARRAY`, the same error `And` and `Or` return for no rules.
+### Linear and Next
+
+`Linear` runs rules in order and stops at the first failure. `a.Next(b)` links two rules the same way. `a.Next(b).Next(c)` appends `c` to the end, so it behaves like `new[] { a, b, c }.Linear()`.
+
+```csharp
+IRuleBase<Applicant> chain = new IRule<Applicant>[] { age, country }.Linear();
+IRule<Applicant> linked = age.Next(license).Next(country);
+```
+
+The `.Linear()` extension exists on `IRule<T>[]` and `IAsyncRule<T>[]`. `Next` accepts another rule or a `Func`.
 
 ### Static shortcuts
 
-`RuleEngine.And`, `RuleEngine.Or` and `RuleEngine.Linear` take the array and the context directly. `RuleEngine.Linear(Func[], ctx)` rebuilds the chain on every call (1.94 to 2.59 times the prebuilt chain in [BENCHMARKS.md](/benchmarks/rules)), so on a hot path build the tree once and keep it:
+`RuleEngine.And`, `RuleEngine.Or` and `RuleEngine.Linear` take the array and the context in one call. They accept `IRule<T>[]` and every `Func` shape.
 
 ```csharp
-Result all = RuleEngine.And(new Func<UserContext, Result>[] { regionRule, CheckEmail }, ctx);
-Result any = RuleEngine.Or(new IRule<UserContext>[] { new AgeRule(), new LicenseRule(repo) }, ctx);
-Result seq = RuleEngine.Linear(new IRule<UserContext>[] { new AgeRule(), new LicenseRule(repo) }, ctx);
+Func<Applicant, Result>[] checks = [license, a => a.Age >= 18 ? Result.Success() : Error.Validation("Age", "Too young.")];
+
+Result both = RuleEngine.And(checks, applicant);
+Result either = RuleEngine.Or(checks, applicant);
+Result inOrder = RuleEngine.Linear(checks, applicant);
 ```
 
-Every combinator also exists for rules with values (`IRule<TContext, TResult>`, `Func<TContext, Result<TResult>>`) and for async rules.
+These shortcuts build the tree on every call. For `RuleEngine.Linear(Func[], ctx)` that costs 1.94 to 2.59 times the prebuilt chain (see [BENCHMARKS.md](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.Rules/BENCHMARKS.md)), so on a hot path build the tree once and keep it.
 
-### Conditional: if/then/else branching
+### If
+
+`RuleEngine.If` evaluates a condition and then runs the `success` or the `failure` branch. The condition is a rule, a `Func` or a plain `bool`. The result is the result of the branch that ran.
 
 ```csharp
-// Class instances
-Result conditional = RuleEngine.If(
-    new AgeRule(),
-    success: new GrantAccessRule(),
-    failure: new DenyAccessRule(),
-    ctx);
+Result fromRule = RuleEngine.If(age, success: new GrantRule(), failure: new DenyRule(), applicant);
 
-// Func lambdas: all three branches inline
-Result conditional2 = RuleEngine.If(
-    (UserContext c) => c.Age >= 18 ? Result.Success() : Error.Validation("Age.Underage", "Must be at least 18."),
-    success: c => Result.Success(),
-    failure: c => Error.Forbidden("Access.Denied", "Access denied."),
-    ctx);
+Result fromBool = RuleEngine.If(applicant.HasLicense, success: new GrantRule(), failure: new DenyRule(), applicant);
 
-// Boolean shorthand
-Result conditional3 = RuleEngine.If(
-    condition: ctx.IsAllowedRegion,
-    success: new GrantAccessRule(),
-    failure: new DenyAccessRule(),
-    ctx);
+Result fromFuncs = RuleEngine.If(
+    (Applicant a) => a.Age >= 18 ? Result.Success() : Error.False,
+    success: a => Result.Success(),
+    failure: a => Error.Forbidden("Access.Denied", "Access denied."),
+    applicant);
 ```
 
----
+## Rules that return a value
 
-## Rules with values (`Result<T>`)
-
-A rule can return a value with its outcome.
+`IRule<TContext, TResult>` and `Func<TContext, Result<TResult>>` return a value with the outcome. Every combinator has a `Result<T>` version.
 
 ```csharp
-// Class form
-public sealed class GradeRule : IRule<int, string>
+Func<int, Result<string>>[] graders =
+[
+    score => score >= 90 ? "A" : Error.Validation("Grade.NotA", "Below 90."),
+    score => score >= 80 ? "B" : Error.Validation("Grade.NotB", "Below 80."),
+];
+
+Result<string> grade = RuleEngine.Or(graders, 85);   // success, "B"
+Result<string> strict = RuleEngine.And(graders, 70); // failure: Grade.NotA and Grade.NotB
+```
+
+| Combinator | `Result` rules | `Result<T>` rules |
+|---|---|---|
+| And | stops at the first failure | runs every child, returns all errors, or the first child's value on success |
+| Or | first success wins, else all errors | first success wins with its value, else all errors |
+| Linear | stops at the first failure | stops at the first failure, returns the last value |
+
+## Async rules
+
+Implement `IAsyncRule<TContext>`, use `FromPredicateAsync`, or convert a `Func<TContext, CancellationToken, ValueTask<Result>>` with `.ToRule()`. Then await `RuleEngine.EvaluateAsync`.
+
+```csharp Program.cs
+// dotnet add package CSharpEssentials.Rules
+using CSharpEssentials.Errors;
+using CSharpEssentials.ResultPattern;
+using CSharpEssentials.Rules;
+
+HashSet<string> taken = ["admin", "root"];
+
+IAsyncRule<string> notEmpty = ((Func<string, CancellationToken, ValueTask<Result>>)((name, ct) =>
+    ValueTask.FromResult(name.Length > 0 ? Result.Success() : Error.Validation("Name.Empty", "Name is required.")))).ToRule();
+
+IAsyncRule<string> unique = RuleEngine.FromPredicateAsync<string>(
+    async name => { await Task.Yield(); return !taken.Contains(name); },
+    name => Error.Conflict("Name.Taken", $"'{name}' is already taken."));
+
+IRuleBase<string> nameRules = new IRuleBase<string>[]
 {
-    public Result<string> Evaluate(int score, CancellationToken ct = default)
+    RuleEngine.FromPredicate<string>(s => s.Length <= 20, Error.Validation("Name.TooLong", "Use at most 20 characters.")),
+    notEmpty,
+    unique,
+    new NotReservedRule(),
+}.And();
+
+foreach (string name in new[] { "ada", "admin", "" })
+{
+    Result result = await RuleEngine.EvaluateAsync(nameRules, name);
+    Console.WriteLine($"'{name}': {(result.IsSuccess ? "ok" : result.FirstError.Code)}");
+}
+
+internal sealed class NotReservedRule : IAsyncRule<string>
+{
+    public async ValueTask<Result> EvaluateAsync(string context, CancellationToken cancellationToken = default)
     {
-        if (score >= 90) return "A";
-        if (score >= 80) return "B";
-        return Error.Validation("Grade.Failed", "Score too low.");
+        await Task.Delay(1, cancellationToken);
+        return context == "system" ? Error.Conflict("Name.Reserved", "Name is reserved.") : Result.Success();
     }
 }
-
-// Func form: no .ToRule() at call site
-Result<string> grade = RuleEngine.Evaluate(
-    (int score) => score >= 90 ? Result<string>.Success("A") : Error.Validation("Grade.Failed", "Score too low."),
-    85);
 ```
 
----
+- `EvaluateAsync` takes the same arguments as `Evaluate` and returns `ValueTask<Result>` or `ValueTask<Result<T>>`. Results, short-circuiting and error order match `Evaluate`.
+- Children of a composite run one at a time, in order. A tree of sync rules completes synchronously.
+- `Evaluate` also runs async rules, but blocks the thread until they finish. That can deadlock under a `SynchronizationContext`. Use `EvaluateAsync` for any tree with an async rule.
+- Cancelling the token throws `OperationCanceledException` from `EvaluateAsync`. It is not turned into an error. The token is checked before each rule, but a running rule is awaited until it returns, so rules should observe the token.
 
-## Integration with domain error hierarchies
+## Exceptions
 
-Rules can return errors from a domain error catalogue:
+A rule that throws does not crash the evaluation. The engine catches the exception and returns `Error.Exception` with the code `RuleEngine.Evaluate.<RuleType>` (for example `RuleEngine.Evaluate.SimpleRule` or `RuleEngine.Evaluate.AndRule`) and type `ErrorType.Unexpected`.
 
 ```csharp
-public static class RegistrationErrors
+Result thrown = RuleEngine.Evaluate((Applicant a) => throw new InvalidOperationException("boom"), applicant);
+// thrown.FirstError.Code == "RuleEngine.Evaluate.SimpleRule", Type == ErrorType.Unexpected
+```
+
+## Empty arrays
+
+`And`, `Or` and `Linear` over an empty array fail with the validation error `EMPTY_RULE_ARRAY`. They do not throw.
+
+## Custom composite rules
+
+The building blocks are public interfaces, so you can write your own composite nodes. `IRuleBase<TContext>` is the marker every rule implements.
+
+| Interface | `Evaluate` acts as | Then the engine runs |
+|---|---|---|
+| `IRule<T>` / `IAsyncRule<T>` | the rule | nothing |
+| `ILinearRule<T>` / `ILinearAsyncRule<T>` | the first step | `Next` on success |
+| `IConditionalRule<T>` / `IConditionalAsyncRule<T>` | the condition | `Success` or `Failure`; a `null` branch returns the condition's result |
+| `IAndRule<T>` / `IAndAsyncRule<T>` | a gate; a failure is returned as is | every item in `Rules` with And semantics |
+| `IOrRule<T>` / `IOrAsyncRule<T>` | a gate; a failure is returned as is | every item in `Rules` with Or semantics |
+
+Each interface also has a `<TContext, TResult>` form.
+
+```csharp
+public sealed class HasNameThen(IRuleBase<Applicant> next) : ILinearRule<Applicant>
 {
-    public static readonly Error Underage =
-        Error.Validation("Registration.Underage", "Applicant must be at least 18.");
+    public IRuleBase<Applicant>? Next { get; } = next;
 
-    public static readonly Error NoLicense =
-        Error.Validation("Registration.NoLicense", "A valid driver's license is required.");
-
-    public static readonly Error RegionBlocked =
-        Error.Forbidden("Registration.RegionBlocked", "Registration is not available in your region.");
+    public Result Evaluate(Applicant context, CancellationToken cancellationToken = default) =>
+        string.IsNullOrWhiteSpace(context.Name) ? Error.Validation("Name.Empty", "Name is required.") : Result.Success();
 }
-
-Func<ApplicantContext, Result> regionRule =
-    ctx => ctx.IsAllowedRegion ? Result.Success() : RegistrationErrors.RegionBlocked;
-
-// Compose with And: Result rules stop at the first failure and return its errors
-var applicant = new ApplicantContext { Age = 16, HasLicense = false, IsAllowedRegion = true };
-
-Result result = RuleEngine.Evaluate(
-    new Func<ApplicantContext, Result>[]
-    {
-        c => c.Age >= 18 ? Result.Success() : RegistrationErrors.Underage,
-        c => c.HasLicense    ? Result.Success() : RegistrationErrors.NoLicense,
-        regionRule
-    }.And(),
-    applicant);
-
-result.Switch(
-    onSuccess: () => Console.WriteLine("Approved"),
-    onFailure: errors =>
-    {
-        foreach (Error e in errors)
-            Console.WriteLine($"[{e.Type}] {e.Code}: {e.Description}");
-    });
-// [Validation] Registration.Underage: Applicant must be at least 18.
 ```
 
-The outcome is a plain `Result` / `Result<T>`, so it chains with `Then`, `Match` and the other Results operations.
+Run custom composites through `RuleEngine.Evaluate` or `EvaluateAsync`. Calling `rule.Evaluate(ctx)` yourself runs only the gate or first step.
 
-## `FromPredicate` and `FromPredicateAsync`
+A class that implements only `IRuleBase<T>` and none of the interfaces above is not evaluated. The engine returns an `ErrorType.NotFound` error with the code `RuleEngine.Evaluate.<ClassName>`.
 
-```csharp
-// Static error: reuse the same error for any failing context
-IRule<int> positiveRule = RuleEngine.FromPredicate<int>(
-    x => x > 0,
-    Error.Validation("Value.Negative", "Must be positive"));
+Never return `default(Result)` or `default(Result<T>)` from a rule as a success. In 9.0 a `default` result is a failure with the `Result.Default` error. Return `Result.Success()` or a value.
 
-// Error factory: error message can reference the failing value
-IRule<int> rangeRule = RuleEngine.FromPredicate<int>(
-    x => x is >= 1 and <= 100,
-    x => Error.Validation("Value.OutOfRange", $"Value {x} must be between 1 and 100"));
+## Links
 
-// Async predicate
-IAsyncRule<string> uniqueRule = RuleEngine.FromPredicateAsync<string>(
-    async s => await _db.IsUniqueAsync(s),
-    s => Error.Conflict("Name.Taken", $"'{s}' is already taken"));
-
-// Sync-only trees can use Evaluate
-Result r = RuleEngine.Evaluate(positiveRule, 42);
-Result composed = RuleEngine.Evaluate(
-    new IRuleBase<int>[] { positiveRule, rangeRule }.And(),
-    value);
-
-// Trees that contain async rules: await EvaluateAsync
-Result unique = await RuleEngine.EvaluateAsync(uniqueRule, name, ct);
-```
-
-## Async rules: `EvaluateAsync`
-
-An async rule implements `IAsyncRule<TContext>` (or `IAsyncRule<TContext, TResult>`), or comes from `FromPredicateAsync` above, or from a `Func<TContext, CancellationToken, ValueTask<Result>>` converted with `.ToRule()`:
-
-```csharp
-public sealed class UniqueNameRule(INameStore store) : IAsyncRule<string>
-{
-    public async ValueTask<Result> EvaluateAsync(string name, CancellationToken ct = default) =>
-        await store.IsUniqueAsync(name, ct) ? Result.Success() : Error.Conflict("Name.Taken", $"{name} is already taken");
-}
-
-IAsyncRule<string> notReserved = ((Func<string, CancellationToken, ValueTask<Result>>)(async (name, ct) =>
-{
-    await Task.Yield();
-    return name != "admin" ? Result.Success() : Error.Validation("Name.Reserved", "This name is reserved.");
-})).ToRule();
-```
-
-`RuleEngine.EvaluateAsync` takes the same arguments as `Evaluate` and returns `ValueTask<Result>` / `ValueTask<Result<T>>`. It awaits every `IAsyncRule` in the tree instead of blocking a thread.
-
-```csharp
-Result result = await RuleEngine.EvaluateAsync(
-    new IRuleBase<string>[]
-    {
-        RuleEngine.FromPredicate<string>(s => s.Length >= 3, Error.Validation("Name.TooShort", "Use at least 3 characters")),
-        uniqueRule
-    }.And(),
-    name,
-    ct);
-```
-
-- Results, short-circuiting, and error order match `Evaluate` for every rule kind (Linear, Conditional, And, Or, nested trees).
-- Children of composites run one at a time, in order.
-- A tree made only of sync rules completes synchronously, without allocating a task.
-- Cancelling `ct` throws `OperationCanceledException`. It is not turned into an error `Result`. `Evaluate` propagates it until an enclosing sync rule (simple, And, Or, Linear, Conditional) returns it as an error `Result`, and throws when no sync rule encloses it. It also stops waiting for a pending async rule, which may keep running.
-- Rules must observe `ct`. The token is checked before each rule runs, but a rule that is already running is awaited until it returns; `EvaluateAsync` never abandons it.
-
-`Evaluate` still works with async rules, but it blocks the calling thread until they finish. That can deadlock under a `SynchronizationContext` and wastes thread-pool threads. Use `EvaluateAsync` when the tree contains async rules.
-
-## Upgrading
-
-- `Linear()` and `RuleEngine.Linear` on an empty array no longer throw `IndexOutOfRangeException`. They return a failed `Result` with the `EMPTY_RULE_ARRAY` validation error, like `And` and `Or`. Replace a `try`/`catch` around an empty `Linear` call with a check of `result.IsFailure`.
-- A custom `IAndRule<TContext, TResult>` or `IAndAsyncRule<TContext, TResult>` whose `Rules` is empty now fails with the `EMPTY_RULE_ARRAY` validation error. Earlier versions failed with a `RuleEngine.Evaluate.*` exception error wrapping an `IndexOutOfRangeException`. Update any code that matches on the old error code.
+- Agent skill: [csharpessentials-rules](https://github.com/senrecep/CSharpEssentials/blob/main/.well-known/agent-skills/csharpessentials-rules/SKILL.md)
+- Example project: [examples/Examples.Rules](https://github.com/senrecep/CSharpEssentials/tree/main/examples/Examples.Rules)
+- Benchmarks: [BENCHMARKS.md](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.Rules/BENCHMARKS.md)
+- Upgrading from 8.x: [docs/migration/v8-to-v9.md](https://github.com/senrecep/CSharpEssentials/blob/main/docs/migration/v8-to-v9.md)
+- Changes in earlier versions: [CHANGELOG.md](https://github.com/senrecep/CSharpEssentials/blob/main/CHANGELOG.md)
+- Related: [CSharpEssentials.Results](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.Results/Readme.MD), [CSharpEssentials.Validation](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.Validation/Readme.MD)

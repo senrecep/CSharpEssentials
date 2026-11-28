@@ -1,166 +1,135 @@
 ---
 name: csharpessentials-meta
-description: Use when deciding which CSharpEssentials package to use. Gives an overview of all 32 packages organized by concern, what the CSharpEssentials meta-package bundles, and a quick-reference table mapping problems to packages.
+description: Use when choosing which CSharpEssentials package solves a problem, or when a project references the CSharpEssentials meta-package. Maps all 32 packages to the problems they solve and their skills, lists what the meta-package bundles, and covers its own helpers JsonElement.TryGetProperty, JsonDocument.TryGetNestedProperty and long?.MsToDateTime.
 ---
 
 # CSharpEssentials: package index
 
-CSharpEssentials is a modular .NET NuGet ecosystem of 32 packages (31 focused packages plus the `CSharpEssentials` meta-package). Each package is independent; take only what you need.
+CSharpEssentials is 31 focused NuGet packages plus the `CSharpEssentials` meta-package. Reference only what you need; each package has its own skill.
 
 ## Meta-package
 
 ```bash
 dotnet add package CSharpEssentials
-# Includes: Any, Clone, Core, Entity, Enums, Errors, Http, Json, Maybe, Results, Rules, These, Time
+# bundles: Any, Clone, Core, Entity, Enums, Errors, Http, Json, Maybe, Results, Rules, These, Time
 ```
 
-Not bundled: Results.Testing, Validation, Mediator (and Mediator.Testing), Resilience, Endpoints, DependencyInjection, EntityFrameworkCore (and EntityFrameworkCore.HealthChecks, EntityFrameworkCore.Hosting and EntityFrameworkCore.Locking), AspNetCore (and its OpenApi and Swashbuckle packages), Idempotency (and Idempotency.Testing), RequestResponseLogging and GcpSecretManager. The meta-package assembly also adds `JsonExtensions.TryGetProperty(params string[])` / `TryGetNestedProperty` on `JsonElement` / `JsonDocument` (namespace `CSharpEssentials.Json`) and `TimeExtensions.MsToDateTime(this long?, DateTime?)` (namespace `CSharpEssentials.Time`).
+```csharp Program.cs
+// dotnet add package CSharpEssentials
+using CSharpEssentials.Errors;
+using CSharpEssentials.Maybe;
+using CSharpEssentials.ResultPattern;
 
-## All packages
+var stock = new Dictionary<string, int> { ["pen"] = 3 };
 
-### Functional core
+Result<int> Reserve(string sku, int quantity)
+{
+    Maybe<int> available = stock.TryGetValue(sku, out int count) ? count : Maybe<int>.None;
+    if (available.HasNoValue)
+        return Error.NotFound("Stock.UnknownSku", $"Unknown SKU {sku}.");
+    if (available.Value < quantity)
+        return Error.Validation("Stock.Insufficient", $"Only {available.Value} left.");
+    return available.Value - quantity;
+}
 
-| Package | Install | Skill |
-|---------|---------|-------|
-| `CSharpEssentials.Results` | `dotnet add package CSharpEssentials.Results` | `csharpessentials-results` |
-| `CSharpEssentials.Errors` | `dotnet add package CSharpEssentials.Errors` | `csharpessentials-errors` |
-| `CSharpEssentials.Maybe` | `dotnet add package CSharpEssentials.Maybe` | `csharpessentials-maybe` |
-| `CSharpEssentials.Results.Testing` | `dotnet add package CSharpEssentials.Results.Testing` | none (see its Readme) |
-| `CSharpEssentials.Any` | `dotnet add package CSharpEssentials.Any` | `csharpessentials-any` |
-| `CSharpEssentials.These` | `dotnet add package CSharpEssentials.These` | `csharpessentials-these` |
-| `CSharpEssentials.Core` | `dotnet add package CSharpEssentials.Core` | `csharpessentials-core` |
-| `CSharpEssentials.Enums` | `dotnet add package CSharpEssentials.Enums` | `csharpessentials-enums` |
+foreach (var (sku, quantity) in new[] { ("pen", 2), ("pen", 5), ("ink", 1) })
+    Reserve(sku, quantity).Switch(
+        onSuccess: left => Console.WriteLine($"{sku}: reserved, {left} left"),
+        onError: errors => Console.WriteLine($"{sku}: {errors[0].Code}"));
+// pen: reserved, 1 left
+// pen: Stock.Insufficient
+// ink: Stock.UnknownSku
+```
 
-### Business rules and validation
+The meta-package assembly adds three helpers (they are not in any single package):
 
-| Package | Install | Skill |
-|---------|---------|-------|
-| `CSharpEssentials.Rules` | `dotnet add package CSharpEssentials.Rules` | `csharpessentials-rules` |
-| `CSharpEssentials.Validation` | `dotnet add package CSharpEssentials.Validation` | `csharpessentials-validation` |
+```csharp
+using System.Text.Json;
+using CSharpEssentials.Json;            // JsonExtensions
+using CSharpEssentials.Maybe;
+using CSharpEssentials.ResultPattern;
+using CSharpEssentials.Time;            // TimeExtensions
 
-### CQRS / Mediator
+using JsonDocument doc = JsonDocument.Parse("""{"user":{"address":{"city":"Izmir"}},"userName":"ada1"}""");
+long? nullableUnixMs = 1_700_000_000_000;
 
-| Package | Install | Skill |
-|---------|---------|-------|
-| `CSharpEssentials.Mediator` | `dotnet add package CSharpEssentials.Mediator` | `csharpessentials-mediator` |
+Result<JsonElement> el = doc.RootElement.TryGetProperty("user_name", "userName"); // first name that exists, same level
+Result<JsonElement?> nested = doc.TryGetNestedProperty("user", "address", "city"); // path
+Maybe<DateTime> when = nullableUnixMs.MsToDateTime();                             // long? -> Maybe<DateTime>, Kind = Utc
+```
 
-### Domain model and EF Core
+Failures are `Result` errors with codes `NoPropertyNames`, `PropertyNotFound` or `DocumentIsNull`; nothing throws.
 
-| Package | Install | Skill |
-|---------|---------|-------|
-| `CSharpEssentials.Entity` | `dotnet add package CSharpEssentials.Entity` | `csharpessentials-entity` |
-| `CSharpEssentials.EntityFrameworkCore` | `dotnet add package CSharpEssentials.EntityFrameworkCore` | `csharpessentials-efcore` |
-| `CSharpEssentials.EntityFrameworkCore.HealthChecks` | `dotnet add package CSharpEssentials.EntityFrameworkCore.HealthChecks` | `csharpessentials-efcore` |
-| `CSharpEssentials.EntityFrameworkCore.Hosting` | `dotnet add package CSharpEssentials.EntityFrameworkCore.Hosting` | `csharpessentials-efcore` |
-| `CSharpEssentials.EntityFrameworkCore.Locking` | `dotnet add package CSharpEssentials.EntityFrameworkCore.Locking` | `csharpessentials-efcore` |
+## Which package
 
-### Web and infrastructure
+| Problem | Package | Skill |
+|---|---|---|
+| Return success or errors without exceptions | `CSharpEssentials.Results` + `CSharpEssentials.Errors` | `csharpessentials-results`, `csharpessentials-errors` |
+| Optional value instead of `null` | `CSharpEssentials.Maybe` | `csharpessentials-maybe` |
+| One of several types | `CSharpEssentials.Any` | `csharpessentials-any` |
+| A value and errors together (partial success) | `CSharpEssentials.These` | `csharpessentials-these` |
+| Assertions on `Result`, `Maybe` and problem details in tests | `CSharpEssentials.Results.Testing` | its Readme |
+| Composable business rules | `CSharpEssentials.Rules` | `csharpessentials-rules` |
+| Model validation that returns `Result<T>` | `CSharpEssentials.Validation` | `csharpessentials-validation` |
+| Mediator with validation, logging, caching, transaction, idempotency and lock behaviors | `CSharpEssentials.Mediator` | `csharpessentials-mediator` |
+| Contract tests for a custom `IResourceLock`, recording fake lock | `CSharpEssentials.Mediator.Testing` | its Readme |
+| Entity base classes, soft delete, domain events | `CSharpEssentials.Entity` | `csharpessentials-entity` |
+| EF Core: audit, soft delete, pagination, error translation, outbox, enum storage | `CSharpEssentials.EntityFrameworkCore` | `csharpessentials-efcore` |
+| Health check that fails on pending migrations | `CSharpEssentials.EntityFrameworkCore.HealthChecks` | `csharpessentials-efcore` |
+| Hosted service that drains the outbox | `CSharpEssentials.EntityFrameworkCore.Hosting` | `csharpessentials-efcore` |
+| Database-backed lock for Mediator requests across instances | `CSharpEssentials.EntityFrameworkCore.Locking` | `csharpessentials-efcore` |
+| Errors to ProblemDetails, enum binding, Idempotency-Key, ETag and If-Match | `CSharpEssentials.AspNetCore` | `csharpessentials-aspnetcore` |
+| OpenAPI document with enum schemas (one of the two per host) | `CSharpEssentials.AspNetCore.OpenApi` (net10) or `CSharpEssentials.AspNetCore.Swashbuckle` | `csharpessentials-aspnetcore` |
+| Minimal API endpoints in classes, source-generated | `CSharpEssentials.Endpoints` | `csharpessentials-endpoints` |
+| Register and decorate services with attributes, source-generated | `CSharpEssentials.DependencyInjection` | `csharpessentials-dependencyinjection` |
+| `HttpClient` calls that return `Result<T>` | `CSharpEssentials.Http` | `csharpessentials-http` |
+| System.Text.Json presets, string enums, polymorphism across assemblies | `CSharpEssentials.Json` | `csharpessentials-json` |
+| One string spelling per enum member everywhere, enum helpers | `CSharpEssentials.Enums` | `csharpessentials-enums` |
+| Log request and response bodies | `CSharpEssentials.RequestResponseLogging` | `csharpessentials-logging` |
+| Run an operation or message once (`IIdempotencyExecutor`, `IdempotencyInbox`) | `CSharpEssentials.Idempotency` | `csharpessentials-idempotency` |
+| Contract tests for a custom `IIdempotencyRecordStore` | `CSharpEssentials.Idempotency.Testing` | its Readme |
+| Retry, timeout, circuit breaker, fallback | `CSharpEssentials.Resilience` | `csharpessentials-resilience` |
+| Secrets from GCP Secret Manager into configuration | `CSharpEssentials.GcpSecretManager` | `csharpessentials-gcpsecretmanager` |
+| Testable clock, time zones, ages | `CSharpEssentials.Time` | `csharpessentials-time` |
+| Typed `Clone()` for domain objects and collections | `CSharpEssentials.Clone` | `csharpessentials-clone` |
+| Case conversion, version 7 GUIDs, collection and null helpers | `CSharpEssentials.Core` | `csharpessentials-core` |
 
-| Package | Install | Skill |
-|---------|---------|-------|
-| `CSharpEssentials.AspNetCore` | `dotnet add package CSharpEssentials.AspNetCore` | `csharpessentials-aspnetcore` |
-| `CSharpEssentials.AspNetCore.Swashbuckle` | `dotnet add package CSharpEssentials.AspNetCore.Swashbuckle` | `csharpessentials-aspnetcore` |
-| `CSharpEssentials.AspNetCore.OpenApi` | `dotnet add package CSharpEssentials.AspNetCore.OpenApi` | `csharpessentials-aspnetcore` |
-| `CSharpEssentials.Endpoints` | `dotnet add package CSharpEssentials.Endpoints` | `csharpessentials-endpoints` |
-| `CSharpEssentials.DependencyInjection` | `dotnet add package CSharpEssentials.DependencyInjection` | `csharpessentials-dependencyinjection` |
-| `CSharpEssentials.Http` | `dotnet add package CSharpEssentials.Http` | `csharpessentials-http` |
-| `CSharpEssentials.Json` | `dotnet add package CSharpEssentials.Json` | `csharpessentials-json` |
-| `CSharpEssentials.RequestResponseLogging` | `dotnet add package CSharpEssentials.RequestResponseLogging` | `csharpessentials-logging` |
-| `CSharpEssentials.GcpSecretManager` | `dotnet add package CSharpEssentials.GcpSecretManager` | `csharpessentials-gcpsecretmanager` |
-
-### Resilience
-
-| Package | Install | Skill |
-|---------|---------|-------|
-| `CSharpEssentials.Resilience` | `dotnet add package CSharpEssentials.Resilience` | `csharpessentials-resilience` |
-
-### Idempotency
-
-| Package | Install | Skill |
-|---------|---------|-------|
-| `CSharpEssentials.Idempotency` | `dotnet add package CSharpEssentials.Idempotency` | `csharpessentials-idempotency` |
-| `CSharpEssentials.Idempotency.Testing` | `dotnet add package CSharpEssentials.Idempotency.Testing` | none (see its Readme) |
-| `CSharpEssentials.Mediator.Testing` | `dotnet add package CSharpEssentials.Mediator.Testing` | none (see its Readme) |
-
-### Utilities
-
-| Package | Install | Skill |
-|---------|---------|-------|
-| `CSharpEssentials.Time` | `dotnet add package CSharpEssentials.Time` | `csharpessentials-time` |
-| `CSharpEssentials.Clone` | `dotnet add package CSharpEssentials.Clone` | `csharpessentials-clone` |
-
-## Problem to package
-
-| Problem | Package |
-|---------|---------|
-| Return errors without exceptions | `CSharpEssentials.Results` + `CSharpEssentials.Errors` |
-| Represent optional values (no null) | `CSharpEssentials.Maybe` |
-| Return one of several distinct types | `CSharpEssentials.Any` |
-| Partial success: errors and a value together | `CSharpEssentials.These` |
-| Compose business validation rules | `CSharpEssentials.Rules` |
-| Model-first validation returning `Result<T>` | `CSharpEssentials.Validation` |
-| CQRS pipeline behaviors (validate, log, cache, transact) | `CSharpEssentials.Mediator` |
-| DDD aggregate base class + domain events | `CSharpEssentials.Entity` |
-| EF Core audit, slow queries, pagination | `CSharpEssentials.EntityFrameworkCore` |
-| Readiness check that fails on pending EF Core migrations | `CSharpEssentials.EntityFrameworkCore.HealthChecks` |
-| Transactional outbox for domain events (store, claim, retry, dead-letter) | `CSharpEssentials.EntityFrameworkCore` |
-| Background loop that drains the outbox | `CSharpEssentials.EntityFrameworkCore.Hosting` |
-| Map errors to HTTP ProblemDetails (privacy-first defaults in 4.0, `UseLegacyDefaults()` for 3.x output) | `CSharpEssentials.AspNetCore` |
-| Organize Minimal API endpoints in classes (source-generated, AOT-safe) | `CSharpEssentials.Endpoints` |
-| Register and decorate services with attributes (source-generated) | `CSharpEssentials.DependencyInjection` |
-| HttpClient that returns Result<T> | `CSharpEssentials.Http` |
-| JSON serialization with string enums + polymorphism (wire names come from `[StringEnum]` metadata, shared by JSON, EF Core, OpenAPI and binding; `StringEnumNaming` is obsolete) | `CSharpEssentials.Json` |
-| Log request/response bodies | `CSharpEssentials.RequestResponseLogging` |
-| OpenAPI documents with enum schemas and optional route parameters (one per host) | `CSharpEssentials.AspNetCore.Swashbuckle` (net8-net11) or `CSharpEssentials.AspNetCore.OpenApi` (net10, `Microsoft.AspNetCore.OpenApi`) |
-| Idempotency-Key, ETag/304 and If-Match for HTTP endpoints | `CSharpEssentials.AspNetCore` |
-| Run an operation or a message once (`IIdempotencyExecutor`, `IdempotencyInbox`), or a Mediator request (`IdempotencyBehavior`) | `CSharpEssentials.Idempotency`, `CSharpEssentials.Mediator` |
-| Framework-agnostic test assertions for `Result`, `Maybe` and problem details responses | `CSharpEssentials.Results.Testing` |
-| Contract tests for a custom `IIdempotencyRecordStore` (xUnit) | `CSharpEssentials.Idempotency.Testing` |
-| Contract tests for a custom `IResourceLock`, or a recording fake lock (xUnit) | `CSharpEssentials.Mediator.Testing` |
-| Lock Mediator requests across instances with a database lock | `CSharpEssentials.EntityFrameworkCore.Locking` |
-| Load secrets from GCP Secret Manager | `CSharpEssentials.GcpSecretManager` |
-| Transient fault handling (retry, timeout, circuit breaker, fallback) | `CSharpEssentials.Resilience` |
-| Testable time / freeze clock in tests | `CSharpEssentials.Time` |
-| Deep-copy entity collections | `CSharpEssentials.Clone` |
-| Fast enum to string and back (Native AOT safe) | `CSharpEssentials.Enums` |
-| String case conversions, GUID utilities | `CSharpEssentials.Core` |
+Install any of them with `dotnet add package <name>`.
 
 ## Namespaces
 
-```csharp
-using CSharpEssentials.ResultPattern;       // Result, Result<T>
-using CSharpEssentials.Errors;              // Error, ErrorType, ErrorMetadata
-using CSharpEssentials.Maybe;               // Maybe<T>
-using CSharpEssentials.Any;                 // Any<T1,T2,...>
-using CSharpEssentials.These;               // These<TError,TValue>
-using CSharpEssentials.Core;                // string/GUID/collection helpers
-using CSharpEssentials.Enums;              // [StringEnum]
-using CSharpEssentials.Rules;              // IRule<T>, RuleEngine
-using CSharpEssentials.Validation;         // Validator<T>, RuleContext<T>, IValidator<T>
-using CSharpEssentials.Mediator;           // ICacheable, ILoggableRequest, ITransactionalRequest
-using CSharpEssentials.Entity;             // EntityBase, SoftDeletableEntityBase
-using CSharpEssentials.Entity.Interfaces;  // IDomainEvent
-using CSharpEssentials.EntityFrameworkCore; // BaseDbContext, DbContextInterceptors, SoftDeleteAsync, *AsResultAsync
-using CSharpEssentials.EntityFrameworkCore.DbErrors;     // DbErrorTranslation, IDbErrorTranslator
-using CSharpEssentials.EntityFrameworkCore.Interceptors; // AuditInterceptor, DomainEventInterceptor, SlowQueryInterceptor
-using CSharpEssentials.EntityFrameworkCore.Pagination;   // PaginateAsync, KeysetPaginateAsync
-using CSharpEssentials.EntityFrameworkCore.HealthChecks; // AddMigrationsCheck (CSharpEssentials.EntityFrameworkCore.HealthChecks)
-using CSharpEssentials.EntityFrameworkCore.Outbox;       // AddEfCoreOutbox, AddOutboxProcessor, IOutboxMessageHandler
-using CSharpEssentials.EntityFrameworkCore.Hosting;      // AddOutboxProcessorHostedService (CSharpEssentials.EntityFrameworkCore.Hosting)
-using CSharpEssentials.AspNetCore;         // GlobalExceptionHandler, ResultEndpointFilter, AddEnhancedProblemDetails, AddSwagger / AddEnumConventions (Swashbuckle and OpenApi packages)
-using CSharpEssentials.Endpoints;          // IEndpoint, IEndpointGroup, [EndpointGroup<T>]
-using CSharpEssentials.DependencyInjection; // [RegisterScoped], [Decorates], RegistrationStrategy
-using CSharpEssentials.Http;               // HttpClientResultExtensions, HttpRequestBuilder
-using CSharpEssentials.Resilience;          // ResiliencePolicy, ResiliencePolicy<T>
-using CSharpEssentials.Json;               // EnhancedJsonSerializerOptions, converters
-using CSharpEssentials.RequestResponseLogging; // LoggingOptions, [SkipRequestLogging], [SkipResponseLogging]
-using CSharpEssentials.Idempotency;        // IIdempotencyExecutor, IIdempotencyRecordStore, IdempotencyInbox, IdempotencyKeys, IdempotencyScopes
-using CSharpEssentials.Idempotency.Testing; // IdempotencyRecordStoreContractTests
-using CSharpEssentials.ResultPattern.Testing; // ShouldBeSuccess, ShouldHaveError, ShouldHaveValue, ShouldBeProblemAsync (CSharpEssentials.Results.Testing)
-using CSharpEssentials.Locking.Testing;     // ResourceLockContractTests, RecordingResourceLock (CSharpEssentials.Mediator.Testing)
-using CSharpEssentials.EntityFrameworkCore.Locking; // AddRelationalResourceLock, ResourceLockSqlDialect (CSharpEssentials.EntityFrameworkCore.Locking)
-using CSharpEssentials.GcpSecretManager;   // ProjectSecretConfiguration
-using CSharpEssentials.GcpSecretManager.Extensions; // AddGcpSecretManager()
-using CSharpEssentials.Time;               // IDateTimeProvider, DateTimeProvider
-using CSharpEssentials.Clone;              // ICloneable<T>
-```
+| Namespace | Main types |
+|---|---|
+| `CSharpEssentials.ResultPattern` | `Result`, `Result<T>` |
+| `CSharpEssentials.Errors` | `Error`, `ErrorType`, `ErrorMetadata` |
+| `CSharpEssentials.Maybe` | `Maybe<T>` |
+| `CSharpEssentials.Any` | `Any<T1, T2, ...>` |
+| `CSharpEssentials.These` | `These<TError, TValue>` |
+| `CSharpEssentials.Core` | case conversion, `Guider`, collection helpers, `HttpCodes` |
+| `CSharpEssentials.Transactions` | `ITransactionRunner`, `ITransactionCallbacks` |
+| `CSharpEssentials.Enums` | `[StringEnum]`, `EnumConventions`, `EnumMetadata` |
+| `CSharpEssentials.Json` | `EnhancedJsonSerializerOptions`, `[JsonTypeDiscriminator]` |
+| `CSharpEssentials.Rules` | rules and the rule engine |
+| `CSharpEssentials.Validation` | `Validator<T>`, `IValidator<T>` |
+| `CSharpEssentials.Mediator` | pipeline behaviors and marker interfaces |
+| `CSharpEssentials.Entity`, `CSharpEssentials.Entity.Interfaces` | entity base classes, `IDomainEvent` |
+| `CSharpEssentials.EntityFrameworkCore` (and `.Outbox`, `.Locking`, `.HealthChecks`, `.Hosting`) | EF Core integration |
+| `CSharpEssentials.AspNetCore` | problem details, filters, enum binding |
+| `CSharpEssentials.Endpoints` | `IEndpoint`, `IEndpointGroup` |
+| `CSharpEssentials.DependencyInjection` | registration attributes |
+| `CSharpEssentials.Http` | `HttpClient` result extensions, `HttpRequestBuilder` |
+| `CSharpEssentials.Resilience` | `ResiliencePolicy`, `ResiliencePolicy<T>` |
+| `CSharpEssentials.RequestResponseLogging` | logging middleware options |
+| `CSharpEssentials.Idempotency` (and `.Testing`) | `IIdempotencyExecutor`, `IdempotencyKeys` |
+| `CSharpEssentials.GcpSecretManager` | Secret Manager configuration |
+| `CSharpEssentials.Time` | `IDateTimeProvider`, `DateTimeProvider`, `TimeZones` |
+| `CSharpEssentials.Clone` | `ICloneable<T>` |
+| `CSharpEssentials.ResultPattern.Testing` | `Result` assertions (Results.Testing) |
+| `CSharpEssentials.Locking.Testing` | lock contract tests (Mediator.Testing) |
+
+## Rules
+
+- Prefer the focused package over the meta-package in libraries; the meta-package suits apps.
+- `CSharpEssentials.AspNetCore.OpenApi` and `CSharpEssentials.AspNetCore.Swashbuckle` must not both be in one host.
+- Packages that depend on Enums (Json, AspNetCore, EntityFrameworkCore, Http, the meta-package) bring the enum generator; no separate `CSharpEssentials.Enums` reference is needed.
+- The `Result` types live in namespace `CSharpEssentials.ResultPattern`, not `CSharpEssentials.Results`.
