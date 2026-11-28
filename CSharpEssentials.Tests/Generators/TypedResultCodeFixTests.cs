@@ -127,6 +127,26 @@ public class TypedResultCodeFixTests
     }
 
     [Fact]
+    public async Task CSE5005_CodeFix_Should_Not_Be_Offered_For_The_Type_Property_When_The_Base_Declares_Another_Kind()
+    {
+        using AdhocWorkspace workspace = new();
+        Project project = CreateProject(workspace, """
+            [ErrorKind(ErrorType.Conflict)]
+            public abstract record BaseError() : TypedError("Base", "Base.");
+
+            [ErrorKind(ErrorType.Conflict)]
+            public sealed record Custom() : BaseError
+            {
+                public override ErrorType Type => ErrorType.NotFound;
+            }
+            """);
+
+        IReadOnlyList<CodeAction> actions = await ActionsAsync(project, "CSE5005", new ErrorKindCodeFixProvider());
+
+        actions.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task CSE5005_CodeFix_Should_Not_Be_Offered_For_The_Base_When_The_Type_Property_Sets_The_Kind()
     {
         using AdhocWorkspace workspace = new();

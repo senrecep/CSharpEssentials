@@ -58,7 +58,7 @@ public sealed class ErrorKindCodeFixProvider : CodeFixProvider
         {
             type = model.GetDeclaredSymbol(property, cancellationToken)?.ContainingType;
             Optional<object?> constant = model.GetConstantValue(expression, cancellationToken);
-            if (!constant.HasValue)
+            if (!constant.HasValue || Inherited(type, attribute) is { } baseKind && !Equals(baseKind.Value, constant.Value))
                 return null;
 
             runtimeKind = constant.Value;
