@@ -497,7 +497,7 @@ MapError, Recover and Compensate in one chain, mean in ns (failure / success), 0
 | Two slots | 29.551 / 25.715 | 27.515 / 28.204 | 7.734 / 8.196 | 8.023 / 7.692 |
 | Three slots | 38.609 / 36.427 | 36.233 / 38.186 | 14.178 / 13.989 | 14.275 / 14.325 |
 
-The same class, run about 90 minutes earlier on main 23a0e431 with the same library code for these members, read much lower for two and three slots:
+The same class, run about 90 minutes earlier on main 23a0e431 with the same library code for these members, read much lower for two and three slots, and for the net8 `Result<int>` failure baseline:
 
 | Row | net8 | net9 | net10 | net11 |
 |---|---|---|---|---|
@@ -506,6 +506,7 @@ The same class, run about 90 minutes earlier on main 23a0e431 with the same libr
 | Two slots | 9.804 / 9.873 | 10.095 / 10.229 | 4.181 / 4.313 | 3.723 / 2.568 |
 | Three slots | 10.443 / 10.597 | 11.005 / 11.007 | 4.501 / 4.851 | 3.130 / 2.244 |
 
+- The net8 `Result<int>` failure baseline moved too, from 19.179 to 41.027 ns, while the other baselines stayed within 1 ns. So the net8 Ratio column of the checked-in report (0.72 for two slots and 0.94 for three on failure) is not a typed against `Result<int>` comparison to rely on: in the fast window the typed chain took 9.8 and 10.4 ns against 19.2 ns, in the report 29.6 and 38.6 ns against 41.0 ns.
 - The cause of the jump was not found. The net10 `Result.dll` of main was not rebuilt between the fast run and a later slow one (same file, 4.181 then 7.735 ns for two slots), the runtime was the same (10.0.15), and CV stayed at or below 0.6% in both. `DOTNET_TieredPGO=0` and `DOTNET_TieredCompilation=0` did not bring the fast numbers back (two slots 12.124 / 7.700 and 11.926 / 7.895 ns, short job). `TypedAsyncBenchmarks` rows rerun in the slow window did not move the same way (`ValueTask` source, `MapErrorAsync`, sync handler: 43.17 / 40.84 ns against 43.13 / 42.36 ns in the report). Neither table is "the" number; treat the two- and three-slot chain as somewhere between them on this machine.
 - `AggressiveInlining` on the two- and three-slot MapError, Recover and Compensate (1af30234) was measured in both windows and reverted in 3d28b0ec. In the fast window it moved the rows by -7.3% to +7.1% with no consistent sign. In the slow window it was within 1% (net10 three slots 14.199 / 13.970 ns with it, 14.327 / 14.086 ns without), and the Tier1 code of the benchmark method still called all three members with the attribute present.
 - The one-slot chain has no middle step, so it is not directly comparable with the other two.
