@@ -45,18 +45,15 @@ public sealed class ErrorKindCodeFixProvider : CodeFixProvider
 
     private static async Task<KindPlan?> PlanAsync(Document document, Microsoft.CodeAnalysis.Text.TextSpan span, CancellationToken cancellationToken)
     {
-        SyntaxNode? root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
-        SemanticModel? model = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
-        INamedTypeSymbol? attribute = model?.Compilation.GetTypeByMetadataName(ErrorKindAttribute);
-        if (root is null || model is null || attribute is null)
-            return null;
-
+        SyntaxNode root = (await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false))!;
+        SemanticModel model = (await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false))!;
+        INamedTypeSymbol attribute = model.Compilation.GetTypeByMetadataName(ErrorKindAttribute)!;
         SyntaxNode node = root.FindNode(span);
-        INamedTypeSymbol? type;
+        INamedTypeSymbol type;
         object? runtimeKind;
         if (node is ExpressionSyntax expression && node.FirstAncestorOrSelf<PropertyDeclarationSyntax>() is { } property)
         {
-            type = model.GetDeclaredSymbol(property, cancellationToken)?.ContainingType;
+            type = model.GetDeclaredSymbol(property, cancellationToken)!.ContainingType;
             Optional<object?> constant = model.GetConstantValue(expression, cancellationToken);
             if (!constant.HasValue || Inherited(type, attribute) is { } baseKind && !Equals(baseKind.Value, constant.Value))
                 return null;
@@ -65,7 +62,7 @@ public sealed class ErrorKindCodeFixProvider : CodeFixProvider
         }
         else if (node is BaseTypeDeclarationSyntax declaration)
         {
-            type = model.GetDeclaredSymbol(declaration, cancellationToken);
+            type = model.GetDeclaredSymbol(declaration, cancellationToken)!;
             if (Inherited(type, attribute) is not { } inherited || DeclaresKindProperty(type, inherited.Type))
                 return null;
 
@@ -76,18 +73,18 @@ public sealed class ErrorKindCodeFixProvider : CodeFixProvider
             return null;
         }
 
-        if (type is null || Own(type, attribute) is not { ApplicationSyntaxReference: { } reference } own ||
-            own.ConstructorArguments[0].Type is not { } kindType ||
+        if (Own(type, attribute) is not { ApplicationSyntaxReference: { } reference } own ||
             await reference.GetSyntaxAsync(cancellationToken).ConfigureAwait(false) is not AttributeSyntax { ArgumentList.Arguments: { Count: 1 } arguments } ||
             arguments[0].Expression is not MemberAccessExpressionSyntax access ||
-            document.Project.Solution.GetDocument(reference.SyntaxTree) is not { } attributeDocument)
+            document.Project.GetDocument(reference.SyntaxTree) is not { } attributeDocument)
         {
             return null;
         }
 
-        SemanticModel? attributeModel = await attributeDocument.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
+        ITypeSymbol kindType = own.ConstructorArguments[0].Type!;
+        SemanticModel attributeModel = (await attributeDocument.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false))!;
         string? kind = kindType.GetMembers().OfType<IFieldSymbol>().FirstOrDefault(field => field.HasConstantValue && Equals(field.ConstantValue, runtimeKind))?.Name;
-        bool namesKindMember = attributeModel?.GetSymbolInfo(access, cancellationToken).Symbol is IFieldSymbol { ContainingType: { } containing } &&
+        bool namesKindMember = attributeModel.GetSymbolInfo(access, cancellationToken).Symbol is IFieldSymbol { ContainingType: { } containing } &&
             SymbolEqualityComparer.Default.Equals(containing, kindType);
         return kind is null || !namesKindMember ? null : new KindPlan(attributeDocument.Id, access, kind);
     }
@@ -100,16 +97,16 @@ public sealed class ErrorKindCodeFixProvider : CodeFixProvider
         return solution.WithDocumentSyntaxRoot(plan.DocumentId, root.ReplaceNode(plan.Access, renamed));
     }
 
-    private static bool DeclaresKindProperty(INamedTypeSymbol? type, ITypeSymbol? kindType) =>
-        type?.GetMembers("Type").OfType<IPropertySymbol>().Any(property => SymbolEqualityComparer.Default.Equals(property.Type, kindType)) == true;
+    private static bool DeclaresKindProperty(INamedTypeSymbol type, ITypeSymbol? kindType) =>
+        type.GetMembers("Type").OfType<IPropertySymbol>().Any(property => SymbolEqualityComparer.Default.Equals(property.Type, kindType));
 
     private static AttributeData? Own(INamedTypeSymbol type, INamedTypeSymbol attribute) =>
         type.GetAttributes().FirstOrDefault(data =>
             SymbolEqualityComparer.Default.Equals(data.AttributeClass, attribute) && data.ConstructorArguments.Length == 1);
 
-    private static TypedConstant? Inherited(INamedTypeSymbol? type, INamedTypeSymbol attribute)
+    private static TypedConstant? Inherited(INamedTypeSymbol type, INamedTypeSymbol attribute)
     {
-        for (INamedTypeSymbol? current = type?.BaseType; current is not null; current = current.BaseType)
+        for (INamedTypeSymbol? current = type.BaseType; current is not null; current = current.BaseType)
         {
             if (Own(current, attribute) is { } data)
                 return data.ConstructorArguments[0];

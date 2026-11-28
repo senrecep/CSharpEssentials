@@ -27,9 +27,9 @@ public sealed class DuplicateSlotCodeFixProvider : CodeFixProvider
     /// <inheritdoc />
     public override async Task RegisterCodeFixesAsync(CodeFixContext context)
     {
-        SyntaxNode? root = await context.Document.GetSyntaxRootAsync(context.CancellationToken).ConfigureAwait(false);
-        SemanticModel? model = await context.Document.GetSemanticModelAsync(context.CancellationToken).ConfigureAwait(false);
-        if (root is null || model is null || Find(root, context.Span) is not { } name || KeptIndexes(name, model, context.CancellationToken) is null)
+        SyntaxNode root = (await context.Document.GetSyntaxRootAsync(context.CancellationToken).ConfigureAwait(false))!;
+        SemanticModel model = (await context.Document.GetSemanticModelAsync(context.CancellationToken).ConfigureAwait(false))!;
+        if (Find(root, context.Span) is not { } name || KeptIndexes(name, model, context.CancellationToken) is null)
             return;
 
         Document document = context.Document;
@@ -43,11 +43,8 @@ public sealed class DuplicateSlotCodeFixProvider : CodeFixProvider
 
     private static async Task<Document> FixAsync(Document document, ImmutableArray<Diagnostic> diagnostics, CancellationToken cancellationToken)
     {
-        SyntaxNode? root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
-        SemanticModel? model = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
-        if (root is null || model is null)
-            return document;
-
+        SyntaxNode root = (await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false))!;
+        SemanticModel model = (await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false))!;
         Dictionary<GenericNameSyntax, int[]> kept = [];
         foreach (Diagnostic diagnostic in diagnostics)
         {
@@ -70,8 +67,7 @@ public sealed class DuplicateSlotCodeFixProvider : CodeFixProvider
         List<int> kept = [0];
         for (int index = 1; index < arguments.Count; index++)
         {
-            if (model.GetTypeInfo(arguments[index], cancellationToken).Type is not { } slot)
-                return null;
+            ITypeSymbol slot = model.GetTypeInfo(arguments[index], cancellationToken).Type!;
             if (slots.Contains(slot, SymbolEqualityComparer.Default))
                 continue;
 

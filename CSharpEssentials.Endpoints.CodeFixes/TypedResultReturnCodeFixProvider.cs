@@ -33,9 +33,9 @@ public sealed class TypedResultReturnCodeFixProvider : CodeFixProvider
     /// <inheritdoc />
     public override async Task RegisterCodeFixesAsync(CodeFixContext context)
     {
-        SyntaxNode? root = await context.Document.GetSyntaxRootAsync(context.CancellationToken).ConfigureAwait(false);
-        SemanticModel? model = await context.Document.GetSemanticModelAsync(context.CancellationToken).ConfigureAwait(false);
-        if (root is null || model?.Compilation.GetTypeByMetadataName(Extensions) is null)
+        SyntaxNode root = (await context.Document.GetSyntaxRootAsync(context.CancellationToken).ConfigureAwait(false))!;
+        SemanticModel model = (await context.Document.GetSemanticModelAsync(context.CancellationToken).ConfigureAwait(false))!;
+        if (model.Compilation.GetTypeByMetadataName(Extensions) is null)
             return;
 
         foreach (Diagnostic diagnostic in context.Diagnostics)
@@ -55,11 +55,8 @@ public sealed class TypedResultReturnCodeFixProvider : CodeFixProvider
 
     private static async Task<Document> FixAsync(Document document, ImmutableArray<Diagnostic> diagnostics, CancellationToken cancellationToken)
     {
-        SyntaxNode? root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
-        SemanticModel? model = await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
-        if (root is null || model?.Compilation.GetTypeByMetadataName(Extensions) is null)
-            return document;
-
+        SyntaxNode root = (await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false))!;
+        SemanticModel model = (await document.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false))!;
         ExpressionSyntax[] targets =
         [
             .. diagnostics
@@ -91,9 +88,9 @@ public sealed class TypedResultReturnCodeFixProvider : CodeFixProvider
         ITypeSymbol returned = method.IsAsync && returnType is INamedTypeSymbol { TypeArguments.Length: 1 } awaitable ? awaitable.TypeArguments[0] : returnType;
         ExpressionSyntax?[] returns = lambda.ExpressionBody is { } body
             ? [body]
-            : [.. lambda.Block?.DescendantNodes(static node => node is not (AnonymousFunctionExpressionSyntax or LocalFunctionStatementSyntax))
+            : [.. lambda.Body.DescendantNodes(static node => node is not (AnonymousFunctionExpressionSyntax or LocalFunctionStatementSyntax))
                 .OfType<ReturnStatementSyntax>()
-                .Select(static statement => statement.Expression) ?? []];
+                .Select(static statement => statement.Expression)];
         ExpressionSyntax[] targets = [.. returns.OfType<ExpressionSyntax>()];
         return targets.Length > 0 && targets.Length == returns.Length && targets.All(target =>
             SymbolEqualityComparer.Default.Equals(model.GetTypeInfo(target, cancellationToken).Type, returned))

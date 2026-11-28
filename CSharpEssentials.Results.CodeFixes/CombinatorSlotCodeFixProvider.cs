@@ -32,10 +32,8 @@ public sealed class CombinatorSlotCodeFixProvider : CodeFixProvider
     /// <inheritdoc />
     public override async Task RegisterCodeFixesAsync(CodeFixContext context)
     {
-        SyntaxNode? root = await context.Document.GetSyntaxRootAsync(context.CancellationToken).ConfigureAwait(false);
-        SemanticModel? model = await context.Document.GetSemanticModelAsync(context.CancellationToken).ConfigureAwait(false);
-        if (root is null || model is null)
-            return;
+        SyntaxNode root = (await context.Document.GetSyntaxRootAsync(context.CancellationToken).ConfigureAwait(false))!;
+        SemanticModel model = (await context.Document.GetSemanticModelAsync(context.CancellationToken).ConfigureAwait(false))!;
 
         foreach (Diagnostic diagnostic in context.Diagnostics)
         {
