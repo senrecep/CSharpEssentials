@@ -8,12 +8,7 @@
     <PackageId>CSharpEssentials.RequestResponseLogging</PackageId>
     <Title>CSharpEssentials.RequestResponseLogging</Title>
     <Product>CSharpEssentials.RequestResponseLogging</Product>
-    <Description>
-      Advanced HTTP traffic monitoring middleware for ASP.NET Core applications.
-      Features configurable logging fields, path-based filtering, customizable header logging,
-      high performance with minimal overhead, and comprehensive request/response monitoring
-      capabilities.
-    </Description>
+    <Description>ASP.NET Core middleware that logs HTTP requests and responses. You choose the fields, headers and paths to log.</Description>
     <PackageTags>
       AspNetCore,RequestResponseLogging,Middleware,HTTP,Monitoring,Performance,Diagnostics,CSharpEssentials
     </PackageTags>

@@ -12,13 +12,7 @@
     <PackageIcon>icon.png</PackageIcon>
     <PackageTags>
       AspNetCore,Result,Error,Maybe,Rule,Any,Json,Entity,DomainEvent,Utility,FunctionalProgramming,ApiVersioning,ProblemDetails,ExceptionHandling,GlobalExceptionHandler,JsonConfiguration,ValidationSupport</PackageTags>
-    <Description>A comprehensive ASP.NET Core library that enhances functional programming
-      capabilities in web applications. Features include API versioning, global exception handling
-      with enhanced problem details, enum binding and wire formats, model validation,
-      optimized JSON handling, and seamless integration with CSharpEssentials core functional
-      patterns (Result, Maybe, Rule Engine). Perfect for building robust, maintainable, and
-      type-safe web APIs following functional programming principles. OpenAPI documents come from
-      CSharpEssentials.AspNetCore.OpenApi or CSharpEssentials.AspNetCore.Swashbuckle.</Description>
+    <Description>ASP.NET Core integration for CSharpEssentials: Result and Error to ProblemDetails, a global exception handler, enum binding and wire formats, conditional requests (If-Match), the Idempotency-Key middleware and API versioning. OpenAPI documents come from CSharpEssentials.AspNetCore.OpenApi or CSharpEssentials.AspNetCore.Swashbuckle.</Description>
     <PackageProjectUrl>https://github.com/senrecep/CSharpEssentials</PackageProjectUrl>
     <RepositoryType>git</RepositoryType>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
