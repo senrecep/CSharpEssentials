@@ -1,73 +1,72 @@
 using CSharpEssentials.Time;
+using Microsoft.Extensions.Time.Testing;
 
-Console.WriteLine("========================================");
-Console.WriteLine("CSharpEssentials.Time Example");
-Console.WriteLine("========================================\n");
+Console.WriteLine("--- DateTimeProvider over the system clock ---");
+IDateTimeProvider system = new DateTimeProvider(TimeProvider.System);
+Console.WriteLine($"UtcNow         {system.UtcNow:O}");
+Console.WriteLine($"UtcNowDateTime kind {system.UtcNowDateTime.Kind}");
+Console.WriteLine($"UtcNowDate     {system.UtcNowDate:yyyy-MM-dd}");
+Console.WriteLine($"UtcNowTime     {system.UtcNowTime:HH:mm:ss}");
+Console.WriteLine($"TimeZone       {system.TimeZone.Id} (TimeZoneInfo.Local)");
+Console.WriteLine($"TimeZoneUtc    {system.TimeZoneUtc.Id}");
 
-Console.WriteLine("--- DateTimeProvider ---");
+Console.WriteLine("\n--- FakeDateTimeProvider in a test ---");
+var fake = new FakeDateTimeProvider(new DateTimeOffset(2025, 1, 15, 10, 0, 0, TimeSpan.Zero));
+var trials = new TrialService(fake);
+Console.WriteLine($"trial ends     {trials.EndsOn():yyyy-MM-dd}");
+fake.Advance(TimeSpan.FromDays(15));
+Console.WriteLine($"after Advance  expired: {trials.IsExpired(new DateOnly(2025, 1, 29))}");
+fake.SetTime(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
+Console.WriteLine($"after SetTime  {fake.UtcNowDate:yyyy-MM-dd}, zone {fake.TimeZone.Id}");
 
-IDateTimeProvider provider = new DateTimeProvider(TimeProvider.System);
-Console.WriteLine($"UtcNowDateTime: {provider.UtcNowDateTime}");
-Console.WriteLine($"UtcNow: {provider.UtcNow}");
-Console.WriteLine($"TimeZone: {provider.TimeZone}");
-Console.WriteLine($"TimeZoneUtc: {provider.TimeZoneUtc}");
-#if NET6_0_OR_GREATER
-Console.WriteLine($"UtcNowDate: {provider.UtcNowDate}");
-Console.WriteLine($"UtcNowTime: {provider.UtcNowTime}");
-#endif
-Console.WriteLine();
+Console.WriteLine("\n--- DateTimeProvider over FakeTimeProvider (timers and delays) ---");
+var fakeTime = new FakeTimeProvider(new DateTimeOffset(2025, 1, 15, 10, 0, 0, TimeSpan.Zero));
+IDateTimeProvider clock = new DateTimeProvider(fakeTime);
+Task reminder = Task.Delay(TimeSpan.FromMinutes(5), fakeTime);
+Console.WriteLine($"delay done before Advance: {reminder.IsCompleted}");
+fakeTime.Advance(TimeSpan.FromMinutes(5));
+await reminder;
+Console.WriteLine($"delay done after Advance:  {reminder.IsCompleted}, clock {clock.UtcNow:HH:mm}");
+fakeTime.SetLocalTimeZone(TimeZones.Find("Europe/Istanbul"));
+Console.WriteLine($"TimeZone follows the provider: {clock.TimeZone.BaseUtcOffset}");
 
-Console.WriteLine("--- DateTime Extensions ---");
+Console.WriteLine("\n--- Time zones ---");
+var lateEvening = new FakeDateTimeProvider(new DateTimeOffset(2024, 6, 15, 22, 30, 0, TimeSpan.Zero));
+TimeZoneInfo istanbul = TimeZones.Find("Europe/Istanbul");
+TimeZoneInfo fromWindowsId = TimeZones.Find("Turkey Standard Time");
+Console.WriteLine($"Find by IANA and Windows id: {istanbul.BaseUtcOffset} {fromWindowsId.BaseUtcOffset}");
+Console.WriteLine($"TryFind unknown id: {TimeZones.TryFind("Mars/Olympus", out _)}");
+Console.WriteLine($"NowIn          {lateEvening.NowIn(istanbul):yyyy-MM-dd HH:mm zzz}");
+Console.WriteLine($"TodayIn        {lateEvening.TodayIn(istanbul):yyyy-MM-dd} (UTC date is {lateEvening.UtcNowDate:yyyy-MM-dd})");
 
-DateTime now = DateTime.Now;
-Console.WriteLine($"Now: {now}");
+Console.WriteLine("\n--- Date helpers ---");
+var saturday = new DateOnly(2024, 6, 15);
+Console.WriteLine($"NextDayOfWeek(Monday)                    {saturday.NextDayOfWeek(DayOfWeek.Monday):yyyy-MM-dd}");
+Console.WriteLine($"NextDayOfWeek(Saturday)                  {saturday.NextDayOfWeek(DayOfWeek.Saturday):yyyy-MM-dd}");
+Console.WriteLine($"NextDayOfWeek(Saturday, includeCurrent)  {saturday.NextDayOfWeek(DayOfWeek.Saturday, includeCurrent: true):yyyy-MM-dd}");
+Console.WriteLine($"PreviousDayOfWeek(Friday)                {saturday.PreviousDayOfWeek(DayOfWeek.Friday):yyyy-MM-dd}");
+var noon = new DateTime(2024, 6, 15, 12, 30, 0, DateTimeKind.Utc);
+Console.WriteLine($"DateTime.PreviousDayOfWeek(Monday)       {noon.PreviousDayOfWeek(DayOfWeek.Monday):yyyy-MM-dd HH:mm}");
+Console.WriteLine($"ToDateOnly / ToTimeOnly                  {noon.ToDateOnly():yyyy-MM-dd} {noon.ToTimeOnly():HH:mm}");
 
-#if NET6_0_OR_GREATER
-Console.WriteLine($"ToDateOnly: {now.ToDateOnly()}");
-Console.WriteLine($"ToTimeOnly: {now.ToTimeOnly()}");
-#endif
-Console.WriteLine();
-
-Console.WriteLine("--- TimeZone Conversions ---");
-
-DateTime utcTime = new DateTime(2025, 6, 15, 12, 0, 0, DateTimeKind.Utc);
-DateTime local = utcTime.ToLocalTime();
-Console.WriteLine($"UTC: {utcTime:O}");
-Console.WriteLine($"Local: {local:O}");
-Console.WriteLine();
-
-Console.WriteLine("--- Custom Provider (for testing) ---");
-
-DateTime fixedTime = new DateTime(2025, 1, 1, 10, 30, 0, DateTimeKind.Utc);
-IDateTimeProvider fixedProvider = new FixedDateTimeProvider(fixedTime);
-Console.WriteLine($"Fixed UtcNowDateTime: {fixedProvider.UtcNowDateTime}");
-Console.WriteLine($"Fixed UtcNow: {fixedProvider.UtcNow}");
-#if NET6_0_OR_GREATER
-Console.WriteLine($"Fixed UtcNowDate: {fixedProvider.UtcNowDate}");
-Console.WriteLine($"Fixed UtcNowTime: {fixedProvider.UtcNowTime}");
-#endif
-Console.WriteLine();
-
-Console.WriteLine("========================================");
-Console.WriteLine("Demo complete.");
-Console.WriteLine("========================================");
-
-public class FixedDateTimeProvider : IDateTimeProvider
+var birthDate = new DateOnly(2000, 6, 16);
+Console.WriteLine($"GetAge(date)                             {birthDate.GetAge(new DateOnly(2024, 6, 15))}");
+Console.WriteLine($"GetAge(provider)                         {birthDate.GetAge(lateEvening)}");
+Console.WriteLine($"GetAge(provider, Istanbul)               {birthDate.GetAge(lateEvening, istanbul)}");
+try
 {
-    private readonly DateTime _fixedTime;
+    new DateOnly(2030, 1, 1).GetAge(new DateOnly(2025, 1, 1));
+}
+catch (ArgumentOutOfRangeException)
+{
+    Console.WriteLine("GetAge with a future birth date         ArgumentOutOfRangeException");
+}
 
-    public FixedDateTimeProvider(DateTime fixedTime)
-    {
-        _fixedTime = fixedTime;
-    }
+sealed class TrialService(IDateTimeProvider clock)
+{
+    private readonly DateOnly _start = clock.UtcNowDate;
 
-    public TimeZoneInfo TimeZone => TimeZoneInfo.Local;
-    public TimeZoneInfo TimeZoneUtc => TimeZoneInfo.Utc;
-    public DateTime UtcNowDateTime => _fixedTime;
-    public DateTimeOffset UtcNow => new DateTimeOffset(_fixedTime);
+    public DateOnly EndsOn() => _start.AddDays(14);
 
-#if NET6_0_OR_GREATER
-    public DateOnly UtcNowDate => DateOnly.FromDateTime(_fixedTime);
-    public TimeOnly UtcNowTime => TimeOnly.FromDateTime(_fixedTime);
-#endif
+    public bool IsExpired(DateOnly endsOn) => clock.UtcNowDate > endsOn;
 }

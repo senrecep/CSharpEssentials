@@ -1,19 +1,23 @@
 # CSharpEssentials.Time example
 
-This console app shows the date and time helpers from `CSharpEssentials.Time`.
+A console app for [CSharpEssentials.Time](../../CSharpEssentials.Time/Readme.MD): the injectable clock, both test fakes, time zone lookup and the date helpers.
 
-## Features demonstrated
-
-| Feature | Description |
-|---------|-------------|
-| DateTimeProvider | `DateTimeProvider` over `TimeProvider.System`, reading `UtcNowDateTime`, `UtcNow`, `TimeZone`, `TimeZoneUtc`, `UtcNowDate` and `UtcNowTime` |
-| DateTime extensions | `ToDateOnly()`, `ToTimeOnly()` |
-| Time zone conversion | UTC to local time with `DateTime.ToLocalTime()` (plain .NET, not part of the package) |
-| Custom provider | A hand-written `FixedDateTimeProvider` implementing `IDateTimeProvider` (the package also ships `FakeDateTimeProvider` with `Advance` and `SetTime`) |
-
-## Running
+## Run
 
 ```bash
-cd examples/Examples.Time
-dotnet run
+dotnet run --project examples/Examples.Time
 ```
+
+The first section reads the real clock, so its output changes per run. Every other section uses a fake clock and prints the same values each time.
+
+## What each section shows
+
+| Section | Shows |
+|---|---|
+| DateTimeProvider over the system clock | `UtcNow`, `UtcNowDateTime`, `UtcNowDate`, `UtcNowTime`, `TimeZone`, `TimeZoneUtc` |
+| FakeDateTimeProvider in a test | A `TrialService` that takes `IDateTimeProvider`; the test moves time with `Advance` and `SetTime` |
+| DateTimeProvider over FakeTimeProvider | One fake drives the clock and `Task.Delay`; `TimeZone` follows `SetLocalTimeZone` |
+| Time zones | `TimeZones.Find` with an IANA and a Windows id, `TryFind`, `NowIn`, `TodayIn` |
+| Date helpers | `NextDayOfWeek`, `PreviousDayOfWeek` (with `includeCurrent`), `ToDateOnly`, `ToTimeOnly`, the three `GetAge` overloads and its exception |
+
+`FakeTimeProvider` comes from `Microsoft.Extensions.TimeProvider.Testing`, which the project references.

@@ -1,39 +1,35 @@
 using CSharpEssentials.Entity;
 using CSharpEssentials.Enums;
-using System.ComponentModel.DataAnnotations;
+using Examples.EntityFrameworkCore.Data.Events;
 
 namespace Examples.EntityFrameworkCore.Data;
 
-/// <summary>
-/// Product entity demonstrating SoftDeletableEntityBase.
-/// When deleted, the row remains in the database but IsDeleted = true,
-/// and it is automatically filtered out of normal queries.
-/// </summary>
-public class Product : SoftDeletableEntityBase<Guid>
+public sealed class Product : SoftDeletableEntityBase<Guid>
 {
-    [Required]
-    [MaxLength(200)]
-    public string Name { get; set; } = string.Empty;
+    private Product() { }
 
-    [MaxLength(1000)]
-    public string? Description { get; set; }
+    public string Name { get; private set; } = "";
+    public decimal Price { get; private set; }
+    public ProductCategory Category { get; private set; }
 
-    [Required]
-    public decimal Price { get; set; }
+    public static Product Create(string name, decimal price, ProductCategory category)
+    {
+        Product product = new() { Id = Guid.NewGuid(), Name = name, Price = price, Category = category };
+        product.Raise(new ProductCreatedEvent(name));
+        return product;
+    }
 
-    public ProductCategory Category { get; set; }
+    public void ChangePrice(decimal price)
+    {
+        Raise(new ProductPriceChangedEvent(Id, Price, price));
+        Price = price;
+    }
 }
 
-/// <summary>
-/// Enum demonstrating storage as its wire name via ConfigureEnumConventions.
-/// The [StringEnum] attribute ensures enums are stored as readable strings in the database.
-/// </summary>
 [StringEnum]
 public enum ProductCategory
 {
     Electronics,
-    Clothing,
-    Food,
+    HomeAndGarden,
     Books,
-    Home
 }

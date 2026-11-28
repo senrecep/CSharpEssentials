@@ -1,83 +1,49 @@
 using CSharpEssentials.Clone;
 
-Console.WriteLine("========================================");
-Console.WriteLine("CSharpEssentials.Clone Example");
-Console.WriteLine("========================================\n");
+Console.WriteLine("--- ICloneable<T> on one object ---");
+Person original = new() { Name = "Alice", Address = new Address { City = "New York" }, Tags = ["admin"] };
+Person copy = original.Clone();
+copy.Name = "Bob";
+copy.Address.City = "Los Angeles";
+copy.Tags.Add("beta");
+Console.WriteLine($"original: {original.Name}, {original.Address.City}, [{string.Join(",", original.Tags)}]");
+Console.WriteLine($"copy:     {copy.Name}, {copy.Address.City}, [{string.Join(",", copy.Tags)}]");
+Console.WriteLine($"same address instance: {ReferenceEquals(original.Address, copy.Address)}");
 
-Console.WriteLine("--- ICloneable<T> ---");
+Console.WriteLine("\n--- Clone() on IEnumerable<T> ---");
+List<Person> people = [original, new() { Name = "Carol", Address = new Address { City = "Paris" } }];
+int calls = 0;
+IEnumerable<Person> lazy = people.Select(p => { calls++; return p; }).Clone();
+Console.WriteLine($"items cloned before enumeration: {calls}");
+List<Person> copies = lazy.ToList();
+Console.WriteLine($"items cloned after ToList: {calls}");
+copies[1].Address.City = "Lyon";
+Console.WriteLine($"original city: {people[1].Address.City}, copy city: {copies[1].Address.City}");
 
-Person original = new()
+Console.WriteLine("\n--- Arrays ---");
+Address[] addresses = [new() { City = "Rome" }];
+object shallow = addresses.Clone();
+Address[] deep = ((IEnumerable<Address>)addresses).Clone().ToArray();
+Console.WriteLine($"Array.Clone shares items: {ReferenceEquals(((Address[])shallow)[0], addresses[0])}");
+Console.WriteLine($"Clone extension copies items: {ReferenceEquals(deep[0], addresses[0])}");
+
+Console.WriteLine("\n--- Clone() on IQueryable<T> ---");
+IQueryable<Person> query = people.AsQueryable().Where(p => p.Name.StartsWith('C'));
+IQueryable<Person> cloned = query.Clone();
+Console.WriteLine($"cloned query result: {string.Join(",", cloned.Select(p => p.Name))} ({cloned.GetType().Name})");
+
+public sealed class Person : ICloneable<Person>
 {
-    Name = "Alice",
-    Age = 30,
-    Address = new Address { Street = "123 Main St", City = "New York" }
-};
-
-Person clone = original.Clone();
-
-Console.WriteLine($"Original: {original.Name}, {original.Age}, {original.Address.City}");
-Console.WriteLine($"Clone: {clone.Name}, {clone.Age}, {clone.Address.City}");
-Console.WriteLine($"Are same reference? {ReferenceEquals(original, clone)}");
-Console.WriteLine($"Are addresses same reference? {ReferenceEquals(original.Address, clone.Address)}");
-
-clone.Name = "Bob";
-clone.Address.City = "Los Angeles";
-
-Console.WriteLine($"\nAfter modifying clone:");
-Console.WriteLine($"Original: {original.Name}, {original.Address.City}");
-Console.WriteLine($"Clone: {clone.Name}, {clone.Address.City}");
-Console.WriteLine();
-
-Console.WriteLine("--- Clone Extension ---");
-
-Product product = new() { Id = 1, Name = "Laptop", Price = 999.99m };
-Product productClone = product.Clone();
-
-Console.WriteLine($"Original: {product.Name} (${product.Price})");
-Console.WriteLine($"Clone: {productClone.Name} (${productClone.Price})");
-Console.WriteLine($"Same reference? {ReferenceEquals(product, productClone)}");
-Console.WriteLine();
-
-Console.WriteLine("========================================");
-Console.WriteLine("Demo complete.");
-Console.WriteLine("========================================");
-
-public class Person : ICloneable<Person>
-{
-    public string Name { get; set; } = string.Empty;
-    public int Age { get; set; }
+    public string Name { get; set; } = "";
     public Address Address { get; set; } = new();
+    public List<string> Tags { get; set; } = [];
 
-    public Person Clone()
-    {
-        return new Person
-        {
-            Name = Name,
-            Age = Age,
-            Address = Address.Clone()
-        };
-    }
+    public Person Clone() => new() { Name = Name, Address = Address.Clone(), Tags = [.. Tags] };
 }
 
-public class Address : ICloneable<Address>
+public sealed class Address : ICloneable<Address>
 {
-    public string Street { get; set; } = string.Empty;
-    public string City { get; set; } = string.Empty;
+    public string City { get; set; } = "";
 
-    public Address Clone()
-    {
-        return new Address { Street = Street, City = City };
-    }
-}
-
-public class Product : ICloneable<Product>
-{
-    public int Id { get; set; }
-    public string Name { get; set; } = string.Empty;
-    public decimal Price { get; set; }
-
-    public Product Clone()
-    {
-        return new Product { Id = Id, Name = Name, Price = Price };
-    }
+    public Address Clone() => new() { City = City };
 }

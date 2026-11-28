@@ -1,0 +1,35 @@
+# Examples.EntityFrameworkCore.Operations
+
+A console app for the three small EF Core add-on packages. It runs on an in-memory SQLite database and needs no server.
+
+| Package | Shown in step |
+|---|---|
+| `CSharpEssentials.EntityFrameworkCore.HealthChecks` | 1 |
+| `CSharpEssentials.EntityFrameworkCore.Hosting` | 2 |
+| `CSharpEssentials.EntityFrameworkCore.Locking` | 3 |
+
+```bash
+cd examples/Examples.EntityFrameworkCore.Operations
+dotnet run
+```
+
+Output:
+
+```text
+1. Migrations health check
+   OpsDb-migrations [ready]: Degraded. OpsDb has model changes that no migration covers.
+   (This project has no migrations, so the model has changes no migration covers: Degraded.)
+2. Outbox relayed by the hosted service
+   Saved 1 order and 1 outbox row
+   Handler received orders.placed (message id 01a2230d-3b21-7ca7-9399-c3a1132723e4)
+3. Relational resource lock
+   Second TryAcquireAsync while held: busy
+   AcquireAsync with a 100 ms timeout: TimeoutException
+   TryAcquireAsync after release: acquired
+```
+
+1. `AddMigrationsCheck<OpsDb>()` registers the check under the name `OpsDb-migrations` with the tag `ready`. The project creates its schema with `EnsureCreated` and has no migrations, so the check reports `Degraded`. With pending migrations it would report `Unhealthy`, and with every migration applied `Healthy`.
+2. `OpsDb` derives from `BaseDbContext` with `DispatchDomainEventsOnSaveChanges`. `AddEfCoreOutbox` stores the `OrderPlaced` event as an `OutboxMessage` row in the same save as the order. `AddOutboxProcessorHostedService()` runs the processor in the background, and `PrintingHandler` receives the message. The program starts and stops the `IHostedService` instances itself instead of building a full host.
+3. `AddRelationalResourceLock<OpsDb>` registers `IResourceLock`. SQLite has no session locks, so the example uses a table-based `ResourceLockSqlDialect`. That dialect is for demos and tests only; use `ResourceLockSqlDialect.PostgreSql` or `ResourceLockSqlDialect.SqlServer` in production.
+
+The csproj sets `CentralPackageTransitivePinningEnabled` to `false` because the repository pins EF Core 9 centrally while the libraries use EF Core 10 on `net10.0`. A normal app that installs the NuGet packages does not need this.

@@ -1,28 +1,21 @@
-# CSharpEssentials (main package) example
+# CSharpEssentials (meta-package) example
 
-A console app that combines several `CSharpEssentials` packages and uses the helpers the `CSharpEssentials` meta-package adds itself.
+A console app that references the `CSharpEssentials` meta-package. It combines the bundled packages and runs the three helpers that only the meta-package assembly has. See the [meta-package readme](../../CSharpEssentials/Readme.MD).
 
-## Features demonstrated
-
-| Feature | Package | Description |
-|---------|---------------|-------------|
-| Input sanitization | Core | `Trim()` and `ToPascalCase()` on user input |
-| Optional lookup | Maybe | `Maybe<T>` instead of a nullable return (`FindUserByEmail`) |
-| Business logic | Results | `Result<T>` for composable operations (`PlaceOrder`) and `Switch` on the outcome |
-| Error reporting | Errors | Structured errors with `Error.Validation`, `Error.NotFound` |
-| Time | Time | `IDateTimeProvider` / `DateTimeProvider` for testable date and time access |
-| GUID generation | Core | `Guider.NewGuid()` and `Guider.ToStringFromGuid` (URL-safe) |
-| String extensions | Results | `TrimStart(prefix)` / `TrimEnd(suffix)` returning `Result<string>` (`Program.cs` labels this section "Meta String Extensions", but the methods come from `CSharpEssentials.Results`) |
-| JSON extensions | Meta | `JsonElement.TryGetProperty(params string[])` (first name that exists) and `JsonDocument.TryGetNestedProperty(params string[])` (names as a path), both returning `Result` |
-| Time extensions | Meta | `long?.MsToDateTime()` returning `Maybe<DateTime>` (`None` for `null`) |
-| Maybe to Result | Maybe | `ToMaybeResult(error)` and `ToMaybeUnitResult(error)` |
-| Pipeline | All | A parse and validate function that returns `Result<int>` |
-
-## Running
+## Run
 
 ```bash
-cd examples/Examples.Main
-dotnet run
+dotnet run --project examples/Examples.Main
 ```
 
-The `TryGetProperty 'user.name'` line of the Json section prints the whole `user` object, not the name: `TryGetProperty("user", "name")` returns the first of the given names that exists in the root, and `user` does. `TryGetNestedProperty("user", "name")` reads `user.name` (the next line, `Alice`).
+## What each section shows
+
+| Section | Packages | Shows |
+|---|---|---|
+| Maybe, Result and Error together | Maybe, Results, Errors | `FindUserByEmail` returns `Maybe<User>`; `ToResult(error)` turns a missing user into `User.NotFound`; `Then` chains `PlaceOrder`; `Switch` prints the outcome. Also `ToMaybeUnitResult` |
+| Core and Time | Core, Time | `Guider.NewGuid` stamped with `IDateTimeProvider.UtcNow`, `ToStringFromGuid`, `ToPascalCase` |
+| Results string helpers | Results | `TrimStart(prefix)` returning `Result<string>` |
+| Meta-package JSON helpers | meta-package | `JsonElement.TryGetProperty(params string[])` (first name that exists on the element), `JsonDocument.TryGetNestedProperty(params string[])` (names as a path), and the `PropertyNotFound`, `NoPropertyNames` and `DocumentIsNull` failures |
+| Meta-package time helper | meta-package | `long?.MsToDateTime()` returning `Maybe<DateTime>`, with and without a default |
+
+`Models.cs` holds `User` and `Order`; `Services.cs` holds the two service methods.

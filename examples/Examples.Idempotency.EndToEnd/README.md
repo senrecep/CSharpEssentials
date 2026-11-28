@@ -1,6 +1,8 @@
 # Idempotency end-to-end example
 
-One payments service with every idempotency layer wired together, run against PostgreSQL in a container:
+One payments service with every idempotency layer wired together, run against PostgreSQL in a container. For a
+smaller start that needs no Docker, see [Examples.Idempotency](../Examples.Idempotency).
+
 
 ```
 merchant client ──POST /payments──▶ HTTP layer ──▶ CapturePayment ──▶ payment provider

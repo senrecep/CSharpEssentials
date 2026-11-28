@@ -1,201 +1,167 @@
+using System.Globalization;
 using CSharpEssentials.Core;
+using CSharpEssentials.Transactions;
 
-Console.WriteLine("========================================");
-Console.WriteLine("CSharpEssentials.Core Example");
-Console.WriteLine("========================================\n");
-
-Console.WriteLine("--- GUID Generation ---");
-
-Guid standardGuid = Guider.NewGuid();
-Console.WriteLine($"Standard Guid: {standardGuid}");
-
-string urlSafe = Guider.ToStringFromGuid(standardGuid);
-Console.WriteLine($"URL-safe Guid: {urlSafe}");
-
-Guid backToGuid = Guider.ToGuidFromString(urlSafe);
-Console.WriteLine($"Back to Guid: {backToGuid}");
-
-Guid extGuid = Guid.NewGuid();
-string extUrlSafe = extGuid.ToStringFromGuid();
-Console.WriteLine($"Guid extension ToStringFromGuid: {extUrlSafe}");
-Guid extBack = extUrlSafe.ToGuidFromString();
-Console.WriteLine($"String extension ToGuidFromString: {extBack}");
-Console.WriteLine();
-
-Console.WriteLine("--- String Case Extensions ---");
-
-string input = "hello world example";
-Console.WriteLine($"Original: '{input}'");
-Console.WriteLine($"ToPascalCase: '{input.ToPascalCase()}'");
-Console.WriteLine($"ToCamelCase: '{input.ToCamelCase()}'");
-Console.WriteLine($"ToSnakeCase: '{input.ToSnakeCase()}'");
-Console.WriteLine($"ToKebabCase: '{input.ToKebabCase()}'");
-Console.WriteLine($"ToTitleCase: '{input.ToTitleCase()}'");
-Console.WriteLine($"ToMacroCase: '{input.ToMacroCase()}'");
-Console.WriteLine($"ToTrainCase: '{input.ToTrainCase()}'");
-Console.WriteLine($"ToUnderscoreCamelCase: '{input.ToUnderscoreCamelCase()}'");
-
-string[] testInputs = { "hello-world", "hello_world", "HelloWorld", "helloWorld", "HELLO_WORLD" };
-foreach (var t in testInputs)
+Section("String case conversion");
+foreach (string input in new[] { "helloWorld", "hello_world", "Hello World", "HTTPStatus" })
 {
-    Console.WriteLine($"\n  Input: '{t}'");
-    Console.WriteLine($"    Pascal: '{t.ToPascalCase()}' | Camel: '{t.ToCamelCase()}' | Snake: '{t.ToSnakeCase()}' | Kebab: '{t.ToKebabCase()}'");
-    Console.WriteLine($"    Title: '{t.ToTitleCase()}' | Macro: '{t.ToMacroCase()}' | Train: '{t.ToTrainCase()}' | _Camel: '{t.ToUnderscoreCamelCase()}'");
+    Console.WriteLine($"{input,-12} snake={input.ToSnakeCase()} kebab={input.ToKebabCase()} pascal={input.ToPascalCase()} camel={input.ToCamelCase()}");
+    Console.WriteLine($"{"",-12} macro={input.ToMacroCase()} train={input.ToTrainCase()} title={input.ToTitleCase()} field={input.ToUnderscoreCamelCase()}");
 }
+Console.WriteLine($"tr-TR: {"istanbul".ToPascalCase(CultureInfo.GetCultureInfo("tr-TR"))}");
 
-Console.WriteLine("\n--- Turkish Character Tests (with tr-TR culture) ---");
-var trCulture = System.Globalization.CultureInfo.GetCultureInfo("tr-TR");
-string[] turkishInputs = { "İstanbul Ankara", "istanbul", "İSTANBUL", "çok güzel" };
-foreach (var t in turkishInputs)
-{
-    Console.WriteLine($"\n  Input: '{t}'");
-    Console.WriteLine($"    Pascal: '{t.ToPascalCase(trCulture)}' | Camel: '{t.ToCamelCase(trCulture)}' | Snake: '{t.ToSnakeCase(trCulture)}' | Kebab: '{t.ToKebabCase(trCulture)}'");
-}
+Section("GUIDs");
+Guid v7 = Guider.NewGuid();
+Guid stamped = Guider.NewGuid(new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero));
+Guid fromClock = Guider.NewGuid(TimeProvider.System);
+Guid first = Guider.NewMonotonicGuid();
+Guid second = Guider.NewMonotonicGuid();
+Guid sqlKey = Guider.NewSqlServerGuid();
+Guid named = Guider.NewGuidV5(GuidNamespaces.Dns, "www.example.com");
+Console.WriteLine($"NewGuid            {v7} (version {v7.Version})");
+Console.WriteLine($"NewGuid(time)      {stamped} (starts with the 2025-01-01 timestamp)");
+Console.WriteLine($"NewGuid(clock)     {fromClock}");
+Console.WriteLine($"NewMonotonicGuid   second > first: {second.CompareTo(first) > 0}");
+Console.WriteLine($"NewSqlServerGuid   {sqlKey} (version {sqlKey.Version})");
+Console.WriteLine($"NewGuidV5          {named} (always the same)");
 
-string emptyStr = "";
-Console.WriteLine($"\nIsEmpty(''): {emptyStr.IsEmpty()}");
-Console.WriteLine($"IsNotEmpty('{input}'): {input.IsNotEmpty()}");
-Console.WriteLine();
-
-Console.WriteLine("--- String General Extensions ---");
-
-string? nullStr = null;
-Console.WriteLine($"null.IsNull(): {nullStr.IsNull()}");
-Console.WriteLine($"'test'.IsNotNull(): {"test".IsNotNull()}");
-
-string mixed = "HelloWorld123";
-Console.WriteLine($"'{mixed}' IsEmpty: {mixed.IsEmpty()}");
-Console.WriteLine();
-
-Console.WriteLine("--- Collection Extensions ---");
-
-List<int> numbers = new() { 1, 2, 3, 4, 5 };
-
-Console.Write("ForEach: ");
-numbers.AsEnumerable().ForEach(n => Console.Write($"{n} ")).ToList();
-Console.WriteLine();
-
-IEnumerable<int> filtered = numbers.WhereIf(true, n => n > 2);
-Console.WriteLine($"WhereIf(true, n > 2): [{string.Join(", ", filtered)}]");
-
-IEnumerable<int> unfiltered = numbers.WhereIf(false, n => n > 100);
-Console.WriteLine($"WhereIf(false, n > 100): [{string.Join(", ", unfiltered)}]");
-
-List<string?> nullableList = new() { "a", null, "b", null, "c" };
-List<string> noNulls = nullableList.WithoutNulls().ToList();
-Console.WriteLine($"WithoutNulls: [{string.Join(", ", noNulls)}]");
-
-List<int> listA = new() { 1, 2, 3 };
-List<int> listB = new() { 3, 2, 1 };
-Console.WriteLine($"HasSameElements [1,2,3] vs [3,2,1]: {listA.HasSameElements(listB)}");
-
-List<bool> bools = new() { true, true, true };
-Console.WriteLine($"AllTrue [T,T,T]: {bools.AllTrue()}");
-Console.WriteLine($"AllFalse [T,T,T]: {bools.AllFalse()}");
-
-List<string> items = new();
-items.IfAdd(true, "first");
-items.IfAdd(false, "skipped");
-items.IfAddRange(true, new[] { "second", "third" });
-items.IfAddRange(false, new[] { "skipped1", "skipped2" });
-Console.WriteLine($"IfAdd/IfAddRange: [{string.Join(", ", items)}]");
-Console.WriteLine();
-
-Console.WriteLine("--- General Extensions ---");
-
-bool flag = true;
-Console.WriteLine($"true.IsTrue(): {flag.IsTrue()}");
-Console.WriteLine($"true.IsFalse(): {flag.IsFalse()}");
-
-flag.IfTrue(() => Console.WriteLine("  IfTrue action executed"));
-flag.IfFalse(() => Console.WriteLine("  IfFalse action skipped"));
-
-string? maybeValue = "hello";
-maybeValue.IfNotNull(v => Console.WriteLine($"  IfNotNull value: {v}"));
-string? nullValue = null;
-nullValue.IfNotNull(v => Console.WriteLine($"  This won't print"), () => Console.WriteLine("  IfNotNull elseAction executed for null"));
-
-nullValue.IfNull(() => Console.WriteLine("  IfNull action executed"));
-
-object numberObj = 42;
-int casted = numberObj.ExplicitCast<int>();
-Console.WriteLine($"ExplicitCast<int>(42): {casted}");
-
-long timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-DateTime fromMs = timestamp.MsToDateTime();
-Console.WriteLine($"MsToDateTime: {fromMs:O}");
-
-string taskResult = "hello".AsTask().Result;
-string vtResult = "world".AsValueTask().Result;
-Console.WriteLine($"AsTask: {taskResult}, AsValueTask: {vtResult}");
-
-CancellationTokenSource cts = new();
-Task<string> taskWithCancellation = "cancellable".AsTask().WithCancellation(cts.Token);
-Console.WriteLine($"WithCancellation: {taskWithCancellation.Result}");
-cts.Dispose();
-Console.WriteLine();
-
-Console.WriteLine("--- Random Items ---");
-
-List<string> fruits = new() { "Apple", "Banana", "Cherry", "Date", "Elderberry" };
-string randomFruit = fruits.GetRandomItem();
-Console.WriteLine($"Random fruit: {randomFruit}");
-
-List<string> randomFruits = fruits.GetRandomItems(3).ToList();
-Console.WriteLine($"3 random fruits: [{string.Join(", ", randomFruits)}]");
-Console.WriteLine();
-
-Console.WriteLine("--- Type Group ---");
-
-HttpStatus statusCode = HttpStatus.BadRequest;
-HttpStatusGroup group = statusCode.GetTypeGroup<HttpStatusGroup, HttpStatus>(100);
-Console.WriteLine($"HttpStatus.BadRequest ({(int)statusCode}) group: {group}");
-Console.WriteLine();
-
-Console.WriteLine("--- Exception Extensions ---");
-
+string shortId = v7.ToStringFromGuid();
+Console.WriteLine($"ToStringFromGuid   {shortId} ({shortId.Length} chars)");
+Console.WriteLine($"ToGuidFromString   round trip: {shortId.ToGuidFromString() == v7}");
 try
 {
-    throw new InvalidOperationException("Outer exception", new ArgumentException("Inner exception"));
+    Guider.ToGuidFromString("too-short");
 }
-catch (Exception ex)
+catch (FormatException ex)
 {
-    var innerExceptions = ex.GetInnerExceptions();
-    Console.WriteLine($"Inner exceptions count: {innerExceptions.Count()}");
-    foreach (var inner in innerExceptions)
+    Console.WriteLine($"Invalid input      FormatException: {ex.Message}");
+}
+
+Section("Collections");
+List<string> items = ["a"];
+items.IfAdd(true, "b");
+items.IfAdd(false, "skipped");
+items.IfAddRange(true, ["c", "d"]);
+Console.WriteLine($"IfAdd/IfAddRange   {string.Join(",", items)}");
+
+int[] numbers = [1, 2, 3, 4, 5];
+Console.WriteLine($"WhereIf(true)      {string.Join(",", numbers.WhereIf(true, n => n > 2))}");
+Console.WriteLine($"WhereIf(false)     {string.Join(",", numbers.WhereIf(false, n => n > 2))}");
+Console.WriteLine($"WhereIf(index)     {string.Join(",", numbers.WhereIf(true, (n, i) => i % 2 == 0))}");
+Console.WriteLine($"WhereIf(query)     {string.Join(",", numbers.AsQueryable().WhereIf(true, n => n < 3))}");
+
+string?[] raw = ["x", null, "y"];
+Console.WriteLine($"WithoutNulls       {string.Join(",", raw.WithoutNulls())}");
+Contact?[] contacts = [new("Ada", "ada@example.com"), new("Bob", null), null];
+Console.WriteLine($"WithoutNulls(sel)  {string.Join(",", contacts.WithoutNulls(c => c.Email).Select(c => c.Name))}");
+
+Console.WriteLine($"HasSameElements    {new[] { 1, 2, 2 }.HasSameElements([2, 1])}");
+Console.WriteLine($"AllTrue/AllFalse   {new[] { true, true }.AllTrue()} {new[] { false, false }.AllFalse()}");
+
+int visited = 0;
+IEnumerable<int> lazy = numbers.ForEach(_ => visited++);
+Console.WriteLine($"ForEach (lazy)     before enumeration: {visited}");
+_ = lazy.ToList();
+Console.WriteLine($"ForEach (lazy)     after ToList: {visited}");
+
+Console.WriteLine($"GetRandomItem      {numbers.GetRandomItem()}");
+Console.WriteLine($"GetRandomItems(3)  {string.Join(",", numbers.GetRandomItems(3))}");
+Console.WriteLine($"GetRandomItems(9)  {numbers.GetRandomItems(9).Length} items (all, shuffled)");
+
+Section("Null, empty and boolean checks");
+string? missing = null;
+string blank = "   ";
+Console.WriteLine($"IsEmpty            null={missing.IsEmpty()} blank={blank.IsEmpty()} text={"x".IsEmpty()}");
+Console.WriteLine($"IsNotEmpty         {"x".IsNotEmpty()}");
+Console.WriteLine($"IsNull/IsNotNull   {missing.IsNull()} {"x".IsNotNull()}");
+bool ran = missing.IfNotNull(v => Console.WriteLine(v), () => Console.WriteLine("IfNotNull          else action ran"));
+Console.WriteLine($"IfNotNull returned {ran}");
+missing.IfNull(() => Console.WriteLine("IfNull             action ran"));
+"x".IfNull(() => Console.WriteLine("not printed"), v => Console.WriteLine($"IfNull else        got {v}"));
+true.IfTrue(() => Console.WriteLine("IfTrue             action ran"));
+false.IfFalse(() => Console.WriteLine("IfFalse            action ran"));
+Console.WriteLine($"IsTrue/IsFalse     {true.IsTrue()} {true.IsFalse()}");
+
+Section("Tasks");
+Console.WriteLine($"AsTask/AsValueTask {await 1.AsTask()} {await "two".AsValueTask()}");
+using (var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(50)))
+{
+    Task slow = Task.Delay(TimeSpan.FromSeconds(10));
+    try
     {
-        Console.WriteLine($"  - {inner.GetType().Name}: {inner.Message}");
+        await slow.WithCancellation(cts.Token);
+    }
+    catch (OperationCanceledException ex)
+    {
+        Console.WriteLine($"WithCancellation   {ex.GetType().Name}; the task still runs: {!slow.IsCompleted}");
+    }
+}
+
+Section("Other helpers");
+Console.WriteLine($"IsBetween          {10.IsBetween(1, 10)} exclusive: {10.IsBetweenExclusive(1, 10)}");
+object boxed = 42;
+Console.WriteLine($"ExplicitCast       {boxed.ExplicitCast<int>()}");
+DateTime when = 1700000000000L.MsToDateTime();
+Console.WriteLine($"MsToDateTime       {when:O} ({when.Kind})");
+Console.WriteLine($"GetTypeGroup       {HttpStatus.NotFound} -> {HttpStatus.NotFound.GetTypeGroup<HttpStatusGroup, HttpStatus>()}");
+var error = new InvalidOperationException("outer", new ArgumentException("inner"));
+Console.WriteLine($"GetInnerExceptions {string.Join(" > ", error.GetInnerExceptions().Select(e => e.GetType().Name))}");
+Console.WriteLine($"...Messages        {string.Join(" > ", error.GetInnerExceptionsMessages())}");
+Console.WriteLine($"HttpCodes          Ok={HttpCodes.Ok} NotFound={HttpCodes.NotFound} TooManyRequests={HttpCodes.TooManyRequests}");
+Console.WriteLine($"IsEmpty (C# 14)    {Members.IsEmptySequence([])} palindrome: {Members.IsPalindrome("level")}");
+
+Section("Transactions");
+var runner = new InMemoryTransactionRunner();
+await runner.ExecuteAsync(
+    async ct =>
+    {
+        await runner.OnCommittedAsync(_ => { Console.WriteLine("OnCommitted        callback ran after commit"); return ValueTask.CompletedTask; }, ct);
+        return true;
+    },
+    shouldCommit: ok => ok);
+await runner.ExecuteAsync(
+    async ct =>
+    {
+        await runner.OnCommittedAsync(_ => { Console.WriteLine("not printed: rolled back"); return ValueTask.CompletedTask; }, ct);
+        return false;
+    },
+    shouldCommit: ok => ok);
+Console.WriteLine("Rollback           callback dropped");
+
+static void Section(string title) => Console.WriteLine($"\n--- {title} ---");
+
+record Contact(string Name, string? Email);
+
+enum HttpStatus { Ok = 200, BadRequest = 400, NotFound = 404, InternalServerError = 500 }
+
+enum HttpStatusGroup { Success = 200, ClientError = 400, ServerError = 500 }
+
+sealed class InMemoryTransactionRunner : ITransactionRunner, ITransactionCallbacks
+{
+    private List<Func<CancellationToken, ValueTask>>? _pending;
+
+    public async ValueTask<T> ExecuteAsync<T>(Func<CancellationToken, ValueTask<T>> work, Func<T, bool> shouldCommit, CancellationToken cancellationToken = default)
+    {
+        _pending = [];
+        try
+        {
+            T result = await work(cancellationToken);
+            if (shouldCommit(result))
+                foreach (var callback in _pending)
+                    await callback(CancellationToken.None);
+            return result;
+        }
+        finally
+        {
+            _pending = null;
+        }
     }
 
-    var messages = ex.GetInnerExceptionsMessages();
-    Console.WriteLine($"Inner messages: [{string.Join(", ", messages)}]");
-}
-Console.WriteLine();
-
-Console.WriteLine("--- HttpCodes ---");
-
-Console.WriteLine($"HttpCodes.Ok: {HttpCodes.Ok}");
-Console.WriteLine($"HttpCodes.BadRequest: {HttpCodes.BadRequest}");
-Console.WriteLine($"HttpCodes.NotFound: {HttpCodes.NotFound}");
-Console.WriteLine($"HttpCodes.InternalServerError: {HttpCodes.InternalServerError}");
-Console.WriteLine();
-
-Console.WriteLine("========================================");
-Console.WriteLine("Demo complete.");
-Console.WriteLine("========================================");
-
-public enum HttpStatus
-{
-    Ok = 200,
-    BadRequest = 400,
-    Unauthorized = 401,
-    NotFound = 404,
-    InternalServerError = 500
-}
-
-public enum HttpStatusGroup
-{
-    Success = 200,
-    ClientError = 400,
-    ServerError = 500
+    public ValueTask OnCommittedAsync(Func<CancellationToken, ValueTask> callback, CancellationToken cancellationToken = default)
+    {
+        if (_pending is null)
+            return callback(cancellationToken);
+        _pending.Add(callback);
+        return ValueTask.CompletedTask;
+    }
 }

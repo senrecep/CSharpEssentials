@@ -1,0 +1,44 @@
+# CSharpEssentials.Idempotency example
+
+A console app that uses `CSharpEssentials.Idempotency` without HTTP, Mediator or a database: the executor, the inbox,
+the record store, deterministic keys, scopes and the decision counter. Everything runs in memory.
+
+## Running
+
+```bash
+dotnet run --project examples/Examples.Idempotency
+```
+
+The program exits with code 0.
+
+## What each section shows
+
+| Section | What happens |
+|---------|--------------|
+| Run an operation once | `IIdempotencyExecutor.ExecuteAsync` charges once. A retry with the same key and fingerprint is `Replayed`, the same key with another fingerprint is `KeyReused`, and the same key for another tenant is a separate record |
+| In flight and exceptions | A second call while the first still runs is `InFlight`. After the operation throws, the key stays in flight until its lease ends |
+| Process a message once | `IdempotencyInbox.ProcessAsync` handles a redelivered message once: `Executed`, then `Replayed` |
+| Observe mode on a keyed store | The `reports` profile runs in `Observe` on a keyed `DistributedCacheIdempotencyRecordStore` (`StoreKey = "cache"`). Nothing is blocked, so the report is built twice |
+| Telemetry | A `MeterListener` on `IdempotencyTelemetry.MeterName` sums the `decision` tag of `idempotency.decisions` |
+| Deterministic keys | `IdempotencyKeys.For`, `FromMessage`, `ToUuidV5`, the hashed form for non-ASCII input, and `IsValid` |
+| Scopes | `IdempotencyScopes.User`, `UserAndTenant`, `Client` and `Custom` on sample principals, and `IdempotencyRecordKey.ToStorageKey()` |
+| Use the store directly | `InMemoryIdempotencyRecordStore`: `Reserved`, `InFlight`, `Completed` with its payload, and `FingerprintMismatch` |
+
+## Registration
+
+```csharp
+services.AddIdempotencyExecutor(options =>
+{
+    options.AddProfile("payments", profile => { profile.Retention = TimeSpan.FromDays(7); profile.Lease = TimeSpan.FromMinutes(5); });
+    options.AddProfile("reports", profile => { profile.Mode = IdempotencyMode.Observe; profile.StoreKey = "cache"; });
+});
+services.AddKeyedSingleton<IIdempotencyRecordStore>("cache", new DistributedCacheIdempotencyRecordStore(cache));
+```
+
+`AddIdempotencyExecutor` registers the scoped `IIdempotencyExecutor` and `IdempotencyInbox`, and the in-memory store as
+the default `IIdempotencyRecordStore`.
+
+Related examples: [Examples.Idempotency.Testing](../Examples.Idempotency.Testing) runs the store contract tests,
+[Examples.Idempotency.Redis](../Examples.Idempotency.Redis) is a Redis store, and
+[Examples.Idempotency.EndToEnd](../Examples.Idempotency.EndToEnd) wires HTTP, Mediator, EF Core and messaging together.
+See the [Idempotency Readme](../../CSharpEssentials.Idempotency/Readme.MD) for the reference.

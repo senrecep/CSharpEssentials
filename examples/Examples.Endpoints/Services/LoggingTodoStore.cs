@@ -17,6 +17,10 @@ public sealed partial class LoggingTodoStore(ITodoStore inner, ILogger<LoggingTo
         return todo;
     }
 
+    public bool MarkDone(int id) => inner.MarkDone(id);
+
+    public bool Remove(int id) => inner.Remove(id);
+
     [LoggerMessage(Level = LogLevel.Information, Message = "Added todo {Id}")]
     private static partial void LogAdded(ILogger logger, int id);
 }

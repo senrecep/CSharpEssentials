@@ -1,138 +1,78 @@
+using System.ComponentModel;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using CSharpEssentials.Enums;
+using CSharpEssentials.Json;
 
-namespace Examples.Enums;
+Console.WriteLine("--- Wire names ---");
+foreach (OrderStatus status in OrderStatusExtensions.Values)
+    Console.WriteLine($"{status,-16} wire={status.ToWireName(),-18} description={status.ToDescription() ?? "(none)"}");
+Console.WriteLine($"const PendingApprovalWireName = {OrderStatusExtensions.PendingApprovalWireName}");
+Console.WriteLine($"kebab-case enum: {DeliverySpeed.NextDay.ToWireName()}");
 
-public class Program
+Console.WriteLine("\n--- Parsing with the generated helpers ---");
+foreach (string text in new[] { "pending_approval", "PendingApproval", "approval", "sent", "1", "gone" })
 {
-    public static void Main(string[] args)
-    {
-        Console.WriteLine("========================================");
-        Console.WriteLine("CSharpEssentials.Enums Example");
-        Console.WriteLine("========================================\n");
-
-        Console.WriteLine("--- StringEnumAttribute ---");
-
-        Status status = Status.Active;
-        Console.WriteLine($"Status.Active value: {(int)status}");
-        Console.WriteLine($"Status.Active name: {status}");
-
-        Priority priority = Priority.High;
-        Console.WriteLine($"Priority.High value: {(int)priority}");
-        Console.WriteLine($"Priority.High name: {priority}");
-
-        Console.WriteLine("ErrorType in library is also [StringEnum]");
-        Console.WriteLine();
-
-        Console.WriteLine("--- Enum Parsing ---");
-
-        bool parsed = Enum.TryParse("Active", out Status activeValue);
-        Console.WriteLine($"Parse 'Active': {parsed}, Value={activeValue}");
-
-        bool unknown = Enum.TryParse("Unknown", out Status unknownValue);
-        Console.WriteLine($"Parse 'Unknown': {unknown}");
-        Console.WriteLine();
-
-        Console.WriteLine("--- Source Generated String Formatting ---");
-
-        Status s = Status.Active;
-
-        string text = s.ToOptimizedString();
-        Console.WriteLine($"Status.Active.ToOptimizedString() = {text}");
-
-        string wire = s.ToWireName();
-        Console.WriteLine($"Status.Active.ToWireName() = {wire}");
-
-        string kebab = s.ToKebabCase();
-        Console.WriteLine($"Status.Active.ToKebabCase() = {kebab}");
-
-        string lower = s.ToLowerCase();
-        Console.WriteLine($"Status.Active.ToLowerCase() = {lower}");
-
-        string upper = s.ToUpperCase();
-        Console.WriteLine($"Status.Active.ToUpperCase() = {upper}");
-        Console.WriteLine();
-
-        Console.WriteLine("--- Source Generated Constants ---");
-        Console.WriteLine($"StatusExtensions.ActiveSnakeCase = {StatusExtensions.ActiveSnakeCase}");
-        Console.WriteLine($"StatusExtensions.PendingKebabCase = {StatusExtensions.PendingKebabCase}");
-        Console.WriteLine();
-
-        Console.WriteLine("--- Source Generated Lookup & Parse ---");
-
-        bool known = StatusExtensions.IsDefined("Pending");
-        Console.WriteLine($"StatusExtensions.IsDefined(\"Pending\") = {known}");
-
-        bool notKnown = StatusExtensions.IsDefined("Deleted");
-        Console.WriteLine($"StatusExtensions.IsDefined(\"Deleted\") = {notKnown}");
-
-        if (StatusExtensions.TryParseWire("inactive", out Status parsedStatus))
-        {
-            Console.WriteLine($"StatusExtensions.TryParseWire(\"inactive\") = {parsedStatus}");
-        }
-
-        string[] names = StatusExtensions.GetNames();
-        Console.WriteLine($"StatusExtensions.GetNames() = [{string.Join(", ", names)}]");
-
-        Status[] values = StatusExtensions.GetValues();
-        Console.WriteLine($"StatusExtensions.GetValues() = [{string.Join(", ", values)}]");
-        Console.WriteLine();
-
-        Console.WriteLine("--- DeliveryStatus ---");
-
-        DeliveryStatus delivery = DeliveryStatus.Shipped;
-        Console.WriteLine($"ToOptimizedString() = {delivery.ToOptimizedString()}");
-        Console.WriteLine($"ToWireName()        = {delivery.ToWireName()}");
-        Console.WriteLine($"ToKebabCase()       = {delivery.ToKebabCase()}");
-        Console.WriteLine($"GetNames()          = [{string.Join(", ", DeliveryStatusExtensions.GetNames())}]");
-        Console.WriteLine($"GetValues()         = [{string.Join(", ", DeliveryStatusExtensions.GetValues())}]");
-
-        if (DeliveryStatusExtensions.TryParseWire("delivered", out DeliveryStatus delivered))
-        {
-            Console.WriteLine($"TryParseWire(\"delivered\") = {delivered}");
-        }
-
-        Console.WriteLine($"ParseWire(\"returned\") = {DeliveryStatusExtensions.ParseWire("returned")}");
-
-        IEnumInfo info = EnumMetadata.Get<DeliveryStatus>();
-        Console.WriteLine($"EnumValueFormatter.Format(Shipped) = {EnumValueFormatter.Format(delivery, EnumWireFormat.String)}");
-        Console.WriteLine($"EnumMetadata.Get<DeliveryStatus>().WireNames = [{string.Join(", ", info.WireNames)}]");
-        Console.WriteLine($"EnumMetadata.IsRegistered(typeof(DeliveryStatus)) = {EnumMetadata.IsRegistered(typeof(DeliveryStatus))}");
-        Console.WriteLine();
-
-        Console.WriteLine("========================================");
-        Console.WriteLine("Demo complete.");
-        Console.WriteLine("Note: The StringEnumAttribute is used by");
-        Console.WriteLine("      JSON converters to serialize enums");
-        Console.WriteLine("      as strings instead of integers.");
-        Console.WriteLine("      Source generators produce fast");
-        Console.WriteLine("      ToString, parsing, and formatting.");
-        Console.WriteLine("========================================");
-    }
+    bool ok = OrderStatusExtensions.TryParseWire(text, out OrderStatus value);
+    Console.WriteLine($"TryParseWire(\"{text}\") = {ok}{(ok ? $" -> {value}" : "")}");
+}
+try
+{
+    OrderStatusExtensions.ParseWire("gone");
+}
+catch (EnumValueException ex)
+{
+    Console.WriteLine($"ParseWire(\"gone\") throws: {ex.Message}");
 }
 
-[StringEnum]
-public enum Status
-{
-    Active,
-    Inactive,
-    Pending,
-    Deleted
-}
+Console.WriteLine("\n--- Input and Data read modes ---");
+EnumConventions conventions = EnumConventions.Default;
+if (!EnumValueParser.TryParse("gone", EnumReadMode.Input, conventions, out OrderStatus _, out EnumValueError? error))
+    Console.WriteLine($"Input: rejected, allowed values: {string.Join(", ", error.AllowedValues)}");
+EnumValueParser.TryParse("gone", EnumReadMode.Data, conventions, out OrderStatus fromDatabase);
+Console.WriteLine($"Data:  mapped to the fallback member {fromDatabase}");
+EnumConventions noNumbers = conventions with { AcceptNumbers = false };
+Console.WriteLine($"Input without numbers accepts \"1\": {EnumValueParser.TryParse("1", EnumReadMode.Input, noNumbers, out OrderStatus _)}");
+
+Console.WriteLine("\n--- Other generated helpers ---");
+OrderStatus shipped = OrderStatus.Shipped;
+Console.WriteLine($"ToOptimizedString={shipped.ToOptimizedString()} ToKebabCase={shipped.ToKebabCase()} ToLowerCase={shipped.ToLowerCase()} ToUpperCase={shipped.ToUpperCase()}");
+Console.WriteLine($"AsUnderlyingType={shipped.AsUnderlyingType()} IsDefined={shipped.IsDefined()} ((OrderStatus)42).IsDefined={((OrderStatus)42).IsDefined()}");
+Console.WriteLine($"IsDefined(\"Shipped\")={OrderStatusExtensions.IsDefined("Shipped")} Names=[{string.Join(", ", OrderStatusExtensions.Names)}] GetValues().Length={OrderStatusExtensions.GetValues().Length}");
+
+Console.WriteLine("\n--- Metadata and formatter ---");
+EnumInfo<OrderStatus> info = EnumMetadata.Get<OrderStatus>();
+Console.WriteLine($"WireNames=[{string.Join(", ", info.WireNames)}] Fallback={info.Fallback?.MemberName}");
+foreach (EnumMemberInfo<OrderStatus> member in info.TypedMembers)
+    Console.WriteLine($"  {member.MemberName}: aliases=[{string.Join(", ", member.Aliases)}] fallback={member.IsFallback}");
+Console.WriteLine($"Format(String)={EnumValueFormatter.Format(shipped, EnumWireFormat.String)} Format(Number)={EnumValueFormatter.Format(shipped, EnumWireFormat.Number)}");
+Console.WriteLine($"IsRegistered={EnumMetadata.IsRegistered(typeof(OrderStatus))}");
+
+Console.WriteLine("\n--- Flags ---");
+Permissions granted = Permissions.Read | Permissions.Write;
+Console.WriteLine($"ToWireName={granted.ToWireName()} ParseWire(\"5\")={PermissionsExtensions.ParseWire("5")} IsDefined(8)={((Permissions)8).IsDefined()}");
+
+Console.WriteLine("\n--- JSON with CSharpEssentials.Json ---");
+JsonSerializerOptions json = new JsonSerializerOptions(JsonSerializerDefaults.Web).AddEnumConventions(EnumConventions.Default);
+string payload = JsonSerializer.Serialize(new Order(OrderStatus.PendingApproval, granted), json);
+Console.WriteLine(payload);
+Order? read = JsonSerializer.Deserialize<Order>("""{"status":"approval","permissions":["delete"]}""", json);
+Console.WriteLine($"read back: {read!.Status}, {read.Permissions}");
 
 [StringEnum]
-public enum DeliveryStatus
+public enum OrderStatus
 {
     Pending,
-    Shipped,
-    Delivered,
-    Returned
+    [EnumAlias("approval")][Description("Waiting for a manager")] PendingApproval,
+    [JsonStringEnumMemberName("sent")] Shipped,
+    [EnumFallback] Unknown = 99,
 }
 
+[StringEnum(Naming = EnumNaming.KebabCaseLower)]
+public enum DeliverySpeed { Standard, NextDay }
+
 [StringEnum]
-public enum Priority
-{
-    Low,
-    Medium,
-    High,
-    Critical
-}
+[Flags]
+public enum Permissions { None = 0, Read = 1, Write = 2, Delete = 4 }
+
+public sealed record Order(OrderStatus Status, Permissions Permissions);

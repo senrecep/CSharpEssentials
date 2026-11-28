@@ -1,156 +1,96 @@
 using CSharpEssentials.Errors;
+using CSharpEssentials.Idempotency;
+using CSharpEssentials.Locking;
 using CSharpEssentials.Mediator;
 using CSharpEssentials.ResultPattern;
-using CSharpEssentials.Validation;
-using CSharpEssentials.Validation.Validators;
+using CSharpEssentials.Transactions;
+using CSharpEssentials.Validation.Extensions;
+using Examples.Mediator;
 using Mediator;
-using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 
-Console.WriteLine("========================================");
-Console.WriteLine("CSharpEssentials.Mediator Example");
-Console.WriteLine("========================================\n");
+ServiceCollection services = new();
+services.AddLogging(logging => logging.AddSimpleConsole(o => o.SingleLine = true).SetMinimumLevel(LogLevel.Information));
+services.AddDistributedMemoryCache();
 
-using var loggerFactory = LoggerFactory.Create(builder =>
-    builder.AddConsole().SetMinimumLevel(LogLevel.Information));
-
-Console.WriteLine("--- ValidationBehavior ---");
-
-var validationBehavior = new ValidationBehavior<CreateProductCommand, Result<int>>(
-    [new CreateProductCommandValidator()]);
-
-Result<int> invalidResult = await validationBehavior.Handle(
-    new CreateProductCommand("", -10),
-    static (_, _) => new ValueTask<Result<int>>(1),
-    default);
-
-Console.WriteLine($"Invalid command - IsFailure: {invalidResult.IsFailure}");
-foreach (Error error in invalidResult.Errors)
-    Console.WriteLine($"  [{error.Code}] {error.Description}");
-
-Result<int> validResult = await validationBehavior.Handle(
-    new CreateProductCommand("Widget", 99),
-    static (_, _) => new ValueTask<Result<int>>(42),
-    default);
-
-Console.WriteLine($"Valid command - IsSuccess: {validResult.IsSuccess}, ProductId: {validResult.Value}");
-
-Console.WriteLine();
-
-Console.WriteLine("--- LoggingBehavior ---");
-
-var requestLogger = loggerFactory.CreateLogger<LoggingBehavior<GetProductQuery, Result<string>>>();
-var loggingBehavior = new LoggingBehavior<GetProductQuery, Result<string>>(requestLogger);
-
-await loggingBehavior.Handle(
-    new GetProductQuery("123"),
-    static (q, _) => new ValueTask<Result<string>>($"Product-{q.Id}"),
-    default);
-
-Console.WriteLine();
-
-Console.WriteLine("--- CachingBehavior ---");
-
-var cacheLogger = loggerFactory.CreateLogger<CachingBehavior<GetProductQuery, Result<string>>>();
-var cache = new DictionaryDistributedCache();
-var cachingBehavior = new CachingBehavior<GetProductQuery, Result<string>>(cacheLogger, cache);
-var query = new GetProductQuery("123");
-
-int callCount = 0;
-
-Result<string> firstCall = await cachingBehavior.Handle(
-    query,
-    (q, _) => { callCount++; return new ValueTask<Result<string>>($"Product-{q.Id}"); },
-    default);
-
-Console.WriteLine($"First call (cache miss) : {firstCall.Value}, handler calls: {callCount}");
-
-Result<string> secondCall = await cachingBehavior.Handle(
-    query,
-    (q, _) => { callCount++; return new ValueTask<Result<string>>($"Product-{q.Id}"); },
-    default);
-
-Console.WriteLine($"Second call (cache hit) : {secondCall.Value}, handler calls: {callCount}");
-
-Console.WriteLine();
-
-Console.WriteLine("--- TransactionScopeBehavior ---");
-
-var transactionBehavior = new TransactionScopeBehavior<PlaceOrderCommand, Result>();
-
-Result transactionResult = await transactionBehavior.Handle(
-    new PlaceOrderCommand(Guid.NewGuid(), 250.00m),
-    static (cmd, _) =>
-    {
-        Console.WriteLine($"  Executing inside transaction: order {cmd.OrderId} for ${cmd.Amount}");
-        return new ValueTask<Result>(Result.Success());
-    },
-    default);
-
-Console.WriteLine($"Transaction result: IsSuccess={transactionResult.IsSuccess}");
-
-Console.WriteLine();
-
-Console.WriteLine("--- DI Registration ---");
-
-var services = new ServiceCollection();
+services.AddMediator(options => options.ServiceLifetime = ServiceLifetime.Scoped);
 
 services.AddMediatorBehaviors();
+services.AddMediatorTransactionRunnerBehavior();
+services.AddSingleton<ITransactionRunner, ConsoleTransactionRunner>();
+services.AddMediatorLockBehavior();
+services.AddMediatorIdempotencyBehavior(options =>
+    options.ForRequest<CapturePayment>(request => request.Profile = "payments"));
+services.AddIdempotencyExecutor(options =>
+    options.AddProfile("payments", profile => profile.Retention = TimeSpan.FromDays(7)));
 
-Console.WriteLine($"Registered behaviors: {services.Count}");
+services.AddSingleton<Counters>();
+services.AddValidator<CreateProduct, CreateProductValidator>();
+services.AddValidator<ImportProduct, ImportProductValidator>();
+services.TryAddEnumerable(ServiceDescriptor.Scoped<IValidationFailureObserver, ConsoleValidationObserver>());
 
-Console.WriteLine();
-Console.WriteLine("========================================");
-Console.WriteLine("Demo complete.");
-Console.WriteLine("========================================");
+await using ServiceProvider provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
+await using AsyncServiceScope scope = provider.CreateAsyncScope();
+ISender sender = scope.ServiceProvider.GetRequiredService<ISender>();
+Counters counters = scope.ServiceProvider.GetRequiredService<Counters>();
 
-public sealed record CreateProductCommand(string? Name, decimal Price)
-    : ICommand<Result<int>>, IRequestLoggable;
+Section("Validation (Enforce)");
+Result<int> invalid = await sender.Send(new CreateProduct("", -1m));
+Console.WriteLine($"Rejected before the handler: {Codes(invalid.Errors)}");
+Result<int> created = await sender.Send(new CreateProduct("Widget", 9.99m));
+Console.WriteLine($"Created product {created.Value}");
 
-public sealed class CreateProductCommandValidator : Validator<CreateProductCommand>
+Section("Validation (LogOnly through IValidationModeOverride)");
+Result imported = await sender.Send(new ImportProduct(""));
+Console.WriteLine($"The observer saw the failure, the handler still ran: IsSuccess={imported.IsSuccess}");
+
+Section("Exception handling");
+Result failed = await sender.Send(new DeleteProduct(404));
+Console.WriteLine($"Thrown exception became a failed Result: {failed.FirstError.Type} {failed.FirstError.Code}");
+
+Section("Caching and logging");
+await sender.Send(new GetProduct(1));
+await sender.Send(new GetProduct(1));
+Console.WriteLine($"Two queries, handler calls: {counters["GetProduct"]}");
+await sender.Send(new GetProduct(1, BypassCache: true));
+Console.WriteLine($"BypassCache skipped the cache, handler calls: {counters["GetProduct"]}");
+
+Section("Transactions (ITransactionRunner)");
+await sender.Send(new RenameProduct(1, "Gadget"));
+await sender.Send(new RenameProduct(1, ""));
+
+Section("Lock");
+await Task.WhenAll(
+    sender.Send(new RestockProduct(7, 10)).AsTask(),
+    sender.Send(new RestockProduct(7, 5)).AsTask());
+Console.WriteLine($"Two concurrent restocks of product 7, most at once: {counters.MaxConcurrent("Restock")}");
+IResourceLock locks = scope.ServiceProvider.GetRequiredService<IResourceLock>();
+await using (await locks.AcquireAsync("product:7", timeout: null))
 {
-    protected override ValueTask Configure(CreateProductCommand model, RuleContext<CreateProductCommand> rules, CancellationToken ct = default)
-    {
-        rules.For(() => model.Name).NotEmpty(Error.Validation("NameRequired", "Name is required"));
-        rules.For(() => model.Price).GreaterThan(0m, Error.Validation("PriceInvalid", "Price must be positive"));
-        return ValueTask.CompletedTask;
-    }
+    Result timedOut = await sender.Send(new RestockProduct(7, 1));
+    Console.WriteLine($"Lock held elsewhere, LockTimeout passed: {timedOut.FirstError.Code}");
 }
 
-public sealed record GetProductQuery(string Id)
-    : IQuery<Result<string>>, IResponseLoggable, ICacheable
-{
-    public string CacheKey => $"product:{Id}";
-    public TimeSpan Expiration => TimeSpan.FromMinutes(5);
-    public bool BypassCache => false;
-    public bool CacheFailures => false;
-}
+Section("Idempotency");
+Result<Guid> first = await sender.Send(new CapturePayment("pay-1", "acme", 10m));
+Result<Guid> retry = await sender.Send(new CapturePayment("pay-1", "acme", 10m));
+Console.WriteLine($"Retry replayed the stored result: {first.Value == retry.Value}, handler calls: {counters["CapturePayment"]}");
+Result<Guid> reused = await sender.Send(new CapturePayment("pay-1", "acme", 99m));
+Console.WriteLine($"Same key, other amount: {reused.FirstError.Code}");
+Result<Guid> otherTenant = await sender.Send(new CapturePayment("pay-1", "globex", 99m));
+Console.WriteLine($"Same key, other tenant runs on its own: {otherTenant.IsSuccess}");
+Result<Guid> missing = await sender.Send(new CapturePayment("", "acme", 10m));
+Console.WriteLine($"No key: {missing.FirstError.Code}");
+Result<Guid> unscoped = await sender.Send(new RefundPayment("refund-1"));
+Console.WriteLine($"No scope and no caller: {unscoped.FirstError.Code}");
+Result crash = await sender.Send(new ChargeCard("charge-1"));
+Result crashRetry = await sender.Send(new ChargeCard("charge-1"));
+Console.WriteLine($"Handler threw: {crash.FirstError.Code}, retry before the lease ends: {crashRetry.FirstError.Code}");
 
-public sealed record PlaceOrderCommand(Guid OrderId, decimal Amount)
-    : ICommand<Result>, ITransactionalRequest;
+return 0;
 
-public sealed class DictionaryDistributedCache : IDistributedCache
-{
-    private readonly Dictionary<string, byte[]> _store = [];
+static void Section(string title) => Console.WriteLine($"{Environment.NewLine}--- {title} ---");
 
-    public byte[]? Get(string key) =>
-        _store.TryGetValue(key, out byte[]? value) ? value : null;
-
-    public Task<byte[]?> GetAsync(string key, CancellationToken token = default) =>
-        Task.FromResult(Get(key));
-
-    public void Set(string key, byte[] value, DistributedCacheEntryOptions options) =>
-        _store[key] = value;
-
-    public Task SetAsync(string key, byte[] value, DistributedCacheEntryOptions options, CancellationToken token = default)
-    {
-        Set(key, value, options);
-        return Task.CompletedTask;
-    }
-
-    public void Refresh(string key) { }
-    public Task RefreshAsync(string key, CancellationToken token = default) => Task.CompletedTask;
-    public void Remove(string key) => _store.Remove(key);
-    public Task RemoveAsync(string key, CancellationToken token = default) { Remove(key); return Task.CompletedTask; }
-}
+static string Codes(IEnumerable<Error> errors) => string.Join(", ", errors.Select(error => error.Code));

@@ -1,8 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <!-- LangVersion 15 comes from the root Directory.Build.props, so the typed result switch expressions compile on net10.0. -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
@@ -10,13 +11,17 @@
     <IsPackable>false</IsPackable>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
-    <RunAnalyzersDuringBuild>false</RunAnalyzersDuringBuild>
     <EnableNETAnalyzers>false</EnableNETAnalyzers>
+    <!-- Demo layout: top-level blocks, types in the global namespace, Codes constants named like the fields. -->
+    <NoWarn>$(NoWarn);S1199;S3903;S3218</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="../../CSharpEssentials.Results/CSharpEssentials.Results.csproj" />
     <ProjectReference Include="../../CSharpEssentials.Errors/CSharpEssentials.Errors.csproj" />
+    <ProjectReference Include="../../CSharpEssentials.Results.Generators/CSharpEssentials.Results.Generators.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
   </ItemGroup>
 
 </Project>
