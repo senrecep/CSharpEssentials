@@ -27,6 +27,7 @@ public sealed class SwashbuckleIfMatchResponseTests
     [Theory]
     [InlineData("/if-match/required")]
     [InlineData("/if-match/mvc/required")]
+    [InlineData("/if-match/mvc-convention/required")]
     public async Task Responses_Should_ListPreconditionRequired_When_TheHeaderIsRequired(string path)
     {
         JsonNode responses = (await GetPathsAsync())[path]!["put"]!["responses"]!;
@@ -47,6 +48,7 @@ public sealed class SwashbuckleIfMatchResponseTests
     [Theory]
     [InlineData("/if-match/read")]
     [InlineData("/if-match/mvc/read")]
+    [InlineData("/if-match/mvc-convention/read")]
     public async Task Responses_Should_NotListIfMatchStatuses_When_TheMethodIsSafe(string path)
     {
         JsonNode responses = (await GetPathsAsync())[path]!["get"]!["responses"]!;
@@ -71,7 +73,7 @@ public sealed class SwashbuckleIfMatchResponseTests
         builder.Services.ConfigureSwaggerGen(static options => options.SwaggerDoc(IfMatchApi.Document, new OpenApiInfo { Title = IfMatchApi.Document, Version = "1" }));
 
         await using WebApplication app = builder.Build();
-        app.MapControllers();
+        app.MapControllers().WithIfMatch(required: true);
         app.MapIfMatchApi();
         await app.StartAsync();
         try

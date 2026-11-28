@@ -11,8 +11,8 @@ namespace CSharpEssentials.Tests.Fixtures.OpenApiSample;
 
 /// <summary>
 /// The <c>If-Match</c> endpoints both OpenAPI packages describe: Minimal API endpoints with an optional and a required
-/// header, one with its own <c>412</c>, a <c>GET</c> in an <c>If-Match</c> group, and <see cref="IfMatchController"/>. One
-/// document, <see cref="Document"/>.
+/// header, one with its own <c>412</c>, a <c>GET</c> in an <c>If-Match</c> group, <see cref="IfMatchController"/> and
+/// <see cref="IfMatchConventionController"/>. One document, <see cref="Document"/>.
 /// </summary>
 public static class IfMatchApi
 {
@@ -30,7 +30,10 @@ public static class IfMatchApi
         return app;
     }
 
-    /// <summary>Adds <see cref="IfMatchController"/> only (it is internal, so no other host discovers it).</summary>
+    /// <summary>
+    /// Adds <see cref="IfMatchController"/> and <see cref="IfMatchConventionController"/> only (they are internal, so no other
+    /// host discovers them). Map them with <c>MapControllers().WithIfMatch(required: true)</c>.
+    /// </summary>
     public static IMvcBuilder AddIfMatchControllers(this IMvcBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
@@ -42,9 +45,11 @@ public static class IfMatchApi
     {
         public void PopulateFeature(IEnumerable<ApplicationPart> parts, ControllerFeature feature)
         {
-            TypeInfo controller = typeof(IfMatchController).GetTypeInfo();
-            if (!feature.Controllers.Contains(controller))
-                feature.Controllers.Add(controller);
+            foreach (TypeInfo controller in new[] { typeof(IfMatchController).GetTypeInfo(), typeof(IfMatchConventionController).GetTypeInfo() })
+            {
+                if (!feature.Controllers.Contains(controller))
+                    feature.Controllers.Add(controller);
+            }
         }
     }
 }

@@ -14,10 +14,13 @@ namespace CSharpEssentials.AspNetCore;
 /// <c>412</c> (the precondition does not match, returned by the loader of <c>WithIfMatch</c> or by the handler with
 /// <see cref="ConditionalRequestErrors.PreconditionFailed"/>) and, when the header is required, <c>428</c>. Only operations
 /// that accept <c>POST</c>, <c>PUT</c>, <c>PATCH</c> or <c>DELETE</c> get them, and a status the operation already declares
-/// is kept. Minimal API endpoints get endpoint metadata; MVC actions with <see cref="IfMatchAttribute"/> get the responses
-/// in API Explorer after the default provider, so the response MVC infers from the return type stays.
+/// is kept. Minimal API endpoints get endpoint metadata; MVC actions with <see cref="IfMatchAttribute"/>, or whose endpoint
+/// has <c>WithIfMatch()</c> from <c>MapControllers()</c> or <c>MapControllerRoute()</c>, get the responses in API Explorer
+/// after the default provider, so the response MVC infers from the return type stays. Like the runtime filter, the attribute
+/// wins over the endpoint convention.
 /// </summary>
-internal sealed class IfMatchResponses(IModelMetadataProvider? modelMetadataProvider = null) : IApiDescriptionProvider
+internal sealed class IfMatchResponses(IModelMetadataProvider? modelMetadataProvider = null, EndpointDataSource? endpoints = null)
+    : IApiDescriptionProvider
 {
     public int Order => 0;
 
@@ -38,15 +41,17 @@ internal sealed class IfMatchResponses(IModelMetadataProvider? modelMetadataProv
 
     public void OnProvidersExecuted(ApiDescriptionProviderContext context)
     {
+        Dictionary<ActionDescriptor, IfMatchMetadata>? conventions = null;
         foreach (ApiDescription description in context.Results)
         {
             if (description.ActionDescriptor is not ControllerActionDescriptor action
-                || (action.MethodInfo.GetCustomAttribute<IfMatchAttribute>(inherit: true)
-                    ?? action.ControllerTypeInfo.GetCustomAttribute<IfMatchAttribute>(inherit: true)) is not { } attribute
-                || !AcceptsUnsafeMethod(description.HttpMethod is null ? null : [description.HttpMethod]))
+                || !AcceptsUnsafeMethod(description.HttpMethod is null ? null : [description.HttpMethod])
+                || ((action.MethodInfo.GetCustomAttribute<IfMatchAttribute>(inherit: true)
+                        ?? action.ControllerTypeInfo.GetCustomAttribute<IfMatchAttribute>(inherit: true))?.Required
+                    ?? (conventions ??= Conventions()).GetValueOrDefault(action)?.Required) is not { } required)
                 continue;
 
-            foreach (int statusCode in Statuses(attribute.Required))
+            foreach (int statusCode in Statuses(required))
             {
                 if (description.SupportedResponseTypes.Any(response => response.StatusCode == statusCode))
                     continue;
@@ -59,6 +64,18 @@ internal sealed class IfMatchResponses(IModelMetadataProvider? modelMetadataProv
                 });
             }
         }
+    }
+
+    private Dictionary<ActionDescriptor, IfMatchMetadata> Conventions()
+    {
+        Dictionary<ActionDescriptor, IfMatchMetadata> conventions = [];
+        foreach (Endpoint endpoint in endpoints?.Endpoints ?? [])
+        {
+            if (endpoint.Metadata.GetMetadata<ActionDescriptor>() is { } action && endpoint.Metadata.GetMetadata<IfMatchMetadata>() is { } metadata)
+                conventions.TryAdd(action, metadata);
+        }
+
+        return conventions;
     }
 
     private static int[] Statuses(bool required) =>
