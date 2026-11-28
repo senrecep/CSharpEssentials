@@ -65,13 +65,18 @@ public static class CodeFixHarness
 
     public static async Task<Project> FixAllAsync(Project project, ImmutableArray<Diagnostic> diagnostics, CodeFixProvider provider)
     {
-        Document document = project.GetDocument(diagnostics[0].Location.SourceTree)!;
         CodeAction first = (await GetActionsAsync(project, diagnostics[0], provider))[0];
+        return await FixAllAsync(project, diagnostics, provider, first.EquivalenceKey);
+    }
+
+    public static async Task<Project> FixAllAsync(Project project, ImmutableArray<Diagnostic> diagnostics, CodeFixProvider provider, string? equivalenceKey)
+    {
+        Document document = project.GetDocument(diagnostics[0].Location.SourceTree)!;
         FixAllContext context = new(
             document,
             provider,
             FixAllScope.Document,
-            first.EquivalenceKey,
+            equivalenceKey,
             provider.FixableDiagnosticIds,
             new FixedDiagnosticProvider(diagnostics),
             CancellationToken.None);

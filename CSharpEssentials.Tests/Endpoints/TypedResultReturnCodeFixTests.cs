@@ -120,6 +120,81 @@ public class TypedResultReturnCodeFixTests
         actions.Should().BeEmpty();
     }
 
+    [Fact]
+    public async Task FixAll_Should_Leave_Handlers_With_An_Explicit_Return_Type_Alone()
+    {
+        using AdhocWorkspace workspace = new();
+        Project project = CreateProject(workspace, Usings, """
+            public static class Api
+            {
+                public static void Map(IEndpointRouteBuilder app)
+                {
+                    app.MapGet("/a/{id}", (int id) => Orders.Get(id));
+                    app.MapGet("/b/{id}", Result<OrderDto, NotFoundError> (int id) => Orders.Get(id));
+                }
+            }
+            """);
+        ImmutableArray<Diagnostic> diagnostics = await CodeFixHarness.GetDiagnosticsAsync(project, EndpointCompilations.Generators.Value.Analyzers, DiagnosticId);
+
+        Project fixedProject = await CodeFixHarness.FixAllAsync(project, diagnostics, new TypedResultReturnCodeFixProvider());
+
+        string text = await TextAsync(fixedProject);
+        text.Should().Contain("(int id) => Orders.Get(id).ToHttpResult()").And.Contain("Result<OrderDto, NotFoundError> (int id) => Orders.Get(id));");
+    }
+
+    [Fact]
+    public async Task FixAll_Should_Not_Change_The_Document_When_No_Handler_Can_Be_Converted()
+    {
+        using AdhocWorkspace workspace = new();
+        Project project = CreateProject(workspace, Usings, Api("Result<OrderDto, NotFoundError> (int id) => Orders.Get(id)"));
+        ImmutableArray<Diagnostic> diagnostics = await CodeFixHarness.GetDiagnosticsAsync(project, EndpointCompilations.Generators.Value.Analyzers, DiagnosticId);
+
+        Project fixedProject = await CodeFixHarness.FixAllAsync(project, diagnostics, new TypedResultReturnCodeFixProvider(), DiagnosticId);
+
+        (await TextAsync(fixedProject)).Should().Be(await TextAsync(project));
+    }
+
+    [Fact]
+    public async Task CodeFix_Should_Ignore_The_Returns_Of_Nested_Lambdas_And_Local_Functions()
+    {
+        using AdhocWorkspace workspace = new();
+        const string handler = "(int id) => { System.Func<int> one = () => { return 1; }; int Two() { return 2; } return Orders.Get(id + one() + Two()); }";
+        Project project = CreateProject(workspace, "using CSharpEssentials.AspNetCore;\n" + Usings, Api(handler));
+
+        Project fixedProject = await ApplySingleFixAsync(project);
+
+        (await TextAsync(fixedProject)).Should()
+            .Contain("return 1; }; int Two() { return 2; } return Orders.Get(id + one() + Two()).ToHttpResult(); }");
+    }
+
+    [Fact]
+    public async Task CodeFix_Should_Not_Be_Offered_When_A_Return_Is_Not_The_Result_Itself()
+    {
+        using AdhocWorkspace workspace = new();
+        Project project = CreateProject(workspace, Usings, Api("(int id) => { if (id < 0) { return new OrderDto(0); } return Orders.Get(id); }"));
+
+        IReadOnlyList<CodeAction> actions = await ActionsAsync(project);
+
+        actions.Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData("// Header\n", "using Microsoft.AspNetCore.Builder;", "using Sys = System;\n")]
+    [InlineData("", "using Sys = System;", "using Microsoft.AspNetCore.Builder;\n")]
+    [InlineData("", "using static System.Math;", "using Microsoft.AspNetCore.Builder;\n")]
+    public async Task CodeFix_Should_Put_The_Using_First_When_No_Using_Sorts_Before_It(string header, string first, string rest)
+    {
+        using AdhocWorkspace workspace = new();
+        const string needed = "using Microsoft.AspNetCore.Routing;\nusing System.Threading.Tasks;\nusing CSharpEssentials.Errors;\nusing CSharpEssentials.ResultPattern;\n";
+        string usings = header + first + "\n" + rest + needed;
+        Project project = CreateProject(workspace, usings, Api("(int id) => Orders.Get(id)"));
+
+        Project fixedProject = await ApplySingleFixAsync(project);
+
+        (await TextAsync(fixedProject)).Should().StartWith(header + "using CSharpEssentials.AspNetCore;\n" + first + "\n" + rest + needed);
+        await ShouldBeFixedAsync(fixedProject);
+    }
+
     private static string Api(string handler) => $$"""
         public static class Api
         {

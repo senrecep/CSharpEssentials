@@ -281,6 +281,38 @@ public sealed partial class TypedResultJsonTests
         first.Should().BeOfType<TypedResultJsonConverter<Guid, NotFoundError, RateLimited>>().And.BeSameAs(second);
     }
 
+    [Fact]
+    public void Factory_Should_ReturnTheRegisteredConverter_When_AOneErrorTypeIsRegistered()
+    {
+        TypedResultJsonConverterFactory.Register<Guid, RateLimited>();
+
+        JsonConverter converter = new TypedResultJsonConverterFactory().CreateConverter(typeof(Result<Guid, RateLimited>), JsonSerializerOptions.Default);
+
+        converter.Should().BeOfType<TypedResultJsonConverter<Guid, RateLimited>>();
+    }
+
+    [Fact]
+    public void Factory_Should_ReturnTheRegisteredConverter_When_AThreeErrorTypeResultIsRegistered()
+    {
+        TypedResultJsonConverterFactory.Register<Guid, NotFoundError, ConflictError, RateLimited>();
+
+        JsonConverter converter = new TypedResultJsonConverterFactory().CreateConverter(
+            typeof(Result<Guid, NotFoundError, ConflictError, RateLimited>), JsonSerializerOptions.Default);
+
+        converter.Should().BeOfType<TypedResultJsonConverter<Guid, NotFoundError, ConflictError, RateLimited>>();
+    }
+
+    [Fact]
+    public void Factory_Should_KeepTheFirstConverter_When_ATypeIsRegisteredTwice()
+    {
+        TypedResultJsonConverterFactory.Register<Guid, NotFoundError>();
+        JsonConverter first = new TypedResultJsonConverterFactory().CreateConverter(typeof(Result<Guid, NotFoundError>), JsonSerializerOptions.Default);
+
+        TypedResultJsonConverterFactory.Register<Guid, NotFoundError>();
+
+        new TypedResultJsonConverterFactory().CreateConverter(typeof(Result<Guid, NotFoundError>), JsonSerializerOptions.Default).Should().BeSameAs(first);
+    }
+
     [Theory]
     [InlineData(typeof(Result<int, NotFoundError>), true)]
     [InlineData(typeof(Result<int, NotFoundError, ConflictError>), true)]
