@@ -1,6 +1,8 @@
 # CSharpEssentials.Endpoints
 
-Source-generated endpoint organization for ASP.NET Core Minimal APIs. Route calls stay in your code, so binding, filters, `IResult`, OpenAPI and the Request Delegate Generator work unchanged.
+Organizes ASP.NET Core Minimal API endpoints into classes. A source generator finds the classes at compile time and writes one mapping method per assembly, so startup does no reflection and the app can publish as Native AOT.
+
+Your `Map` method still calls `MapGet`, `MapPost` and the rest, so model binding, filters, `IResult`, OpenAPI and the Request Delegate Generator behave as in plain Minimal APIs.
 
 ## Installation
 
@@ -8,200 +10,412 @@ Source-generated endpoint organization for ASP.NET Core Minimal APIs. Route call
 dotnet add package CSharpEssentials.Endpoints
 ```
 
-Target frameworks: `net11.0`, `net10.0`, `net9.0`, `net8.0`. The source generator, analyzers and code fixes are bundled in the package.
+Target frameworks: `net11.0`, `net10.0`, `net9.0`, `net8.0`. The source generator, analyzers and code fixes ship inside the package.
 
-> Benchmarks against plain Minimal APIs, Carter and FastEndpoints are in [BENCHMARKS.md](./BENCHMARKS.md). On net10,
-> cold startup ties Carter at 10, 100 and 500 endpoints and ties plain Minimal APIs at 10; at 100 and 500 it takes
-> 1.05× and 1.07× the plain time. Against FastEndpoints, cold startup takes 23% less time at 10 endpoints and 1.62× as
-> long at 500. Per request, CSE ties plain Minimal APIs on every route. Carter ties CSE on GET and DELETE, takes 10%
-> less time on a valid POST and 1.32× as long on an invalid POST. FastEndpoints takes 1.26× (GET), 1.27× (DELETE),
-> 1.24× (valid POST) and 2.06× (invalid POST) the CSE time. The POST rows compare a DataAnnotations stack (Plain, CSE)
-> with FluentValidation stacks (Carter, FastEndpoints). FastEndpoints defers per-endpoint setup to the first request,
-> so only the cold startup figures are like-for-like. The generated path publishes as Native AOT with 0 IL warnings.
-> Design-time cost of the bundled generator against Immediate.Apis is in
-> [the generator BENCHMARKS.md](../CSharpEssentials.Endpoints.Generators/BENCHMARKS.md).
+## Quick start
 
-## Endpoints and groups
-
-```csharp
+```csharp Program.cs
+// dotnet add package CSharpEssentials.Endpoints
 using CSharpEssentials.Endpoints;
 
-public sealed class AppsGroup : IEndpointGroup
-{
-    public static string Prefix => "apps";
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddSingleton<TodoStore>();
 
-    public static void Configure(RouteGroupBuilder group) => group.WithTags("Apps").RequireAuthorization();
+var app = builder.Build();
+app.MapAllEndpoints();
+app.Run();
+
+public sealed class TodosGroup : IEndpointGroup
+{
+    public static string Prefix => "todos";
+
+    public static void Configure(RouteGroupBuilder group) => group.WithTags("Todos");
 }
 
-[EndpointGroup(typeof(AppsGroup))]
-public sealed class CreateApp : IEndpoint
+[EndpointGroup<TodosGroup>]
+public sealed class ListTodos : IEndpoint
 {
     public static void Map(IEndpointRouteBuilder app) =>
-        app.MapPost("/", (CreateAppRequest request, IAppService service) => service.CreateAsync(request));
+        app.MapGet("/", (TodoStore store) => TypedResults.Ok(store.All()));
+}
+
+[EndpointGroup<TodosGroup>]
+public sealed class CreateTodo : IEndpoint
+{
+    public static void Map(IEndpointRouteBuilder app) =>
+        app.MapPost("/", (CreateTodoRequest request, TodoStore store) =>
+        {
+            Todo todo = store.Add(request.Title);
+            return TypedResults.Created($"/todos/{todo.Id}", todo);
+        });
+}
+
+public sealed record CreateTodoRequest(string Title);
+
+public sealed record Todo(int Id, string Title);
+
+public sealed class TodoStore
+{
+    private readonly List<Todo> _todos = [];
+
+    public Todo[] All() => [.. _todos];
+
+    public Todo Add(string title)
+    {
+        Todo todo = new(_todos.Count + 1, title);
+        _todos.Add(todo);
+        return todo;
+    }
 }
 ```
 
-- `IEndpoint.Map` is static. Endpoint types are never instantiated; dependencies come from handler parameters.
-- The generator maps a non-partial type only when it declares `static Map` itself; a class that only inherits `Map` is not mapped (CSE1012, see [Upgrading to 8.0](#upgrading-to-80)). Partial types are checked either way.
-- `IEndpointGroup.Prefix` is passed to `MapGroup`. `Configure` applies group-wide conventions.
-- `[EndpointGroup(typeof(TGroup))]` or `[EndpointGroup<TGroup>]` places an endpoint or a group under a group. Groups can nest.
-- `[ExcludeFromMapping]` excludes an endpoint, a group (with everything under it) or an assembly.
+This maps `GET /todos` and `POST /todos`, both tagged `Todos`.
+
+## Endpoints
+
+An endpoint is a class or struct that implements `IEndpoint` and declares a `static void Map(IEndpointRouteBuilder app)`.
+
+```csharp
+public sealed class Health : IEndpoint
+{
+    public static void Map(IEndpointRouteBuilder app) =>
+        app.MapGet("/health", () => TypedResults.Text("healthy"));
+}
+```
+
+- Endpoint types are never instantiated. Take services as handler parameters, not through a constructor.
+- One type may map several routes, for example `GET` and `DELETE` on the same resource.
+- An endpoint without a group attribute is mapped at the root, inside an empty `MapGroup("")`.
+
+## Groups
+
+A group implements `IEndpointGroup`. `Prefix` goes to `MapGroup`; an empty string adds no route segment. `Configure` is optional and runs on the created `RouteGroupBuilder`, which is the place for tags, authorization and filters that apply to every endpoint in the group.
+
+Put an endpoint or another group under a group with `[EndpointGroup<TGroup>]` or `[EndpointGroup(typeof(TGroup))]`. The two forms do the same thing; use one per type.
+
+```csharp
+public sealed class ApiGroup : IEndpointGroup
+{
+    public static string Prefix => "api";
+}
+
+[EndpointGroup<ApiGroup>]
+public sealed class OrdersGroup : IEndpointGroup
+{
+    public static string Prefix => "orders";
+
+    public static void Configure(RouteGroupBuilder group) => group.WithTags("Orders").RequireAuthorization();
+}
+
+[EndpointGroup<OrdersGroup>]
+public sealed class GetOrder : IEndpoint
+{
+    public static void Map(IEndpointRouteBuilder app) =>
+        app.MapGet("/{id:int}", (int id) => TypedResults.Ok(id));   // GET /api/orders/{id}
+}
+```
+
+## Excluding types
+
+`[ExcludeFromMapping]` leaves out an endpoint, a group together with everything under it, or a whole assembly (`[assembly: ExcludeFromMapping]`). It applies to the generated registry and to the reflection fallback.
 
 ## Mapping
 
-The bundled source generator creates one registry per assembly in the `Microsoft.AspNetCore.Builder` namespace:
+The generator writes a static class in the `Microsoft.AspNetCore.Builder` namespace, so no extra `using` is needed:
 
 ```csharp
-var app = builder.Build();
-
-app.MapAppsEndpoints();   // one assembly's registry
-// or
-app.MapAllEndpoints();    // own registry + every referenced assembly's registry
+app.MapAppsEndpoints();   // the endpoints of one assembly
+app.MapAllEndpoints();    // this assembly and every referenced assembly that has a registry
 ```
 
-- `Map{Asm}Endpoints` maps the endpoints of one assembly. `{Asm}` is the sanitized assembly name (`MyCompany.Apps.Api` → `MyCompanyAppsApi`) or the `[assembly: EndpointRegistryName("Apps")]` value.
-- `{Asm}EndpointRegistry.EndpointTypes` lists the endpoint types in mapping order. `[assembly: EndpointModule(typeof(...))]` is emitted by the generator to mark an assembly that has a registry; do not write it yourself.
-- `MapAllEndpoints` is `internal` and generated automatically in `Exe`/`WinExe` projects that are not test projects. Use `[assembly: GenerateEndpointAggregate]` to opt in from a library or test project, `[assembly: DisableEndpointAggregate]` to opt out. Each registry is mapped once, own registry first, then referenced registries by assembly name.
-- Mapping is not idempotent: calling `Map{Asm}Endpoints` or `MapAllEndpoints` twice on the same route builder maps every route twice, and ASP.NET Core reports an ambiguous match at request time. Mapping the same registry onto different route builders (for example two version groups) is legitimate, so call each method once per builder.
-- Each endpoint type is mapped inside its own `MapGroup("")`, so route patterns, OpenAPI metadata, filters and authorization are the same as direct mapping. Route calls such as `MapGet` stay in your `Map` method.
+- `Map{Asm}Endpoints(Action<EndpointMappingOptions>? configure = null)` maps one assembly. `{Asm}` is the assembly name with non-identifier characters removed and each segment capitalized (`MyCompany.Apps.Api` gives `MapMyCompanyAppsApiEndpoints`).
+- `[assembly: EndpointRegistryName("Apps")]` sets the name instead, giving `AppsEndpointRegistry.MapAppsEndpoints`.
+- `{Asm}EndpointRegistry.EndpointTypes` is an `IReadOnlyList<Type>` of the endpoint types in mapping order.
+- `MapAllEndpoints` is `internal` and generated in `Exe` and `WinExe` projects that are not test projects. It maps its own registry first, then referenced registries ordered by assembly name, each once. `[assembly: GenerateEndpointAggregate]` turns it on in a library or test project, `[assembly: DisableEndpointAggregate]` turns it off.
+- `[assembly: EndpointModule(typeof(...))]` is written by the generator to mark an assembly that has a registry. Do not add it yourself.
 
-## Reflection fallback
+A handler lambda that uses the generated registry type (for example `AppsEndpointRegistry.EndpointTypes`) needs an explicit return type, such as `Ok<string[]> () => ...`, when the Request Delegate Generator is on (it is under Native AOT). That generator cannot see types written by another generator and otherwise emits code that does not compile.
 
-When a registry cannot be generated (for example, plugin assemblies loaded at runtime), map endpoints by scanning assemblies:
+Mapping is not idempotent. Calling the same method twice on one route builder maps every route twice, and ASP.NET Core then reports an ambiguous match at request time. Mapping one registry onto two different builders, for example two version groups, is fine.
 
-```csharp
-app.MapEndpointsFromAssemblies(typeof(CreateApp).Assembly);
-app.MapEndpointsFromAssemblies(options => options.LogDiscovered = true, pluginAssembly);
-```
+### API versioning
 
-- Uses the same discovery rules, ordering, conventions and options as the generated registries.
-- Types the analyzer would report as errors (CSE1001, CSE1002, CSE1003, CSE1007, CSE1008) are skipped and logged at `Warning`, category `CSharpEssentials.Endpoints`. If some types of an assembly cannot be loaded, the loadable types are mapped and each loader exception is logged at `Warning`.
-- Marked `[RequiresUnreferencedCode]` and `[RequiresDynamicCode]`. Prefer the generated methods in trimmed and Native AOT apps.
-- When dynamic code is not supported (Native AOT), `MapEndpointsFromAssemblies` throws `PlatformNotSupportedException` instead of mapping a partial, trimmed set of routes. Use `Map{Asm}Endpoints` or `MapAllEndpoints` there.
-
-## API versioning
-
-`CSharpEssentials.AspNetCore` provides `MapVersionedGroup`, which composes with any registry:
+`MapVersionedGroup` from `CSharpEssentials.AspNetCore` returns a group with the `v{version:apiVersion}` prefix. Map a registry onto it:
 
 ```csharp
-app.MapVersionedGroup(2).MapAppsEndpoints();   // routes under /v2/...
+app.MapVersionedGroup(1).MapAppsEndpoints();   // /v1/...
+app.MapVersionedGroup(2).MapAppsEndpoints();   // /v2/...
 ```
 
 ## Mapping options
 
-```csharp
-app.MapAppsEndpoints(options =>
+Every mapping method takes an optional `Action<EndpointMappingOptions>`.
+
+```csharp Program.cs
+// dotnet add package CSharpEssentials.Endpoints
+using CSharpEssentials.Endpoints;
+
+var app = WebApplication.CreateBuilder(args).Build();
+
+app.MapAllEndpoints(options =>
 {
-    options.Filter(type => type.Namespace != "Sample.Internal");
+    options.Filter(type => type.Namespace != "Internal");
     options.OperationNaming = OperationNaming.TypeName;
     options.AutoTagFromGroup = true;
     options.LogDiscovered = true;
-    options.ConfigureEach((builder, type) => builder.WithMetadata(new MyMetadata(type)));
+    options.ConfigureEach((endpoint, type) => endpoint.WithMetadata(new AuditedAttribute(type.Name)));
 });
-```
 
-| Option | Behavior |
-|---|---|
-| `Filter` | Skips endpoint types for which a predicate returns `false`. Multiple predicates are AND-combined. Groups whose endpoints are all filtered out are not created. |
-| `ConfigureEach` | Runs once per endpoint type after group `Configure` and per-type metadata, in registration order. |
-| `OperationNaming` | `None` (default), `TypeName` or `Custom(...)`. `TypeName` builds unique names from the type and its containing types (`Orders_Endpoint`), adds the HTTP method when a type maps several routes (`Items_Get`, `Items_Post`), qualifies colliding names with the namespace and throws when two types share a full name. An explicit `WithName(...)` always wins. |
-| `AutoTagFromGroup` | Tags endpoints without explicit tags with the innermost group name (`UsersGroup` → `Users`). |
-| `LogDiscovered` | Logs mapped and filtered endpoint types at `Debug`, category `CSharpEssentials.Endpoints`. |
+app.Run();
 
-Every endpoint gets `EndpointTypeMetadata`, which identifies the endpoint type at runtime.
+public sealed class UsersGroup : IEndpointGroup
+{
+    public static string Prefix => "users";
+}
 
-`TypeName` names are not stable across changes to the application. Adding an endpoint or type with the same name can qualify an existing name with its namespace or give it a numeric suffix, which renames the generated operationId and the method names of NSwag or Kiota clients. Set the name with `WithName(...)` in `Map` for endpoints whose client method names must not change.
-
-Explicit names are reserved at build time. The generator collects constant names set with `WithName(...)` or with `WithMetadata(new EndpointNameAttribute(...))`, `new EndpointNameMetadata(...)` or `new RouteNameMetadata(...)` anywhere in the project, including plain `app.MapGet(...).WithName("Items")` calls outside endpoint types. The generated registry reserves them before it maps, and `MapAllEndpoints` reserves the host project's names even when the host has no endpoint types. With `TypeName`, a generated name that would collide with a reserved one gets a numeric suffix (`Items_2`); the explicit name never changes. Not reserved: names that are not constants (CSE1011), `[EndpointName]` attributes on handlers outside endpoint types, endpoints mapped with the `MapEndpointsFromAssemblies` reflection fallback, and names of a project whose registry is not called (calling only a library's `Map{Asm}Endpoints` reserves only that library's names). A reserved name stays reserved even when its endpoint is not mapped.
-
-Reservation and CSE1010 work per project (compilation), not per application. A project that builds two `WebApplication`s and gives an endpoint in each the same `WithName("Items")` gets CSE1010, and each application also reserves the other's names, so a generated name that matches one of them gets an unneeded `_2` suffix. In that case the duplicate is intended; turn CSE1010 off for the project in `.editorconfig` (`dotnet_diagnostic.CSE1010.severity = none`). A host without endpoint types that calls a library's `Map{Asm}Endpoints` directly does not reserve its own explicit names, because the host has no registry to emit them; call `MapAllEndpoints` in the host instead, which reserves them before it maps the libraries.
-
-## Typed routes
-
-`RouteOf<TEndpoint>` builds a request path from the endpoint type, which keeps tests independent of route strings:
-
-```csharp
-string path = app.RouteOf<GetApp>(new { id = 42 });                  // "/apps/42"
-string remove = app.RouteOf<AppCommands>("DELETE", new { id = 42 }); // select by HTTP method or WithName(...)
-```
-
-- Uses `EndpointTypeMetadata` on the mapped endpoints, so group prefixes and versioned groups are included. Extra values become query string entries.
-- Throws `InvalidOperationException` when the type has no route, has more than one route and no selector is given, or a route value is missing or fails its constraint.
-- Reads values from object properties, so it is marked `[RequiresUnreferencedCode]`.
-
-## Authorization shortcuts
-
-Thin wrappers over `RequireAuthorization` for any endpoint, group or route handler builder:
-
-```csharp
-group.RequireRoles("admin", "editor");       // any listed role
-group.RequirePolicies("CanRead", "CanWrite"); // every listed policy
-group.RequireAuthSchemes("Bearer");           // any listed scheme
-```
-
-- Each call adds `AuthorizeAttribute` metadata, so it combines with `RequireAuthorization`, `[Authorize]` and `AllowAnonymous` as usual.
-- Empty lists and null, blank or comma-separated entries throw `ArgumentException`.
-
-## Validation
-
-`CSharpEssentials.AspNetCore` adds a validation endpoint filter for `CSharpEssentials.Validation` validators. Call it on the route handler inside `Map`:
-
-```csharp
-[EndpointGroup<AppsGroup>]
-public sealed class CreateApp : IEndpoint
+[EndpointGroup<UsersGroup>]
+public sealed class ListUsers : IEndpoint
 {
     public static void Map(IEndpointRouteBuilder app) =>
-        app.MapPost("/", (CreateAppRequest request, IAppService service) => service.CreateAsync(request))
-           .WithValidation<CreateAppRequest>();
+        app.MapGet("/", () => TypedResults.Ok(new[] { "ada", "linus" }));
+}
+
+[AttributeUsage(AttributeTargets.Class)]
+public sealed class AuditedAttribute(string name) : Attribute
+{
+    public string Name { get; } = name;
 }
 ```
 
-Failed validation returns a 400 problem response and the handler does not run. See the [AspNetCore Readme](../CSharpEssentials.AspNetCore/Readme.MD) for the details.
+| Option | What it does |
+|---|---|
+| `Filter(Func<Type, bool>)` | Skips endpoint types for which the predicate returns `false`. Several predicates are AND-combined. A group whose endpoints are all skipped is not created. |
+| `ConfigureEach(Action<IEndpointConventionBuilder, Type>)` | Runs once per endpoint type, after group `Configure`, in registration order. |
+| `OperationNaming` | `None` (default), `TypeName`, or `Custom(...)`. See below. |
+| `AutoTagFromGroup` | Tags an endpoint that has no explicit tags with its innermost group's type name, minus a trailing `Group` (`UsersGroup` gives `Users`). |
+| `LogDiscovered` | Logs mapped and filtered endpoint types at `Debug`, category `CSharpEssentials.Endpoints`. |
+
+Every mapped endpoint also gets `EndpointTypeMetadata`, whose `EndpointType` property tells middleware and tests which class mapped it.
+
+### Operation names
+
+The endpoint name becomes the OpenAPI `operationId` and the method name in generated clients. An explicit `WithName(...)` always wins over the policy.
+
+- `OperationNaming.TypeName` uses the type name and its containing types (`Orders_Create`). A type that maps several routes gets the HTTP method as a suffix (`Items_Get`, `Items_Post`). Names that collide are qualified with the namespace; two types with the same full name throw when mapped.
+- `OperationNaming.Custom(Func<Type, EndpointBuilder, string?>)` lets you build the name. Return `null` to leave an endpoint unnamed.
+
+```csharp
+options.OperationNaming = OperationNaming.Custom((type, endpoint) => "op_" + type.Name);
+```
+
+`TypeName` names can change when you add an endpoint or type with the same name: the existing name picks up a namespace or a number, which renames NSwag or Kiota client methods. Set `WithName(...)` on endpoints whose client names must stay fixed.
+
+Explicit names are reserved at build time, so a generated name never takes one. The generator collects every constant name set with `WithName(...)`, or with `EndpointNameAttribute`, `EndpointNameMetadata` or `RouteNameMetadata` inside `WithMetadata(...)`, anywhere in the project, including plain `app.MapGet(...).WithName("Items")` calls. A generated name that would match one gets a numeric suffix (`Items_2`). These names are not reserved:
+
+- names that are not constants (reported as CSE1011);
+- `[EndpointName]` attributes on handlers outside endpoint types;
+- endpoints mapped by `MapEndpointsFromAssemblies`;
+- names in a project whose registry is never called. A host that has no endpoint types and calls a library's `Map{Asm}Endpoints` directly does not reserve its own names; call `MapAllEndpoints` in the host instead.
+
+Reservation and CSE1010 work per project, not per running application. A project that builds two `WebApplication`s with the same `WithName("Items")` in each gets CSE1010, and a generated name that matches gets an unneeded `_2`. If the duplicate is intended, set `dotnet_diagnostic.CSE1010.severity = none` in `.editorconfig`.
+
+## Typed routes
+
+`RouteOf<TEndpoint>` builds a request path from an endpoint type, so tests do not repeat route strings.
+
+```csharp Program.cs
+// dotnet add package CSharpEssentials.Endpoints
+using CSharpEssentials.Endpoints;
+
+var app = WebApplication.CreateBuilder(args).Build();
+app.MapAllEndpoints();
+
+Console.WriteLine(app.RouteOf<GetApp>(new { id = 42 }));                        // /apps/42
+Console.WriteLine(app.RouteOf<GetApp>(new { id = 42, expand = "owner" }));      // /apps/42?expand=owner
+Console.WriteLine(app.RouteOf<AppCommands>("DELETE", new { id = 7 }));         // /apps/7
+
+public sealed class AppsGroup : IEndpointGroup
+{
+    public static string Prefix => "apps";
+}
+
+[EndpointGroup<AppsGroup>]
+public sealed class GetApp : IEndpoint
+{
+    public static void Map(IEndpointRouteBuilder app) =>
+        app.MapGet("/{id:int}", (int id) => TypedResults.Ok(id));
+}
+
+[EndpointGroup<AppsGroup>]
+public sealed class AppCommands : IEndpoint
+{
+    public static void Map(IEndpointRouteBuilder app)
+    {
+        app.MapPut("/{id:int}", (int id) => TypedResults.NoContent());
+        app.MapDelete("/{id:int}", (int id) => TypedResults.NoContent());
+    }
+}
+```
+
+- The second overload, `RouteOf<TEndpoint>(string nameOrMethod, object? values = null)`, picks one route of a type that maps several: an endpoint name set with `WithName` (ordinal match) or an HTTP method (case-insensitive).
+- Group prefixes and version groups are included. Values that are not route parameters become query string entries.
+- Throws `InvalidOperationException` when the type has no mapped route, has several and no selector was given, or a route value is missing or fails its constraint.
+- Reads values from object properties, so it is marked `[RequiresUnreferencedCode]`. Use it in tests, not in trimmed app code.
+
+## Authorization shortcuts
+
+Extensions over `RequireAuthorization` for any endpoint, group or route handler builder:
+
+```csharp
+group.RequireRoles("admin", "editor");        // the user needs one of the roles
+group.RequirePolicies("CanRead", "CanWrite"); // the user must pass every policy
+group.RequireAuthSchemes("Bearer");           // one of the schemes must authenticate the user
+```
+
+- Each call adds `AuthorizeAttribute` metadata, so it combines with `RequireAuthorization`, `[Authorize]` and `AllowAnonymous` as usual.
+- An empty list, or a null, blank or comma-separated entry, throws `ArgumentException`.
+- The app still needs `AddAuthentication`, `AddAuthorization` and the authorization middleware, as with `RequireAuthorization`.
+
+## Returning typed results
+
+A handler that returns `Result<T, E1>`, `Result<T, E1, E2>` or `Result<T, E1, E2, E3>` from `CSharpEssentials.Results` as is would be serialized as a 200 response with the error in the body, and OpenAPI would list only that 200. The analyzer reports this as CSE1013. Convert the result with an extension from `CSharpEssentials.AspNetCore`:
+
+```csharp Program.cs
+// dotnet add package CSharpEssentials.Endpoints
+// dotnet add package CSharpEssentials.AspNetCore
+// dotnet add package CSharpEssentials.Results
+using CSharpEssentials.AspNetCore;
+using CSharpEssentials.Endpoints;
+using CSharpEssentials.Errors;
+using CSharpEssentials.ResultPattern;
+
+var app = WebApplication.CreateBuilder(args).Build();
+app.MapAllEndpoints();
+app.Run();
+
+public sealed class GetBook : IEndpoint
+{
+    public static void Map(IEndpointRouteBuilder app) =>
+        app.MapGet("/books/{id:int}", (int id) => BookCatalog.Find(id).ToHttpResult());
+}
+
+public sealed class CreateBook : IEndpoint
+{
+    public static void Map(IEndpointRouteBuilder app) =>
+        app.MapPost("/books", (Book book) => BookCatalog.Add(book).ToCreated(created => $"/books/{created.Id}"));
+}
+
+public sealed record Book(int Id, string Title);
+
+public static class BookCatalog
+{
+    public static Result<Book, NotFoundError> Find(int id) =>
+        id == 1 ? new Book(1, "Dune") : new NotFoundError("Book.NotFound", $"Book {id} was not found.");
+
+    public static Result<Book, ConflictError> Add(Book book) =>
+        book.Id == 1 ? new ConflictError("Book.Exists", "Book 1 already exists.") : book;
+}
+```
+
+- `ToHttpResult()` and `ToOk()` send 200, `ToCreated(location)` sends 201, `ToNoContent()` sends 204. An error becomes its problem response (404 for `NotFoundError`, 409 for `ConflictError`), and OpenAPI lists each status.
+- Every method has `Task` and `ValueTask` overloads, so `await`-free chains like `service.GetAsync(id).ToHttpResult()` work.
+- The analyzer checks every `Map*` call with a lambda or method group, inside an endpoint type or not.
+
+## Validation
+
+`WithValidation<T>()` from `CSharpEssentials.AspNetCore` runs the registered `CSharpEssentials.Validation` validators for `T` before the handler and returns a 400 problem response on failure. Call it in `Map`:
+
+```csharp
+app.MapPost("/", (CreateAppRequest request, IAppService service) => service.CreateAsync(request))
+   .WithValidation<CreateAppRequest>();
+```
+
+See the [AspNetCore Readme](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.AspNetCore/Readme.MD) for registration.
+
+## Reflection fallback
+
+When no registry can be generated, for example for plugin assemblies loaded at runtime, scan assemblies instead:
+
+```csharp
+app.MapEndpointsFromAssemblies(pluginAssembly);
+app.MapEndpointsFromAssemblies(options => options.LogDiscovered = true, pluginAssembly);
+```
+
+- Same discovery rules, ordering, conventions and options as the generated registries.
+- Types the analyzer would report as errors (CSE1001, CSE1002, CSE1003, CSE1007, CSE1008) are skipped and logged at `Warning`, category `CSharpEssentials.Endpoints`. If some types of an assembly cannot be loaded, the rest are mapped and each loader exception is logged.
+- Marked `[RequiresUnreferencedCode]` and `[RequiresDynamicCode]`. Under Native AOT it throws `PlatformNotSupportedException` instead of mapping a partial set of routes.
+
+## Inheriting `Map`
+
+The generator looks only at types that declare `static Map` themselves or are `partial`. A non-partial class that only inherits `Map` from a base class is not mapped, and the analyzer reports CSE1012:
+
+```csharp
+public abstract class CrudEndpoint<T> : IEndpoint
+{
+    public static void Map(IEndpointRouteBuilder app) => app.MapGet("/", () => TypedResults.Ok(typeof(T).Name));
+}
+
+public sealed class Users : CrudEndpoint<User>;   // CSE1012: not mapped
+```
+
+Fix it in one of two ways:
+
+```csharp
+// Option 1: make the class partial.
+public sealed partial class Users : CrudEndpoint<User>;
+
+// Option 2: declare Map and call the base.
+public sealed class Users : CrudEndpoint<User>
+{
+    public static new void Map(IEndpointRouteBuilder app) => CrudEndpoint<User>.Map(app);
+}
+```
+
+`new` is needed because the method hides the base `Map` (CS0108). Keep the body a call to the base: the registry calls `Map` through `IEndpoint`, which resolves to the base method unless the derived class lists `IEndpoint` itself. Before 8.0 such classes were mapped. With a concrete base class, 7.x mapped both the base and the derived class, so the routes were registered twice.
 
 ## Diagnostics
 
-The bundled analyzer reports types the generator cannot map and explicit endpoint names that repeat or cannot be reserved. Invalid types are skipped, so the generated registry always compiles. Types and assemblies marked `[ExcludeFromMapping]` are not analyzed, except by the endpoint name rules CSE1010 and CSE1011.
+The analyzer reports types the generator cannot map and endpoint names that repeat. Invalid types are skipped, so the generated registry always compiles. Types and assemblies marked `[ExcludeFromMapping]` are not analyzed, except by CSE1010 and CSE1011.
 
 | ID | Severity | Rule |
 |---|---|---|
-| CSE1001 | Error | Endpoint or group type is not accessible from generated code (private/protected nested, `file`-local, or nested in an inaccessible type). |
-| CSE1002 | Error | Group nesting cycle: the `[EndpointGroup]` chain returns to the same group. Reported on each group in the cycle. |
-| CSE1003 | Error | More than one group attribute on one type (`[EndpointGroup(typeof(X))]` and `[EndpointGroup<Y>]`). |
-| CSE1004 | Warning | Endpoint declares instance fields, auto-properties or a constructor with parameters. Endpoint types are never instantiated; take dependencies as handler parameters. Code fix: removes the state when nothing else uses it. |
-| CSE1005 | Warning | Two endpoints in the same group map the same HTTP method and constant route (`MapGet`/`MapPost`/`MapPut`/`MapDelete`/`MapPatch`/`MapMethods` on the `Map` parameter). Ungrouped endpoints count as one group. |
+| CSE1001 | Error | Endpoint or group type is not accessible from generated code (private or protected nested, `file`-local, or inside an inaccessible type). |
+| CSE1002 | Error | The `[EndpointGroup]` chain returns to the same group. Reported on each group in the cycle. |
+| CSE1003 | Error | A type has both `[EndpointGroup(typeof(X))]` and `[EndpointGroup<Y>]`. |
+| CSE1004 | Warning | Endpoint declares instance fields, auto-properties or a constructor with parameters. Has a code fix. |
+| CSE1005 | Warning | Two endpoints in one group map the same HTTP method and constant route (`MapGet`, `MapPost`, `MapPut`, `MapDelete`, `MapPatch`, `MapMethods`). Ungrouped endpoints count as one group. |
 | CSE1006 | Info | Abstract or open-generic endpoint or group type is skipped. |
-| CSE1007 | Error | `[EndpointGroup(typeof(X))]` target does not implement `IEndpointGroup`, or is abstract, open-generic or a ref struct. |
-| CSE1008 | Error | Endpoint or group type is a `ref struct`. Generated code passes it as a generic type argument, which ref structs cannot be, so it is not mapped. |
-| CSE1009 | Warning | Two referenced assemblies produce the same registry name, for example `Foo.Api` and `FooApi` both produce `FooApiEndpointRegistry`. `MapAllEndpoints` skips both registries so the project still compiles. The project's own registry counts too: when it has the same name as a referenced one, only the own registry is mapped. Give one of them a distinct name with `[assembly: EndpointRegistryName("...")]`. Reported only in projects that generate the aggregate. |
-| CSE1010 | Warning | The same constant endpoint name is set at two call sites with `WithName(...)` or with `EndpointNameAttribute`, `EndpointNameMetadata` or `RouteNameMetadata` in `WithMetadata(...)`. Duplicate names produce duplicate operationIds and make link generation by name ambiguous. Endpoint names and route names are compared separately, so `WithMetadata(new EndpointNameMetadata("X"))` and `WithMetadata(new RouteNameMetadata("X"))` on one endpoint are not reported. Reported on each call site. |
-| CSE1011 | Info | An explicit endpoint name outside an `IEndpoint` or `IEndpointGroup` type is not a compile-time constant, so the generated registry cannot reserve it and `OperationNaming.TypeName` can generate the same name. Use a constant. Names set inside endpoint and group types are seen at runtime and are not reported. |
-| CSE1012 | Warning | A non-partial endpoint class inherits `Map` from a base class and does not declare it, so the generator leaves it out of the registry. Make the class `partial`, or declare `Map` on it (see [Upgrading to 8.0](#upgrading-to-80)). |
-| CSE1013 | Warning | A `Map*` route handler, lambda or method group, returns `Result<T, E1..E3>` from `CSharpEssentials.Results`, or a `Task` or `ValueTask` of it. The result would be written as a 200 response with the error in the body, and the OpenAPI document would list only that 200. Return `.ToHttpResult()`, `.ToOk()`, `.ToCreated(...)` or `.ToNoContent()` from `CSharpEssentials.AspNetCore` instead. Reported on any `Map*` call, inside an endpoint type or not. Code fix: appends `.ToHttpResult()` to what a lambda handler returns. |
+| CSE1007 | Error | The `[EndpointGroup]` target does not implement `IEndpointGroup`, or is abstract, open-generic or a ref struct. |
+| CSE1008 | Error | Endpoint or group type is a `ref struct`, which cannot be a generic type argument. |
+| CSE1009 | Warning | Two referenced assemblies produce the same registry name (`Foo.Api` and `FooApi` both give `FooApiEndpointRegistry`). `MapAllEndpoints` skips both; when the own registry shares the name, only the own one is mapped. Fix with `[assembly: EndpointRegistryName("...")]`. Reported only where the aggregate is generated. |
+| CSE1010 | Warning | The same constant endpoint name is set at two call sites. Endpoint names and route names are compared separately. Reported on each call site. |
+| CSE1011 | Info | An explicit endpoint name outside an endpoint or group type is not a constant, so it cannot be reserved. |
+| CSE1012 | Warning | A non-partial endpoint class inherits `Map` and does not declare it, so it is not mapped. See [Inheriting `Map`](#inheriting-map). |
+| CSE1013 | Warning | A `Map*` handler returns `Result<T, E1..E3>`, or a `Task` or `ValueTask` of it, without converting it. Has a code fix. |
 
-The bundled code fix for CSE1004 ("Remove instance state from '{Type}'") deletes the instance fields, auto-properties and parameterized constructors of the endpoint. It is offered only when nothing else in the solution uses them, and not for records.
+### Code fixes
 
-The code fix for CSE1013 ("Convert with ToHttpResult()") appends `.ToHttpResult()` to what a lambda handler returns, to every `return` of a block body, and wraps an `await` in parentheses (`(await GetAsync(id)).ToHttpResult()`). It adds `using CSharpEssentials.AspNetCore;` when the extension is not in scope. It is offered only when the project references `CSharpEssentials.AspNetCore`. It is not offered for a method group, because wrapping it in a lambda would drop the parameter names and attributes that minimal API binding reads, or for a lambda with an explicit return type. Use `.ToOk()`, `.ToCreated(...)` or `.ToNoContent()` by hand when the success should map to another status code.
+- CSE1004, "Remove instance state from '{Type}'": deletes the instance fields, auto-properties and parameterized constructors. Offered only when nothing else in the solution uses them, and not for records.
+- CSE1013, "Convert with ToHttpResult()": appends `.ToHttpResult()` to what a lambda returns, including every `return` of a block body, and wraps an `await` in parentheses (`(await GetAsync(id)).ToHttpResult()`). Adds `using CSharpEssentials.AspNetCore;` when needed. Offered only when the project references `CSharpEssentials.AspNetCore`, and not for method groups or lambdas with an explicit return type. Use `.ToOk()`, `.ToCreated(...)` or `.ToNoContent()` by hand for another success status.
 
 ## Migrating from Carter
 
-Carter modules are instances created at startup; this package maps static methods from a generated registry, so no module is constructed and no assembly is scanned.
+Carter creates module instances at startup and scans assemblies. Here nothing is constructed or scanned: the registry calls static methods.
 
 | Carter | CSharpEssentials.Endpoints |
 |---|---|
 | `builder.Services.AddCarter()` | Nothing to register |
-| `app.MapCarter()` | `app.Map{Assembly}Endpoints()` or `app.MapAllEndpoints()` |
-| `ICarterModule.AddRoutes(IEndpointRouteBuilder app)` | `static void Map(IEndpointRouteBuilder app)` on an `IEndpoint` |
-| `CarterModule` base class with a base path and fluent conventions in the constructor | An `IEndpointGroup` (`Prefix`, `Configure`) and `[EndpointGroup<TGroup>]` on each endpoint |
-| Constructor injection into the module | Handler parameters (`(IAppService service) => ...`) |
-| Explicit module lists in the Carter configurator | `options.Filter(...)` or `[ExcludeFromMapping]` |
-| FluentValidation helpers | `.WithValidation<T>()` from `CSharpEssentials.AspNetCore` with `CSharpEssentials.Validation` |
+| `app.MapCarter()` | `app.MapAllEndpoints()` or `app.Map{Asm}Endpoints()` |
+| `ICarterModule.AddRoutes(app)` | `static void Map(IEndpointRouteBuilder app)` on an `IEndpoint` |
+| `CarterModule` base path and conventions | An `IEndpointGroup` plus `[EndpointGroup<TGroup>]` on each endpoint |
+| Constructor injection into the module | Handler parameters |
+| Module lists in the configurator | `options.Filter(...)` or `[ExcludeFromMapping]` |
+| FluentValidation helpers | `.WithValidation<T>()` with `CSharpEssentials.Validation` |
 | Response negotiators | `IResult` and `TypedResults` |
 
-Before:
+A Carter module:
 
 ```csharp
-using Carter;
-
 public sealed class AppsModule : CarterModule
 {
     public AppsModule() : base("/apps") => WithTags("Apps");
@@ -214,7 +428,7 @@ public sealed class AppsModule : CarterModule
 }
 ```
 
-After: the module becomes a group, and each route becomes an endpoint type. One endpoint type can also keep several related routes.
+becomes a group and one endpoint type per route (a type can also keep several related routes):
 
 ```csharp
 public sealed class AppsGroup : IEndpointGroup
@@ -239,8 +453,21 @@ public sealed class CreateApp : IEndpoint
 }
 ```
 
-Then replace `AddCarter()` and `MapCarter()` with `app.MapAllEndpoints()` and remove the Carter package. On the next build the analyzer reports module state left on endpoint types (CSE1004) and duplicate routes in a group (CSE1005).
+Replace `AddCarter()` and `MapCarter()` with `app.MapAllEndpoints()` and remove the Carter package. The next build reports state left on endpoint types (CSE1004) and duplicate routes in a group (CSE1005).
 
-## Upgrading to 8.0
+## Performance
 
-- A non-partial class that implements `IEndpoint` only by inheriting `Map` from a base class, such as `sealed class Users : CrudEndpoint<User>;`, is no longer added to the generated registry. The analyzer reports it as CSE1012. The generator now looks only at types that declare `static Map` themselves or are partial, so editing an unrelated file no longer re-checks every class with a base list. When the base class is abstract or generic, the derived class was the only mapping of those routes in 7.x, so the routes are gone after the upgrade. When the base class is concrete, 7.x mapped both classes and registered the routes twice. To keep mapping the derived class, make it `partial`, or declare `public static new void Map(IEndpointRouteBuilder app) => CrudEndpoint<User>.Map(app);` on it. `new` is needed because the declaration hides the base `Map` (CS0108). The registry calls `Map` through `IEndpoint`, which still resolves to the base implementation unless the derived class lists `IEndpoint` in its own base list, so keep the body a call to the base.
+Measured on net10 against plain Minimal APIs, Carter and FastEndpoints; full tables in [BENCHMARKS.md](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.Endpoints/BENCHMARKS.md).
+
+- Cold startup ties Carter at 10, 100 and 500 endpoints and ties plain Minimal APIs at 10; at 100 and 500 it takes 1.05× and 1.07× the plain time. Against FastEndpoints it takes 23% less time at 10 endpoints and 1.62× as long at 500.
+- Per request it ties plain Minimal APIs on every route. Carter ties on GET and DELETE, takes 10% less time on a valid POST and 1.32× as long on an invalid POST. FastEndpoints takes 1.26× (GET), 1.27× (DELETE), 1.24× (valid POST) and 2.06× (invalid POST) the CSE time.
+- The POST rows compare a DataAnnotations stack (Plain, CSE) with FluentValidation stacks (Carter, FastEndpoints). FastEndpoints defers per-endpoint setup to the first request, so only the cold startup figures are like-for-like.
+- The generated path publishes as Native AOT with 0 IL warnings.
+
+Design-time cost of the generator against Immediate.Apis is in [the generator BENCHMARKS.md](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.Endpoints.Generators/BENCHMARKS.md).
+
+## See also
+
+- Agent skill: [csharpessentials-endpoints](https://github.com/senrecep/CSharpEssentials/blob/main/.well-known/agent-skills/csharpessentials-endpoints/SKILL.md)
+- Example: [examples/Examples.Endpoints](https://github.com/senrecep/CSharpEssentials/tree/main/examples/Examples.Endpoints), a Native AOT app that also uses `CSharpEssentials.DependencyInjection`
+- Related: [CSharpEssentials.AspNetCore](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.AspNetCore/Readme.MD) (typed result conversion, validation filter, versioning), [CSharpEssentials.DependencyInjection](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.DependencyInjection/Readme.MD)

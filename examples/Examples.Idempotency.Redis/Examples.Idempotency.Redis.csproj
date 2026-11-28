@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- Reference Redis store of the Idempotency Readme, verified by the contract test kit against a Redis container.
+  <!-- Reference Redis store described in the External stores section of the Idempotency Readme, verified by the contract test kit against a Redis container.
        Not part of CSharpEssentials.slnx and never packed; CI runs it explicitly. -->
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>

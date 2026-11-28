@@ -1,260 +1,145 @@
+using System.Text.Json;
 using CSharpEssentials.Errors;
 using CSharpEssentials.Maybe;
 using CSharpEssentials.ResultPattern;
 
-Console.WriteLine("========================================");
-Console.WriteLine("CSharpEssentials.Maybe Example");
-Console.WriteLine("========================================\n");
+Dictionary<int, User> users = new()
+{
+    [1] = new User(1, "Ada", "ada@example.com", IsActive: true),
+    [2] = new User(2, "Bo", null, IsActive: false),
+};
 
-Console.WriteLine("--- Maybe Creation ---");
+Maybe<User> FindUser(int id) => users.TryGetValue(id, out User? user) ? user : Maybe.None;
 
-Maybe<string> some = "hello";
-Maybe<string> none = Maybe<string>.None;
+// 1. Creating
+Console.WriteLine("--- Creating ---");
+Maybe<int> some = 42;                                   // implicit from T
+Maybe<string> fromNull = (string?)null;                 // null becomes None
+Maybe<string> none = Maybe.None;                        // non-generic None converts to any Maybe<T>
+Maybe<string> viaFrom = Maybe.From("Ann");
+Maybe<int> viaExtension = 5.AsMaybe();
+Maybe<int> parsed = Maybe.FromTry(() => int.Parse("not a number")); // exception becomes None
+Maybe<string> lazy = Maybe.From(() => Environment.GetEnvironmentVariable("CSE_EXAMPLE_UNSET"));
+Console.WriteLine($"{some} {fromNull} {none} {viaFrom} {viaExtension} {parsed} {lazy}");
 
-Console.WriteLine($"Some: HasValue={some.HasValue}, Value={some.Value}");
-Console.WriteLine($"None: HasValue={none.HasValue}, HasNoValue={none.HasNoValue}");
-Console.WriteLine();
+// 2. Reading the value
+Console.WriteLine("--- Reading ---");
+Console.WriteLine($"HasValue={some.HasValue}, HasNoValue={none.HasNoValue}, Value={some.Value}");
+Console.WriteLine($"GetValueOrDefault(0)={parsed.GetValueOrDefault(0)}");
+Console.WriteLine($"GetValueOrDefault(() => -1)={parsed.GetValueOrDefault(() => -1)}");
+Console.WriteLine($"GetValueOrDefault(v => v * 2, 0)={some.GetValueOrDefault(v => v * 2, 0)}");
+Console.WriteLine($"GetValueOrElse={parsed.GetValueOrElse(() => 7)}");
+Console.WriteLine($"TryGetValue={some.TryGetValue(out int got)} {got}");
+var (hasValue, inner) = some;
+Console.WriteLine($"Deconstruct=({hasValue}, {inner}), AsNullable={none.AsNullable() ?? "null"}, ToList.Count={some.ToList().Count}");
+try
+{
+    none.GetValueOrThrow("name is required");
+}
+catch (InvalidOperationException ex)
+{
+    Console.WriteLine($"GetValueOrThrow: {ex.Message}");
+}
 
-Console.WriteLine("--- Tap / TapIf ---");
+// 3. Chaining
+Console.WriteLine("--- Map / Bind / Where / Or ---");
+string email1 = FindUser(1).Bind(u => Maybe.From(u.Email)).Map(e => e.ToUpperInvariant()).GetValueOrDefault("no email");
+string email2 = FindUser(2).Bind(u => Maybe.From(u.Email)).GetValueOrDefault("no email");
+string active = FindUser(2).Where(u => u.IsActive).Map(u => u.Name).GetValueOrDefault("inactive");
+Console.WriteLine($"{email1} | {email2} | {active}");
+Console.WriteLine($"Or(7)={Maybe<int>.None.Or(7)}, Or(() => 8)={Maybe<int>.None.Or(() => 8)}, OrElse={Maybe<int>.None.OrElse(() => 9)}");
+Console.WriteLine($"MapIf={some.MapIf(v => v > 40, v => v + 1)}, BindIf={some.BindIf(false, v => Maybe<int>.None)}");
 
-Maybe<int> number = 10;
-number.Tap(v => Console.WriteLine($"  Tap with value: {v}"));
-number.Tap(() => Console.WriteLine("  Tap without value"));
+// 4. LINQ query syntax
+Console.WriteLine("--- LINQ ---");
+Maybe<string> greeting =
+    from user in FindUser(1)
+    from email in Maybe.From(user.Email)
+    where user.IsActive
+    select $"{user.Name} <{email}>";
+Console.WriteLine(greeting);
 
-Maybe<int> empty = Maybe<int>.None;
-empty.Tap(v => Console.WriteLine($"  This won't print: {v}"));
-
-number.TapIf(true, v => Console.WriteLine($"  TapIf (true): {v}"));
-number.TapIf(false, v => Console.WriteLine($"  This won't print"));
-number.TapIf(v => v > 5, v => Console.WriteLine($"  TapIf (predicate): {v}"));
-Console.WriteLine();
-
-Console.WriteLine("--- BindIf ---");
-
-Maybe<int> boundIf = number.BindIf(true, v => Maybe<int>.From(v * 2));
-Console.WriteLine($"BindIf (true): {boundIf.Value}");
-
-Maybe<int> boundIfFalse = number.BindIf(false, v => Maybe<int>.From(v * 2));
-Console.WriteLine($"BindIf (false): HasValue={boundIfFalse.HasValue}, Value={boundIfFalse.Value}");
-
-Maybe<int> boundIfPred = number.BindIf(v => v > 5, v => Maybe<int>.From(v * 3));
-Console.WriteLine($"BindIf (predicate): {boundIfPred.Value}");
-
-Maybe<int> boundIfPredFail = number.BindIf(v => v > 20, v => Maybe<int>.From(v * 3));
-Console.WriteLine($"BindIf (predicate false): HasValue={boundIfPredFail.HasValue}");
-Console.WriteLine();
-
-Console.WriteLine("--- MapIf ---");
-
-Maybe<int> mappedIf = number.MapIf(true, v => v + 100);
-Console.WriteLine($"MapIf (true): {mappedIf.Value}");
-
-Maybe<int> mappedIfFalse = number.MapIf(false, v => v + 100);
-Console.WriteLine($"MapIf (false): {mappedIfFalse.Value}");
-
-Maybe<int> mappedIfPred = number.MapIf(v => v > 5, v => v + 1000);
-Console.WriteLine($"MapIf (predicate): {mappedIfPred.Value}");
-
-Maybe<int> mappedIfPredFail = number.MapIf(v => v > 20, v => v + 1000);
-Console.WriteLine($"MapIf (predicate false): {mappedIfPredFail.Value}");
-Console.WriteLine();
-
-Console.WriteLine("--- ToResult / ToUnitResult ---");
-
-Result<int> toResult = number.ToMaybeResult();
-Console.WriteLine($"ToResult (Some): IsSuccess={toResult.IsSuccess}, Value={toResult.Value}");
-
-Result<int> toResultNone = empty.ToMaybeResult(Error.NotFound("Maybe", "Value missing"));
-Console.WriteLine($"ToResult (None): IsFailure={toResultNone.IsFailure}, Error={toResultNone.FirstError.Description}");
-
-Result toUnitResult = number.ToUnitResult();
-Console.WriteLine($"ToUnitResult (Some): IsSuccess={toUnitResult.IsSuccess}");
-
-Result toUnitResultNone = empty.ToUnitResult(Error.NotFound("Maybe", "Value missing"));
-Console.WriteLine($"ToUnitResult (None): IsFailure={toUnitResultNone.IsFailure}");
-Console.WriteLine();
-
-Console.WriteLine("--- Select / SelectMany (LINQ) ---");
-
-Maybe<int> linqNumber = 5;
-Maybe<int> linqResult = from n in linqNumber
-                        select n * 4;
-Console.WriteLine($"Select: {linqResult.Value}");
-
-Maybe<int> linqBind = from n in linqNumber
-                      from m in Maybe<int>.From(n + 3)
-                      select m;
-Console.WriteLine($"SelectMany: {linqBind.Value}");
-
-Maybe<int> linqMulti = from a in 2.AsMaybe()
-                       from b in 3.AsMaybe()
-                       select a * b;
-Console.WriteLine($"SelectMany multiply: {linqMulti.Value}");
-Console.WriteLine();
-
-Console.WriteLine("--- Map ---");
-
-Maybe<int> doubled = number.Map(x => x * 2);
-Console.WriteLine($"10 * 2 = {doubled.Value}");
-
-Maybe<int> emptyDoubled = empty.Map(x => x * 2);
-Console.WriteLine($"None * 2 = HasValue={emptyDoubled.HasValue}");
-Console.WriteLine();
-
+// 5. Match
 Console.WriteLine("--- Match ---");
+foreach (int id in new[] { 1, 3 })
+{
+    string label = FindUser(id).Match(some: u => $"found {u.Name}", none: () => $"user {id} missing");
+    Console.WriteLine(label);
+}
+FindUser(3).Match(some: u => Console.WriteLine(u.Name), none: () => Console.WriteLine("Match(Action, Action): none"));
 
-Maybe<int> score = 95;
-score.Match(
-    some: val => Console.WriteLine($"Great score: {val}"),
-    none: () => Console.WriteLine("No score available")
-);
+// 6. Side effects
+Console.WriteLine("--- Tap / TapIf / TapNone / Execute ---");
+some.Tap(v => Console.WriteLine($"Tap: {v}"))
+    .TapIf(v => v > 40, v => Console.WriteLine($"TapIf: {v} > 40"))
+    .TapNone(() => Console.WriteLine("not printed"));
+none.TapNone(() => Console.WriteLine("TapNone: missing"));
+some.Execute(v => Console.WriteLine($"Execute: {v}"));
+none.ExecuteNoValue(() => Console.WriteLine("ExecuteNoValue: missing"));
 
-Maybe<int> noScore = Maybe<int>.None;
-noScore.Match(
-    some: val => Console.WriteLine($"Score: {val}"),
-    none: () => Console.WriteLine("No score available (from None)")
-);
-Console.WriteLine();
+// 7. Result bridge
+Console.WriteLine("--- Result bridge ---");
+Result<User> found = FindUser(1).ToResult(Error.NotFound("User.NotFound", "User not found."));
+Result<User> missing = FindUser(3).ToResult(Error.NotFound("User.NotFound", "User not found."));
+Result<User> defaultError = FindUser(3).ToMaybeResult();
+Result checkedOnly = FindUser(1).ToUnitResult();
+Console.WriteLine($"found={found.IsSuccess}, missing={missing.FirstError.Code}, default={defaultError.FirstError.Code}, unit={checkedOnly.IsSuccess}");
 
-Console.WriteLine("--- Or (Fallback) ---");
+Result<int> failedResult = Error.Validation("X", "bad");
+Console.WriteLine($"Result.AsMaybe: {((Result<int>)5).AsMaybe()} / {failedResult.AsMaybe()}");
 
-Maybe<string> emptyName = Maybe<string>.None;
-Maybe<string> fallbackName = emptyName.Or(() => "Default Name");
-Console.WriteLine($"Fallback name: {fallbackName.Value}");
+Result<User, UserMissing> typed = FindUser(3).ToResult(new UserMissing(3));
+Console.WriteLine($"Typed result AsMaybe: {typed.AsMaybe()}");
 
-Maybe<string> existingName = "Alice";
-Maybe<string> keptName = existingName.Or(() => "Default Name");
-Console.WriteLine($"Kept name: {keptName.Value}");
-Console.WriteLine();
+// 8. Collections
+Console.WriteLine("--- Collections ---");
+int[] numbers = [3, 8, 11];
+Console.WriteLine($"TryFirst(even)={numbers.TryFirst(n => n % 2 == 0)}, TryLast()={numbers.TryLast()}, TryFirst on empty={Array.Empty<int>().TryFirst()}");
+IReadOnlyDictionary<int, User> lookup = users;
+Console.WriteLine($"TryFind(1)={lookup.TryFind(1).Map(u => u.Name)}, TryFind(9)={lookup.TryFind(9)}");
 
-Console.WriteLine("--- Choose ---");
+Maybe<int>[] maybes = [1, Maybe.None, 3];
+Console.WriteLine($"Choose=[{string.Join(", ", maybes.Choose())}], Choose(x10)=[{string.Join(", ", maybes.Choose(v => v * 10))}]");
+var (values, noneCount) = maybes.Partition();
+Console.WriteLine($"Partition=[{string.Join(", ", values)}], NoneCount={noneCount}");
+Console.WriteLine($"Sequence with a None={maybes.Sequence()}, Traverse(1,2)={new[] { 1, 2 }.Traverse(id => FindUser(id)).Map(u => u.Length)}");
+Console.WriteLine($"Flatten={Maybe<Maybe<int>>.From(Maybe<int>.From(5)).Flatten()}");
 
-List<Maybe<int>> maybes = new() { 1, Maybe<int>.None, 3, Maybe<int>.None, 5 };
-List<int> chosen = maybes.Choose().ToList();
-Console.WriteLine($"Choose: [{string.Join(", ", chosen)}]");
-Console.WriteLine();
+// 9. Async
+Console.WriteLine("--- Async ---");
+Maybe<User> loaded = await Maybe.FromAsync(LoadUserAsync(1));
+Maybe<string> name = await loaded.MapAsync(u => Task.FromResult(u.Name));
+Maybe<User> fallback = await LoadMaybeAsync(9).OrAsync(() => new User(0, "Guest", null, true));
+string described = await loaded.MatchAsync(
+    some: (u, ct) => Task.FromResult($"async found {u.Name}"),
+    none: ct => Task.FromResult("async missing"));
+Result<User> asResult = await LoadMaybeAsync(9).ToResultAsync(Error.NotFound("User.NotFound", "User not found."));
+Console.WriteLine($"{name} | {fallback.Value.Name} | {described} | {asResult.FirstError.Code}");
 
-Console.WriteLine("--- Bind ---");
+Maybe<string> bound = await loaded.BindAsync(u => Task.FromResult(Maybe.From(u.Email)));
+Maybe<User> activeOnly = await loaded.WhereAsync(u => Task.FromResult(u.IsActive));
+await loaded.TapAsync(u => Task.CompletedTask);
+await loaded.ExecuteAsync(u => { Console.WriteLine($"ExecuteAsync: {u.Name}"); return Task.CompletedTask; });
+string lengthText = await loaded.GetValueOrDefaultAsync(u => Task.FromResult(u.Name.Length.ToString()), "0");
+Maybe<int> fromResultTask = await Task.FromResult((Result<int>)3).AsMaybeAsync();
+Console.WriteLine($"{bound} | {activeOnly.HasValue} | {lengthText} | {fromResultTask}");
 
-Maybe<string> bindName = "alice";
-Maybe<int> nameLength = bindName.Bind(n => n.Length > 0 ? Maybe<int>.From(n.Length) : Maybe<int>.None);
-Console.WriteLine($"Bind Some: {nameLength.Value}");
+await foreach (int value in new[] { Task.FromResult<Maybe<int>>(1), Task.FromResult(Maybe<int>.None) }.ChooseAsync())
+    Console.WriteLine($"ChooseAsync: {value}");
 
-Maybe<int> emptyBound = Maybe<string>.None.Bind(n => Maybe<int>.From(n.Length));
-Console.WriteLine($"Bind None: HasValue={emptyBound.HasValue}");
-Console.WriteLine();
+// 10. Equality and JSON
+Console.WriteLine("--- Equality / JSON ---");
+Console.WriteLine($"From(0) == 0: {Maybe<int>.From(0) == 0}, None == 0: {Maybe<int>.None == 0}, None == null (string): {Maybe<string>.None == null}");
+string json = JsonSerializer.Serialize(some);
+Console.WriteLine($"{json} -> {JsonSerializer.Deserialize<Maybe<int>>(json)}");
 
-Console.WriteLine("--- GetValueOrDefault / GetValueOrThrow ---");
+async Task<User?> LoadUserAsync(int id)
+{
+    await Task.Yield();
+    return users.GetValueOrDefault(id);
+}
 
-Maybe<int> someInt = 42;
-Maybe<int> noneInt = Maybe<int>.None;
+async Task<Maybe<User>> LoadMaybeAsync(int id) => await LoadUserAsync(id);
 
-int gvod = noneInt.GetValueOrDefault(-1);
-Console.WriteLine($"GetValueOrDefault (None): {gvod}");
-
-int gvod2 = noneInt.GetValueOrDefault(() => 99);
-Console.WriteLine($"GetValueOrDefault factory (None): {gvod2}");
-
-int gvod3 = someInt.GetValueOrDefault(-1);
-Console.WriteLine($"GetValueOrDefault (Some): {gvod3}");
-
-int gvot = someInt.GetValueOrThrow();
-Console.WriteLine($"GetValueOrThrow (Some): {gvot}");
-
-try { noneInt.GetValueOrThrow("No value!"); }
-catch (InvalidOperationException ex) { Console.WriteLine($"GetValueOrThrow (None) threw: {ex.Message}"); }
-Console.WriteLine();
-
-Console.WriteLine("--- TryFirst / TryLast / TryFind ---");
-
-int[] nums = { 3, 7, 2, 9, 1 };
-Maybe<int> firstVal = nums.TryFirst();
-Console.WriteLine($"TryFirst: {firstVal.Value}");
-
-Maybe<int> firstMatch = nums.TryFirst(x => x > 5);
-Console.WriteLine($"TryFirst (predicate): {firstMatch.Value}");
-
-Maybe<int> noMatch = nums.TryFirst(x => x > 100);
-Console.WriteLine($"TryFirst (no match): HasValue={noMatch.HasValue}");
-
-Maybe<int> lastVal = nums.TryLast();
-Console.WriteLine($"TryLast: {lastVal.Value}");
-
-Maybe<int> lastMatch = nums.TryLast(x => x > 5);
-Console.WriteLine($"TryLast (predicate): {lastMatch.Value}");
-
-IReadOnlyDictionary<string, int> dict = new Dictionary<string, int> { { "a", 1 }, { "b", 2 } };
-Maybe<int> found = dict.TryFind("b");
-Console.WriteLine($"TryFind found: {found.Value}");
-Maybe<int> notFoundVal = dict.TryFind("z");
-Console.WriteLine($"TryFind not found: HasValue={notFoundVal.HasValue}");
-Console.WriteLine();
-
-Console.WriteLine("--- AsNullable ---");
-
-int? nullable = someInt.AsNullable();
-Console.WriteLine($"AsNullable (Some): {nullable}");
-
-int? nullableNone = noneInt.AsNullable();
-Console.WriteLine($"AsNullable (None): {nullableNone.HasValue}");
-Console.WriteLine();
-
-Console.WriteLine("--- Execute / ExecuteNoValue ---");
-
-someInt.Execute(v => Console.WriteLine($"  Execute (Some): {v}"));
-noneInt.Execute(v => Console.WriteLine("  This won't print"));
-
-noneInt.ExecuteNoValue(() => Console.WriteLine("  ExecuteNoValue (None) fired"));
-someInt.ExecuteNoValue(() => Console.WriteLine("  This won't print"));
-Console.WriteLine();
-
-Console.WriteLine("--- Flatten ---");
-
-Maybe<Maybe<int>> nested = Maybe<Maybe<int>>.From(42.AsMaybe());
-Maybe<int> flat = nested.Flatten();
-Console.WriteLine($"Flatten: {flat.Value}");
-
-Maybe<Maybe<int>> nestedNone = Maybe<Maybe<int>>.None;
-Maybe<int> flatNone = nestedNone.Flatten();
-Console.WriteLine($"Flatten None: HasValue={flatNone.HasValue}");
-Console.WriteLine();
-
-Console.WriteLine("--- Deconstruct ---");
-
-(bool hasValue, int val) = someInt;
-Console.WriteLine($"Deconstruct Some: hasValue={hasValue}, value={val}");
-
-(bool hasValueNone, int valNone) = noneInt;
-Console.WriteLine($"Deconstruct None: hasValue={hasValueNone}, value={valNone}");
-Console.WriteLine();
-
-Console.WriteLine("--- ToMaybeUnitResult ---");
-
-Result unitOk = someInt.ToMaybeUnitResult();
-Console.WriteLine($"ToMaybeUnitResult (Some): IsSuccess={unitOk.IsSuccess}");
-
-Result unitNone = noneInt.ToMaybeUnitResult(Error.NotFound("Val", "No value"));
-Console.WriteLine($"ToMaybeUnitResult (None): IsFailure={unitNone.IsFailure}, Code={unitNone.FirstError.Code}");
-Console.WriteLine();
-
-Console.WriteLine("--- Collection: Sequence / Traverse / Partition ---");
-
-List<Maybe<int>> allSome = new() { 1, 2, 3 };
-Maybe<int[]> sequenced = allSome.Sequence();
-Console.WriteLine($"Sequence (all Some): [{string.Join(", ", sequenced.Value)}]");
-
-List<Maybe<int>> withNone = new() { 1, Maybe<int>.None, 3 };
-Maybe<int[]> sequencedNone = withNone.Sequence();
-Console.WriteLine($"Sequence (has None): HasValue={sequencedNone.HasValue}");
-
-Maybe<int[]> traversed = new[] { "1", "2", "3" }
-    .Traverse(s => int.TryParse(s, out int n) ? Maybe<int>.From(n) : Maybe<int>.None);
-Console.WriteLine($"Traverse: [{string.Join(", ", traversed.Value)}]");
-
-(int[] values, int noneCount) = withNone.Partition();
-Console.WriteLine($"Partition: {values.Length} values, {noneCount} None(s)");
-Console.WriteLine();
-
-Console.WriteLine("========================================");
-Console.WriteLine("Demo complete.");
-Console.WriteLine("========================================");
+internal sealed record User(int Id, string Name, string? Email, bool IsActive);
+internal sealed record UserMissing(int Id);

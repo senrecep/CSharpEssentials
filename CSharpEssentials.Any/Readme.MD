@@ -1,96 +1,179 @@
 # CSharpEssentials.Any
 
-Discriminated unions (sum types) for .NET: `Any<T0, T1>` through `Any<T0, ..., T7>` hold a value of one of 2 to 8 fixed types. They support implicit conversions, `Switch` and `Match`, type helpers (`Is`, `As`, `TryAs`, `Deconstruct`, `ToTuple`), `Partition` and `Traverse` over sequences, and JSON.
-
-Benchmarks against OneOf 3.0.271 and Dunet 1.16.2 (construct, match, try-pick, partition, JSON and ToString) are in [BENCHMARKS.md](./BENCHMARKS.md).
-
-## Installation
+`Any<T0, T1>` through `Any<T0, ..., T7>` are discriminated unions: a value that is exactly one of 2 to 8 fixed types. Use them when a method returns one of several distinct outcomes, each with its own data, instead of returning `object` and casting.
 
 ```bash
 dotnet add package CSharpEssentials.Any
 ```
 
-Targets `net11.0`, `net10.0`, `net9.0` and `netstandard2.1`. Depends on `CSharpEssentials.Json` and `CSharpEssentials.Core`. The types live in the `CSharpEssentials.Any` namespace.
+Targets `net11.0`, `net10.0`, `net9.0` and `netstandard2.1`. Depends on `CSharpEssentials.Json` and `CSharpEssentials.Core`. Everything lives in the `CSharpEssentials.Any` namespace.
 
-## Usage
+## Quick start
 
-### Creating unions
-
-```csharp
+```csharp Program.cs
+// dotnet add package CSharpEssentials.Any
 using CSharpEssentials.Any;
 
-Any<string, int> ParseInput(string input)
+foreach (int quantity in new[] { 3, 0, 99 })
 {
-    if (int.TryParse(input, out int n))
-        return n; // implicit to Any<string, int>
-    return input;
+    Any<Order, InvalidQuantity, OutOfStock> outcome = PlaceOrder(quantity);
+
+    string response = outcome.Match(
+        first: order => $"201: order for {order.Quantity}",
+        second: invalid => $"400: {invalid.Message}",
+        third: stock => $"409: only {stock.Available} left").Result!;
+
+    Console.WriteLine(response);
 }
 
-Any<string, int> first = Any<string, int>.First("text");   // explicit factories: First, Second, Third ... Eighth
-Any<string, int> second = Any.Create<string, int>(5);      // or Any.Create with the type arguments spelled out
-```
-
-The union holds its active branch in `Index` (0 for the first type) and its value in `Value` (`object?`, so a value-type branch is boxed). Implicit conversion is ambiguous when two type arguments are the same type, for example `Any<int, int>`. `default(Any<...>)` has `Index` 0 but a `null` `Value`, so `IsFirst` is `true` while `GetFirst()` returns `null` or `default`.
-
-### Pattern matching
-
-```csharp
-Any<string, int> result = ParseInput("123");
-
-// Match returns AnyActionResult<TResult>: Status tells whether a handler ran, Result holds its value
-AnyActionResult<string> output = result.Match(
-    first: str => $"String: {str}",
-    second: num => $"Number: {num}");
-Console.WriteLine(output.Result);
-
-AnyActionStatus status = result.Switch(
-    first: str => Console.WriteLine("It's a string"),
-    second: num => Console.WriteLine("It's a number"));
-```
-
-Every handler is optional, so the compiler does not check that all branches are handled. When the active branch has no handler, `Switch` returns `AnyActionStatus.NotExecuted` and `Match` returns an `AnyActionResult` whose `Status` is `NotExecuted` and whose `Result` is `default`; otherwise the status is `Executed`. Calling `Match` or `Switch` on `default(Any<...>)`, or on a union that holds `null`, throws `InvalidOperationException`.
-
-### Type checking
-
-```csharp
-if (result.IsSecond)
+static Any<Order, InvalidQuantity, OutOfStock> PlaceOrder(int quantity)
 {
-    int val = result.GetSecond();   // throws InvalidOperationException when another branch is active
+    if (quantity <= 0)
+        return new InvalidQuantity("Quantity must be positive.");
+    if (quantity > 50)
+        return new OutOfStock(50);
+    return new Order(quantity);
 }
 
-// Generic helpers: the target type first, then the union's type arguments
-bool isInt = result.Is<int, string, int>();
-int? asInt = result.As<int, string, int>();
-bool found = result.TryAs<int, string, int>(out int value);
-
-// Deconstruct and ToTuple: the inactive branches are default
-var (text, number) = result;
-(string? First, int Second) tuple = result.ToTuple();
+internal sealed record Order(int Quantity);
+internal sealed record InvalidQuantity(string Message);
+internal sealed record OutOfStock(int Available);
 ```
 
-`IsFirst` through `IsEighth` and `GetFirst()` through `GetEighth()` exist up to the arity of the union. `Is`, `As` and `TryAs` test the runtime type of the value, not the branch. For a value-type target, `As` returns `default` (so `0` for `int`) when the value is of another type, not `null`; use `Is` or `TryAs` to tell the cases apart.
+Output:
 
-### JSON and ToString
+```text
+201: order for 3
+400: Quantity must be positive.
+409: only 50 left
+```
 
-A union serializes to JSON as `{"Index":1,"Value":123}` and deserializes back to the same branch. The value is read with the `JsonSerializerOptions` you pass to `JsonSerializer`, so a naming policy or converter applies to it too. A `null` value deserializes when the branch type is a reference type or `Nullable<T>`, and throws `ArgumentNullException` for any other value-type branch. `ToString()` returns the value's own `ToString()`, or an empty string when the value is `null`; it does not use reflection, so it is safe under trimming and Native AOT.
+## Creating a union
 
-### Collection extensions
-
-`Partition` and `Traverse` scatter a sequence of unions into one typed array per branch in one pass, for every arity:
+A value of any branch type converts implicitly. The static factories `First`, `Second`, ... `Eighth` and `Any.Create` do the same thing explicitly.
 
 ```csharp
-// Classify API responses into successes and errors
-var (users, errors) = responses
-    .Traverse(r => ClassifyResponse(r));  // returns Any<UserDto, ApiError>
-
-// Or partition an existing sequence of unions
-var (drafts, published) = articles
-    .Select(a => GetState(a))             // returns Any<Draft, Published>
-    .Partition();
+Any<string, int> fromText = "hello";                         // implicit
+Any<string, int> fromNumber = Any<string, int>.Second(42);   // factory per branch
+Any<string, int> created = Any.Create<string, int>(5);       // type arguments spelled out
 ```
 
-## Upgrading to 8.0
+`Index` is the active branch (0 for `T0`) and `Value` is the stored value as `object?`, so a value-type branch is boxed.
 
-- A `null` value is now accepted when its branch is a reference type or `Nullable<T>`. This applies to JSON deserialization (`{"Index":n,"Value":null}` now round-trips) and to the public `(int index, object? value)` constructor, so `new Any<int, string>(1, null)` no longer throws. Earlier versions threw `ArgumentNullException` for every `null` value. If you relied on that to reject such input, check `Value is null` after constructing or deserializing.
-- JSON deserialization now reads the value with the caller's `JsonSerializerOptions`. Earlier versions ignored them and always used `EnhancedJsonSerializerOptions.DefaultOptions` (camelCase, case-insensitive, enum and date converters), so a snake_case payload lost its properties. If your payloads relied on those defaults, pass `EnhancedJsonSerializerOptions.DefaultOptions` (or options with the same settings) to `JsonSerializer.Deserialize`. With a source-generated `JsonSerializerContext`, register each branch type with `[JsonSerializable]`; an unregistered branch type now throws `NotSupportedException` on deserialization.
-- `ToString()` now returns the value's own `ToString()` instead of its JSON, so a string value comes back without quotes (`text`, not `"text"`), an object returns its type's `ToString()` instead of a JSON object, and a `null` value returns an empty string instead of `null`. The old output came from reflection-based `System.Text.Json`, which is not safe under Native AOT. If you need the JSON, call `JsonSerializer.Serialize(any.Value, options)` with your own options or source-generated context.
+When two type arguments are the same type, for example `Any<int, int>`, the implicit conversion is ambiguous (CS0457). Use the factories then.
+
+## Match and Switch
+
+`Match` runs the handler of the active branch and returns `AnyActionResult<TResult>`. `Switch` runs a side effect and returns `AnyActionStatus`.
+
+```csharp
+Any<string, int> value = 42;
+
+AnyActionResult<string> result = value.Match(
+    first: s => $"text {s}",
+    second: n => $"number {n}");
+Console.WriteLine(result.Status);  // Executed
+Console.WriteLine(result.Result);  // number 42
+
+AnyActionStatus status = value.Switch(
+    first: s => Console.WriteLine(s),
+    second: n => Console.WriteLine(n));
+```
+
+Every handler parameter is optional, so the compiler does not force you to cover each branch. When the active branch has no handler, `Switch` returns `AnyActionStatus.NotExecuted` and `Match` returns `Status = NotExecuted` with `Result = default`.
+
+```csharp
+AnyActionResult<string> skipped = value.Match(first: s => s);  // Status is NotExecuted, Result is null
+```
+
+`AnyActionResult<TResult>` is a `readonly record struct` with `Status` and `Result`. A `TResult` converts to it implicitly with `Status = Executed`, and an `AnyActionStatus` converts to it with `Result = default`.
+
+`Match` and `Switch` throw `InvalidOperationException` when `Value` is `null`: on `default(Any<...>)` and on a union built with a `null` value.
+
+## Checking the branch
+
+`IsFirst` through `IsEighth` and `GetFirst()` through `GetEighth()` exist up to the arity of the union. A getter throws `InvalidOperationException` ("No value") when another branch is active.
+
+```csharp
+Any<string, int> value = 42;
+
+if (value.IsSecond)
+{
+    int n = value.GetSecond();
+}
+```
+
+## Is, As and TryAs
+
+These extension methods take the target type first, then the union's own type arguments. They test the runtime type of `Value`, not the branch index.
+
+```csharp
+Any<string, int> value = 42;
+
+bool isInt = value.Is<int, string, int>();                 // true
+string? text = value.As<string, string, int>();            // null
+int number = value.As<int, string, int>();                 // 42
+bool ok = value.TryAs<int, string, int>(out int parsed);   // true, 42
+```
+
+For a value-type target, `As` returns `default` on a mismatch (`0` for `int`), not `null`. Use `Is` or `TryAs` to tell a real `0` from a mismatch.
+
+## Deconstruct and ToTuple
+
+Both give one slot per branch. The inactive slots hold `default`.
+
+```csharp
+Any<string, int> value = "hello";
+
+var (text, number) = value;                         // "hello", 0
+(string? First, int Second) tuple = value.ToTuple(); // ("hello", 0)
+```
+
+## Partition and Traverse
+
+For every arity, `Partition` splits a sequence of unions into one array per branch in one pass. `Traverse` maps each source item to a union first.
+
+```csharp
+Any<string, int>[] mixed = ["a", 1, "b", 2];
+(string[] texts, int[] numbers) = mixed.Partition();        // ["a", "b"], [1, 2]
+
+(string[] bad, int[] good) = new[] { "10", "x", "30" }
+    .Traverse(s => int.TryParse(s, out int n) ? (Any<string, int>)n : s);  // ["x"], [10, 30]
+```
+
+Both throw `ArgumentNullException` for a `null` source or selector. An element that holds `null` throws `InvalidOperationException`, because `Partition` calls `Switch`.
+
+## JSON
+
+A union serializes as `{"Index":1,"Value":42}` and deserializes back to the same branch.
+
+```csharp
+using System.Text.Json;
+
+Any<string, int> value = 42;
+string json = JsonSerializer.Serialize(value);                      // {"Index":1,"Value":42}
+Any<string, int> back = JsonSerializer.Deserialize<Any<string, int>>(json);
+```
+
+- The value is read with the `JsonSerializerOptions` you pass, so naming policies and converters apply to it.
+- With a source-generated `JsonSerializerContext`, register every branch type with `[JsonSerializable]`. An unregistered branch type throws `NotSupportedException` on read.
+- `{"Index":n,"Value":null}` reads back when that branch is a reference type or `Nullable<T>`, and throws `ArgumentNullException` for any other value type.
+- An unknown `Index` throws `InvalidOperationException`.
+
+## ToString
+
+`ToString()` returns the value's own `ToString()`, or an empty string for `null`. It uses no reflection, so it is safe under trimming and Native AOT. Call `JsonSerializer.Serialize(any.Value, options)` when you need JSON.
+
+## Pitfalls
+
+- `default(Any<...>)` has `Index` 0 and a `null` `Value`. `IsFirst` is `true`, `GetFirst()` returns `null` or `default`, and `Match`/`Switch` throw.
+- The public constructor `new Any<T0, T1>(index, value)` exists for JSON. It accepts `null` for reference and `Nullable<T>` branches.
+- Pass a handler for every branch when you rely on `Match(...).Result`. A missing handler gives `default`, not a compile error.
+
+## Links
+
+- Agent skill: [csharpessentials-any](https://github.com/senrecep/CSharpEssentials/blob/main/.well-known/agent-skills/csharpessentials-any/SKILL.md)
+- Example project: [examples/Examples.Any](https://github.com/senrecep/CSharpEssentials/tree/main/examples/Examples.Any)
+- Benchmarks against OneOf 3.0.271 and Dunet 1.16.2: [BENCHMARKS.md](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.Any/BENCHMARKS.md)
+- Changes in earlier versions: [CHANGELOG.md](https://github.com/senrecep/CSharpEssentials/blob/main/CHANGELOG.md)
+- Related: [CSharpEssentials.Results](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.Results/Readme.MD) for success or failure with `Error` values

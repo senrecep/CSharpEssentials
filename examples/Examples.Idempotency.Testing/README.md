@@ -1,0 +1,22 @@
+# CSharpEssentials.Idempotency.Testing example
+
+An xUnit project that runs the `IdempotencyRecordStoreContractTests` of `CSharpEssentials.Idempotency.Testing`
+against `InMemoryIdempotencyRecordStore`.
+
+`InMemoryIdempotencyRecordStoreTests.cs` derives from the contract class and returns the store from `CreateStore`. That
+one override brings in every contract scenario. The extra `[Fact]` shows how a store-specific test uses the protected
+helpers (`Key`, `ReserveAsync`, `Payload`, `AdvanceAsync`, `Store`, `Lease`, `Retention`, `ExpirySlack`) and the fake
+clock the base class passes to the store.
+
+To test your own store, replace `new InMemoryIdempotencyRecordStore(timeProvider)` with it. A store that keeps time on
+its own clock (Redis TTL, a database `now()`) also overrides `UseRealClock => true`; see
+[Examples.Idempotency.Redis](../Examples.Idempotency.Redis).
+
+## Running
+
+```bash
+dotnet test examples/Examples.Idempotency.Testing/Examples.Idempotency.Testing.csproj
+```
+
+No external services are needed. See the
+[Idempotency.Testing Readme](../../CSharpEssentials.Idempotency.Testing/Readme.MD) for the options.

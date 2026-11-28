@@ -1,8 +1,9 @@
 # Redis idempotency store example
 
-Reference `IIdempotencyRecordStore` on Redis, the same code as the
-[External stores](../../CSharpEssentials.Idempotency/Readme.MD#external-stores) section of the Idempotency Readme.
-It is not a package: copy `RedisIdempotencyRecordStore.cs` into your application.
+Reference `IIdempotencyRecordStore` on Redis. The
+[External stores](../../CSharpEssentials.Idempotency/Readme.MD#external-stores) section of the Idempotency Readme
+describes the algorithm and the store requirements; this project holds the code. It is not a package: copy
+`RedisIdempotencyRecordStore.cs` into your application.
 
 | File | Content |
 |------|---------|

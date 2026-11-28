@@ -8,12 +8,7 @@
     <PackageId>CSharpEssentials.Errors</PackageId>
     <Title>CSharpEssentials.Errors</Title>
     <Product>CSharpEssentials.Errors</Product>
-    <Description>
-      Comprehensive error handling system for functional programming in C#.
-      Provides Error types, ErrorMetadata, ErrorType enums, and extensions for robust error
-      management.
-      Foundation for Result pattern and functional error handling.
-    </Description>
+    <Description>Error values for CSharpEssentials: the Error type, ErrorType, ErrorMetadata and factories such as Error.Validation and Error.NotFound. Results, Rules and the ASP.NET Core integration build on it.</Description>
     <PackageTags>
       Errors,ErrorHandling,FunctionalProgramming,ErrorTypes,ErrorMetadata,CSharpEssentials
     </PackageTags>

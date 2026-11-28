@@ -1,198 +1,189 @@
 using CSharpEssentials.Errors;
 using CSharpEssentials.Exceptions;
 
-Console.WriteLine("========================================");
-Console.WriteLine("CSharpEssentials.Errors Example");
-Console.WriteLine("========================================\n");
-
-Console.WriteLine("--- Error Creation ---");
-
-Error notFound = Error.NotFound("User.NotFound", "User with id 123 was not found");
-Console.WriteLine($"NotFound: Code={notFound.Code}, Description={notFound.Description}, Type={notFound.Type}");
-
-Error validation = Error.Validation("Email.Invalid", "Email address is not valid");
-Console.WriteLine($"Validation: Code={validation.Code}, Type={validation.Type}");
-
-Error conflict = Error.Conflict("User.Duplicate", "A user with this email already exists");
-Console.WriteLine($"Conflict: Code={conflict.Code}, Type={conflict.Type}");
-Console.WriteLine();
-
-Console.WriteLine("--- Error[] Implicit Conversion ---");
-
-Error single = Error.Validation("Single", "One error");
-Error[] array = single;
-Console.WriteLine($"Implicit to array: Length={array.Length}, Code={array[0].Code}");
-Console.WriteLine();
-
-Console.WriteLine("--- + Operator (Combining Errors) ---");
-
-Error errorA = Error.Validation("A", "First error");
-Error errorB = Error.Validation("B", "Second error");
-Error[] combined = errorA + errorB;
-Console.WriteLine($"Combined: Length={combined.Length}");
-foreach (Error err in combined)
+Section("Factories and HTTP status");
 {
-    Console.WriteLine($"  - {err.Code}: {err.Description}");
+    Error[] errors =
+    [
+        Error.Validation("Email.Invalid", "Email format is invalid."),
+        Error.Unauthorized("Token.Expired", "The token has expired."),
+        Error.Forbidden("Order.Forbidden", "You cannot cancel this order."),
+        Error.NotFound("User.NotFound", "User was not found."),
+        Error.Conflict("User.Duplicate", "User already exists."),
+        Error.Domain("Payment.Declined", "The card was declined."),
+        Error.Failure("Gateway.Down", "The gateway did not respond."),
+        Error.Unexpected("Db.Down", "The database is unreachable."),
+        Error.Create("Legacy.Code", "Built with Create.", ErrorType.Unknown),
+    ];
+    foreach (Error error in errors)
+        Console.WriteLine($"{error.Type,-12} {error.Type.ToHttpStatusCode()} {error.Code}");
+
+    Error defaults = Error.NotFound();
+    Console.WriteLine($"defaults: {defaults.Code} / {defaults.Description}");
+    Console.WriteLine($"422 -> {422.ToErrorType()}, 418 -> {418.ToErrorType()}, Domain number {ErrorType.Domain.ToIntType()}");
 }
-Console.WriteLine();
 
-Console.WriteLine("--- Error Type to HTTP Status ---");
-
-Error[] errors = { notFound, validation, conflict };
-foreach (Error error in errors)
+Section("IError and equality");
 {
-    Console.WriteLine($"{error.Type} -> HTTP {error.Type.ToHttpStatusCode()}");
+    IError error = Error.Conflict("User.Duplicate", "User already exists.");
+    Console.WriteLine($"{error.Code} {error.Description} {error.Type} {error.NumericType} metadata={error.Metadata is null}");
+
+    Error a = Error.Validation("A", "a", new ErrorMetadata().AddMetadata("x", 1).AddMetadata("y", 2));
+    Error b = Error.Validation("A", "a", new ErrorMetadata().AddMetadata("y", 2).AddMetadata("x", 1));
+    Console.WriteLine($"equal with metadata in another order: {a == b}");
 }
-Console.WriteLine();
 
-Console.WriteLine("--- Error Metadata ---");
-
-ErrorMetadata metadata = new ErrorMetadata()
-    .AddMetadata("TraceId", Guid.NewGuid().ToString())
-    .AddMetadata("Timestamp", DateTime.UtcNow.ToString("O"))
-    .AddMetadata("RequestPath", "/api/users/123");
-
-Error withMetadata = Error.NotFound("User.NotFound", "User not found", metadata);
-Console.WriteLine($"Error with metadata: {withMetadata.Code}");
-if (withMetadata.Metadata is not null)
+Section("Combining errors");
 {
-    foreach (System.Collections.Generic.KeyValuePair<string, object?> item in withMetadata.Metadata)
+    Error first = Error.Validation("Name.Empty", "Name is required.");
+    Error second = Error.Validation("Email.Invalid", "Email is invalid.");
+    Error[] pair = first + second;
+    Error[] many = Error.CreateMany(first, second, first);
+    Error[] single = first;
+    Console.WriteLine($"+ gives {pair.Length}, CreateMany gives {many.Length}, implicit gives {single.Length}");
+}
+
+Section("Metadata");
+{
+    ErrorMetadata metadata = new ErrorMetadata()
+        .AddMetadata("traceId", "abc-123")
+        .AddMetadata("traceId", "ignored")
+        .Combine(new ErrorMetadata("path", "/api/users/1"));
+    Console.WriteLine($"metadata: {metadata}");
+
+    var field = new ErrorMetadata(ErrorMetadata.FieldKey, "Address.City");
+    Console.WriteLine($"GetField: {field.GetField()}");
+
+    ErrorMetadata withStack = ErrorMetadata.CreateEmpty().AddStackTrace();
+    Console.WriteLine($"AddStackTrace adds key: {withStack.ContainsKey("stackTrace")}, CreateWithStackTrace too: {ErrorMetadata.CreateWithStackTrace().ContainsKey("stackTrace")}");
+
+    var boom = new InvalidOperationException("Boom");
+    Console.WriteLine($"AddException nests under: {string.Join(",", new ErrorMetadata().AddException(boom).Keys)}");
+    Console.WriteLine($"AddExceptionDetailed adds: {string.Join(",", new ErrorMetadata().AddExceptionDetailed(boom).Keys)}");
+    Console.WriteLine($"CreateWithException: {string.Join(",", ErrorMetadata.CreateWithException(boom).Keys)}, CreateWithExceptionDetailed: {ErrorMetadata.CreateWithExceptionDetailed(boom).Count} keys");
+}
+
+Section("Errors from exceptions");
+{
+    try
     {
-        Console.WriteLine($"  {item.Key}: {item.Value}");
+        throw new InvalidOperationException("Outer", new TimeoutException("Inner"));
+    }
+    catch (Exception ex)
+    {
+        Error error = Error.Exception(ex);
+        Console.WriteLine($"{error.Code} {error.Type} {error.Description}");
+        var inner = (ErrorMetadata)error.Metadata!["innerException"]!;
+        Console.WriteLine($"inner exception type: {inner["exceptionType"]}");
+
+        Error withCode = Error.Exception("Orders.SaveFailed", ex, ErrorType.Failure);
+        Console.WriteLine($"{withCode.Code} {withCode.Type} {withCode.Description}");
     }
 }
-Console.WriteLine();
 
-Console.WriteLine("--- Multiple Errors ---");
-
-Error[] multipleErrors =
+Section("Error catalog");
 {
-    Error.Validation("Name.Empty", "Name is required"),
-    Error.Validation("Email.Invalid", "Email is invalid"),
-    Error.Validation("Age.Range", "Age must be between 18 and 120")
-};
-
-Console.WriteLine($"Total validation errors: {multipleErrors.Length}");
-foreach (Error err in multipleErrors)
-{
-    Console.WriteLine($"  - {err.Code}: {err.Description}");
+    Console.WriteLine(OrderErrors.EmptyCart.Code);
+    Error funds = OrderErrors.InsufficientFunds(120m, 80m);
+    Console.WriteLine($"{funds.Code} {funds.Type.ToHttpStatusCode()} required={funds.Metadata!["required"]}");
 }
-Console.WriteLine();
 
-Console.WriteLine("--- DomainException ---");
-
-try
+Section("Typed error kinds");
 {
-    Error domainError = Error.Validation("Order.Invalid", "Order total must be greater than zero");
-    throw new DomainException(domainError);
-}
-catch (DomainException dex)
-{
-    Console.WriteLine($"DomainException caught: {dex.Message}");
-    Console.WriteLine($"  Error Code: {dex.Error.Code}");
-    Console.WriteLine($"  Error Type: {dex.Error.Type}");
-}
-Console.WriteLine();
-
-Console.WriteLine("--- EnhancedValidationException ---");
-
-try
-{
-    Error[] validationErrors =
+    TypedError[] errors =
+    [
+        UserErrors.NotFound, UserErrors.Deleted, new UserErrors.Locked(7), new DomainError("Plan.Expired", "Plan expired."),
+        new UnauthorizedError("Token.Missing", "No token."), new ForbiddenError("Role.Missing", "No role."),
+        new FailureError("Gateway.Down", "Gateway down."), new UnexpectedError("Bug", "Unexpected."),
+    ];
+    foreach (TypedError error in errors)
     {
-        Error.Validation("Name.Empty", "Name is required"),
-        Error.Validation("Email.Invalid", "Email format is invalid")
-    };
-    throw new EnhancedValidationException(validationErrors);
+        string message = error switch
+        {
+            NotFoundError { Code: UserErrors.Codes.Deleted } => "deleted",
+            NotFoundError => "not found",
+            UserErrors.Locked locked => $"locked {locked.Id}",
+            _ => error.Type.ToString(),
+        };
+        Console.WriteLine($"{error.GetType().Name,-14} -> {message}");
+    }
+
+    Error bridged = UserErrors.NotFound.ToError();
+    Console.WriteLine($"ToError: {bridged.Code} {bridged.Type}");
+
+    var invalid = new ValidationError("City.Empty", "City is required.", new ErrorMetadata(ErrorMetadata.FieldKey, "Address.City"));
+    Console.WriteLine($"ValidationError.Field: {invalid.Field}");
+
+    NotFoundError left = new("A", "B");
+    NotFoundError right = new("A", "B");
+    Console.WriteLine($"same code and description equal: {left == right}");
+    Console.WriteLine($"derived equals base: {new UserErrors.Locked(1).Equals(new ConflictError(UserErrors.Codes.Locked, "User is locked."))}");
+
+    ErrorKindAttribute? kind = (ErrorKindAttribute?)Attribute.GetCustomAttribute(typeof(OrderLocked), typeof(ErrorKindAttribute));
+    OrderLocked structError = new(5);
+    Console.WriteLine($"[ErrorKind] on struct: {kind?.Type}, bridged: {Error.Create(structError.Code, structError.Description, structError.Type).Code}");
 }
-catch (EnhancedValidationException vex)
+
+Section("Exceptions that carry errors");
 {
-    Console.WriteLine($"EnhancedValidationException caught: {vex.Message}");
-    Console.WriteLine($"  Total errors: {vex.Errors.Length}");
-    foreach (Error err in vex.Errors)
+    try
     {
-        Console.WriteLine($"    - {err.Code}: {err.Description}");
+        throw new DomainException(Error.Domain("Order.Closed", "Order is closed."));
+    }
+    catch (DomainException ex)
+    {
+        Console.WriteLine($"DomainException: {ex.Message} ({ex.Error.Code})");
+    }
+
+    try
+    {
+        throw new EnhancedValidationException([Error.Validation("A", "a"), Error.Validation("B", "b")]);
+    }
+    catch (EnhancedValidationException ex)
+    {
+        Console.WriteLine($"EnhancedValidationException: {ex.Message} ({string.Join(", ", ex.Errors.Select(e => e.Code))})");
     }
 }
-Console.WriteLine();
 
-Console.WriteLine("--- Failure / Unexpected / Unauthorized / Forbidden / Exception ---");
-
-Error failure = Error.Failure("Op.Failed", "The operation failed.");
-Console.WriteLine($"Failure: Code={failure.Code}, Type={failure.Type}");
-
-Error unexpected = Error.Unexpected("Sys.Crash", "An unexpected error occurred.");
-Console.WriteLine($"Unexpected: Code={unexpected.Code}, Type={unexpected.Type}");
-
-Error unauthorized = Error.Unauthorized("Auth.NoToken", "Access token is missing.");
-Console.WriteLine($"Unauthorized: Code={unauthorized.Code}, Type={unauthorized.Type}");
-
-Error forbidden = Error.Forbidden("Perm.Denied", "Insufficient permissions.");
-Console.WriteLine($"Forbidden: Code={forbidden.Code}, Type={forbidden.Type}");
-
-try { throw new InvalidOperationException("Disk full"); }
-catch (Exception ex)
+Section("Sentinels");
 {
-    Error fromEx = Error.Exception(ex);
-    Console.WriteLine($"Exception: Code={fromEx.Code}, Description={fromEx.Description}");
-
-    Error fromExWithCode = Error.Exception("Storage.Full", ex);
-    Console.WriteLine($"Exception with code: Code={fromExWithCode.Code}");
-}
-Console.WriteLine();
-
-Console.WriteLine("--- CreateMany ---");
-
-Error[] many = Error.CreateMany(
-    Error.Validation("Name.Empty", "Name is required"),
-    Error.Validation("Email.Invalid", "Email is invalid"),
-    Error.Validation("Age.Range", "Age out of range")
-);
-Console.WriteLine($"CreateMany: {many.Length} errors");
-foreach (Error e in many)
-    Console.WriteLine($"  {e.Code}");
-Console.WriteLine();
-
-Console.WriteLine("--- Sentinel Values ---");
-
-Console.WriteLine($"NoFirstError: Code={Error.NoFirstError.Code}, Type={Error.NoFirstError.Type}");
-Console.WriteLine($"NoErrors: Code={Error.NoErrors.Code}");
-Console.WriteLine($"False: Code={Error.False.Code}, Type={Error.False.Type}");
-Console.WriteLine();
-
-Console.WriteLine("--- ErrorType Enum / ToIntType / ToErrorType ---");
-
-ErrorType[] types =
-{
-    ErrorType.Failure, ErrorType.Validation, ErrorType.NotFound,
-    ErrorType.Unauthorized, ErrorType.Forbidden, ErrorType.Conflict, ErrorType.Domain, ErrorType.Unexpected
-};
-
-foreach (ErrorType t in types)
-{
-    int intType = t.ToIntType();
-    int httpCode = t.ToHttpStatusCode();
-    Console.WriteLine($"  {t}: numeric={intType}, http={httpCode}");
+    Console.WriteLine($"{Error.NoErrors.Code}, {Error.NoFirstError.Code}, {Error.NoLastError.Code}, {Error.False.Code}");
 }
 
-ErrorType fromHttp404 = 404.ToErrorType();
-Console.WriteLine($"404.ToErrorType(): {fromHttp404}");
+static void Section(string title) => Console.WriteLine($"{Environment.NewLine}--- {title} ---");
 
-ErrorType fromHttp400 = 400.ToErrorType();
-Console.WriteLine($"400.ToErrorType(): {fromHttp400}");
-Console.WriteLine();
+public static class OrderErrors
+{
+    public static readonly Error EmptyCart = Error.Validation("Order.EmptyCart", "Cannot place an order with an empty cart.");
 
-Console.WriteLine("--- IError Interface ---");
+    public static Error InsufficientFunds(decimal required, decimal available) =>
+        Error.Domain(
+            "Order.InsufficientFunds",
+            $"Payment requires {required} but only {available} is available.",
+            new ErrorMetadata().AddMetadata("required", required).AddMetadata("available", available));
+}
 
-Error sample = Error.NotFound("Sample.Missing", "Sample not found");
-IError asInterface = sample;
-Console.WriteLine($"IError.Code={asInterface.Code}");
-Console.WriteLine($"IError.Description={asInterface.Description}");
-Console.WriteLine($"IError.Type={asInterface.Type}");
-Console.WriteLine($"IError.NumericType={asInterface.NumericType}");
-Console.WriteLine($"IError.Metadata={asInterface.Metadata}");
-Console.WriteLine();
+public static class UserErrors
+{
+    public static class Codes
+    {
+        public const string NotFound = "User.NotFound";
+        public const string Deleted = "User.Deleted";
+        public const string Locked = "User.Locked";
+    }
 
-Console.WriteLine("========================================");
-Console.WriteLine("Demo complete.");
-Console.WriteLine("========================================");
+    public static readonly NotFoundError NotFound = new(Codes.NotFound, "User not found.");
+    public static readonly NotFoundError Deleted = new(Codes.Deleted, "User was deleted.");
+
+    public sealed record Locked(int Id) : ConflictError(Codes.Locked, "User is locked.");
+}
+
+[ErrorKind(ErrorType.Conflict)]
+public readonly record struct OrderLocked(int OrderId) : IError
+{
+    public string Code => "Order.Locked";
+    public string Description => $"Order {OrderId} is locked.";
+    public ErrorType Type => ErrorType.Conflict;
+    public int NumericType => (int)Type;
+    public ErrorMetadata? Metadata => null;
+}

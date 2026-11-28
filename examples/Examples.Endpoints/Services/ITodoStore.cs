@@ -9,4 +9,8 @@ public interface ITodoStore
     Todo? Find(int id);
 
     Todo Add(string title);
+
+    bool MarkDone(int id);
+
+    bool Remove(int id);
 }

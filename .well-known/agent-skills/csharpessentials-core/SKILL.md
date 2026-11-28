@@ -1,96 +1,132 @@
 ---
 name: csharpessentials-core
-description: Use when you need low-level C# helpers. Covers string case conversions (ToPascalCase/ToSnakeCase/ToKebabCase), Guider.NewGuid and URL-safe GUID strings, IsBetween/IsBetweenExclusive range checks, collection helpers (IfAdd, WhereIf, WithoutNulls), IfNotNull/IfTrue statements and WithCancellation for tasks.
+description: Use for small C# helpers from CSharpEssentials.Core. String case conversion (ToSnakeCase, ToPascalCase, ToKebabCase), GUIDs (Guider.NewGuid version 7, NewMonotonicGuid, NewSqlServerGuid, NewGuidV5, ToStringFromGuid/ToGuidFromString), collection helpers (IfAdd, WhereIf, WithoutNulls, HasSameElements, GetRandomItems), null and bool helpers (IsEmpty, IfNotNull, IfTrue), IsBetween, WithCancellation, HttpCodes and the ITransactionRunner/ITransactionCallbacks interfaces.
 ---
 
 # CSharpEssentials.Core
 
-Small C# utility helpers. Functional types live in the Results, Errors, Maybe and Any skills.
-
 ```bash
-dotnet add package CSharpEssentials.Core   # or the CSharpEssentials meta-package, which includes it
+dotnet add package CSharpEssentials.Core
 ```
 
 ```csharp
+using CSharpEssentials.Core;          // all extension methods, Guider, GuidNamespaces, HttpCodes
+using CSharpEssentials.Transactions;  // ITransactionRunner, ITransactionCallbacks
+using CSharpEssentials;               // .NET 10+: IEnumerable<T>.IsEmpty and string.IsPalindrome properties
+```
+
+## Quick start
+
+```csharp Program.cs
+// dotnet add package CSharpEssentials.Core
 using CSharpEssentials.Core;
+
+Console.WriteLine("OrderLineItem".ToSnakeCase());    // order_line_item
+Console.WriteLine("order-line-item".ToCamelCase());  // orderLineItem
+
+Guid id = Guider.NewGuid();                          // version 7
+string shortId = id.ToStringFromGuid();              // 22 chars, URL-safe
+Guid back = shortId.ToGuidFromString();
+Console.WriteLine(back == id);                       // True
+
+List<string> roles = ["user"];
+roles.IfAdd(condition: true, "admin");
+Console.WriteLine(string.Join(",", roles));          // user,admin
+
+int[] scores = [40, 75, 90];
+bool onlyPassing = true;
+Console.WriteLine(string.Join(",", scores.WhereIf(onlyPassing, s => s >= 50))); // 75,90
+
+string? name = null;
+name.IfNotNull(n => Console.WriteLine(n), () => Console.WriteLine("no name"));   // no name
+Console.WriteLine(75.IsBetween(50, 100));            // True
+Console.WriteLine(HttpCodes.NotFound);               // 404
 ```
 
-## String case conversions
+## Converting case
 
 ```csharp
-string pascal = "helloWorld".ToPascalCase();   // "HelloWorld"
-string snake  = "HelloWorld".ToSnakeCase();    // "hello_world"
-string kebab  = "HelloWorld".ToKebabCase();    // "hello-world"
-string camel  = "hello-world".ToCamelCase();   // "helloWorld"
-string macro  = "HelloWorld".ToMacroCase();    // "HELLO_WORLD"
+string snake  = "HelloWorld".ToSnakeCase();      // hello_world
+string kebab  = "HelloWorld".ToKebabCase();      // hello-world
+string pascal = "hello_world".ToPascalCase();    // HelloWorld
+string camel  = "hello world".ToCamelCase();     // helloWorld
+string macro  = "helloWorld".ToMacroCase();      // HELLO_WORLD
+string train  = "helloWorld".ToTrainCase();      // Hello-World
+string title  = "helloWorld".ToTitleCase();      // Hello World
+string field  = "helloWorld".ToUnderscoreCamelCase(); // _helloWorld
 ```
 
-Also `ToTitleCase`, `ToTrainCase`, `ToUnderscoreCamelCase`. Each takes an optional `CultureInfo` (invariant when omitted). Letters without case (CJK, Arabic, Hebrew, Thai) are kept and continue the current word.
+Each takes an optional `CultureInfo`. A run of capitals is one word: `"HTTPStatus".ToSnakeCase()` is `httpstatus`. For enum wire names use `[StringEnum]` and `ToWireName()` from CSharpEssentials.Enums (`http_status`).
 
-## GUIDs
+## Creating GUIDs
+
+```csharp Program.cs
+// dotnet add package CSharpEssentials.Core
+using CSharpEssentials.Core;
+
+Guid key = Guider.NewGuid();                       // version 7 primary key
+Guid ordered = Guider.NewMonotonicGuid();          // strictly increasing in this process
+Guid sqlServerKey = Guider.NewSqlServerGuid();     // version 8, for SQL Server uniqueidentifier
+Guid fromKey = Guider.NewGuidV5(GuidNamespaces.Url, "https://example.com/a"); // deterministic
+Guid atTime = Guider.NewGuid(DateTimeOffset.UtcNow);
+Guid fromClock = Guider.NewGuid(TimeProvider.System); // only in the .NET 9+ builds
+
+Console.WriteLine($"{key.Version} {sqlServerKey.Version} {fromKey.Version}"); // 7 8 5
+
+try
+{
+    Guider.ToGuidFromString("bad");
+}
+catch (FormatException)
+{
+    Console.WriteLine("rejected");
+}
+```
+
+## Working with collections
 
 ```csharp
-Guid id = Guider.NewGuid();                 // version 7, time-sortable, every target
-Guid ordered = Guider.NewMonotonicGuid();   // version 7, strictly increasing within the process
-Guid stamped = Guider.NewGuid(timeProvider); // version 7 with the provider's time; NewGuid(DateTimeOffset) on every target
-Guid named = Guider.NewGuidV5(GuidNamespaces.Url, url); // version 5 (SHA-1, name-based), deterministic
-Guid sqlKey = Guider.NewSqlServerGuid();    // version 8, sequential in SQL Server uniqueidentifier order
-
-string shortId = id.ToStringFromGuid();     // 22-char RFC 4648 base64url, no padding
-Guid parsed = shortId.ToGuidFromString();
+list.IfAdd(condition, item);                    // ICollection<T>, returns the collection
+list.IfAddRange(condition, ["a", "b"]);
+query.WhereIf(filter is not null, x => x.Name == filter);   // IQueryable<T> stays translatable
+IEnumerable<string> names = rawNames.WithoutNulls();         // IEnumerable<string?> -> IEnumerable<string>
+bool same = a.HasSameElements(b);               // set comparison
+bool all = flags.AllTrue();                     // also AllFalse(); both true when empty
+T one = array.GetRandomItem();                  // T[], List<T>, Span<T>
+T[] some = array.GetRandomItems(3);             // distinct positions
 ```
 
-`ToGuidFromString` requires exactly 22 characters from `A-Z a-z 0-9 - _` and throws `FormatException` otherwise (no `TryParse` form). Version 7 GUIDs reveal their creation time; use `Guid.NewGuid()` where that matters. In a cloned VM or a checkpointed and restored process, set the AppContext switch `CSharpEssentials.Guider.DisableRandomPool` to `true`.
-
-## Range checks
+## Waiting with a token
 
 ```csharp
-bool inRange = 5.IsBetween(1, 10);            // inclusive
-bool strict  = 10.IsBetweenExclusive(1, 10);  // exclusive: false
+string data = await LoadAsync().WithCancellation(cancellationToken);
 ```
 
-Both work for any `IComparable<T>`.
+`WithCancellation` stops waiting and throws `OperationCanceledException` (on .NET 9+ the subclass `TaskCanceledException`). It does not cancel `LoadAsync`; pass the token to the operation when it accepts one.
 
-## Collection helpers
+## Implementing ITransactionRunner
 
 ```csharp
-List<string> tags = ["a"];
-tags.IfAdd(includeBeta, "beta");                 // adds only when the condition is true
-tags.IfAddRange(includeExtra, ["x", "y"]);       // params collection; separate arguments need C# 13
+public interface ITransactionRunner
+{
+    ValueTask<T> ExecuteAsync<T>(Func<CancellationToken, ValueTask<T>> work, Func<T, bool> shouldCommit, CancellationToken cancellationToken = default);
+}
 
-IEnumerable<User> active = users.WhereIf(onlyActive, u => u.IsActive);   // also on IQueryable<T>
-IEnumerable<string> names = rawNames.WithoutNulls();
+public interface ITransactionCallbacks
+{
+    ValueTask OnCommittedAsync(Func<CancellationToken, ValueTask> callback, CancellationToken cancellationToken = default);
+}
 ```
 
-## Statement helpers and tasks
+Do not write your own for EF Core: `EfCoreTransactionRunner<TDbContext>` in CSharpEssentials.EntityFrameworkCore implements both. `OnCommittedAsync` queues work until the outermost commit, drops it on rollback, and runs it at once when no transaction is open.
 
-```csharp
-user.IfNotNull(u => Console.WriteLine(u.Name));        // returns whether it ran
-isAdmin.IfTrue(() => Console.WriteLine("admin"));
-string data = await LoadAsync().WithCancellation(ct);  // throws OperationCanceledException on cancel
-```
+## Rules
 
-`IfNotNull` and `IfNull` also take an else action, and each overload returns a `bool`: whether the value was not null (`IfNotNull`) or null (`IfNull`). `WithCancellation` stops waiting; it does not cancel the underlying task. On .NET 9+ it throws the `TaskCanceledException` subclass.
-
-## Also available
-
-```csharp
-bool same = listA.HasSameElements(listB);        // set comparison, order and duplicates ignored
-bool all  = flags.AllTrue();                     // also AllFalse()
-bool blank = text.IsEmpty();                     // null, "" or whitespace; also IsNotEmpty()
-int pick  = numbers.GetRandomItem();             // RandomNumberGenerator; T[], List<T>, Span<T>; also GetRandomItems(count)
-IEnumerable<Exception> chain = ex.GetInnerExceptions();   // ex, then each inner exception; also GetInnerExceptionsMessages()
-int status = HttpCodes.NotFound;                 // 404
-```
-
-- `ForEach(action)` on `IEnumerable<T>` is lazy: the action runs while the result is enumerated. On a `List<T>` the built-in `List<T>.ForEach` wins.
-- `ExplicitCast<T>()`, `MsToDateTime()` (Unix milliseconds, `Kind = Utc`) and `GetTypeGroup<TGroup, TType>(group = 100)` are small conversion helpers.
-- `ITransactionRunner` (namespace `CSharpEssentials.Transactions`) runs work in a transaction and commits when `shouldCommit` returns `true`; `EfCoreTransactionRunner<TDbContext>` implements it and `TransactionBehavior` in `CSharpEssentials.Mediator` consumes it.
-- `ITransactionCallbacks.OnCommittedAsync(callback, ct)` (same namespace) queues a callback for after the outermost commit and drops it on rollback; `EfCoreTransactionRunner<TDbContext>` implements it.
-- On .NET 10+, `using CSharpEssentials;` adds the extension properties `IEnumerable<T>.IsEmpty` and `string.IsPalindrome`.
-
-## Guidance
-
-- Use `Guider.NewGuid()` for primary keys, or `NewSqlServerGuid()` for SQL Server `uniqueidentifier` columns.
-- `WithoutNulls()` keeps nullable annotations correct, unlike `.Where(x => x != null)`.
-- `IfNotNull()` is a statement form; for transforms use `Maybe<T>.Map()`.
+- The class is `Guider`, not `GuidHelper`. The string methods are `ToStringFromGuid` and `ToGuidFromString`; there is no `TryParse`, so catch `FormatException`.
+- Version 7 GUIDs reveal their creation time. Use `Guid.NewGuid()` for tokens that must not.
+- Use `NewSqlServerGuid()` only for SQL Server; it does not sort by time elsewhere.
+- `IsEmpty()` is a method on `string?` and is `true` for whitespace. Do not import `CSharpEssentials` and `CSharpEssentials.Core` in the same file if it calls `IsEmpty` on a string: that is CS9339 on .NET 10.
+- `ForEach` on `IEnumerable<T>` is lazy and returns the sequence; enumerate it. On a `List<T>` variable it binds to `List<T>.ForEach`.
+- `IfNotNull` and `IfNull` are statements that return `bool`. For transforms use `Maybe<T>.Map` (CSharpEssentials.Maybe).
+- In a cloned VM or restored process, set the AppContext switch `CSharpEssentials.Guider.DisableRandomPool` to `true`.
+- XML docs: `<see cref="Guider.NewGuid()"/>`; a bare `Guider.NewGuid` is CS0419 since 9.0.

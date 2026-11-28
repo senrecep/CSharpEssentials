@@ -1,161 +1,91 @@
 using CSharpEssentials.Entity;
 using CSharpEssentials.Entity.Interfaces;
 
-Console.WriteLine("========================================");
-Console.WriteLine("CSharpEssentials.Entity Example");
-Console.WriteLine("========================================\n");
+Console.WriteLine("1. EntityBase<TId> and audit fields");
+Order order = Order.Place("customer-1", 120m);
+order.SetCreatedInfo(DateTimeOffset.UtcNow, "alice");
+order.ChangeTotal(150m);
+order.SetUpdatedInfo(DateTimeOffset.UtcNow, "bob");
+Console.WriteLine($"   Order {order.Id}: created by {order.CreatedBy} at {order.CreatedAt:t}, updated by {order.UpdatedBy} at {order.UpdatedAt:t}");
 
-Console.WriteLine("--- EntityBase ---");
-
-User user = new()
-{
-    FirstName = "Alice",
-    LastName = "Smith",
-    Email = "alice@example.com"
-};
-
-user.SetCreatedInfo(DateTimeOffset.UtcNow, "system");
-user.SetUpdatedInfo(DateTimeOffset.UtcNow, "system");
-
-Console.WriteLine($"User: {user.FirstName} {user.LastName}");
-Console.WriteLine($"CreatedAt: {user.CreatedAt}");
-Console.WriteLine($"CreatedBy: {user.CreatedBy}");
-Console.WriteLine($"UpdatedAt: {user.UpdatedAt}");
-Console.WriteLine($"UpdatedBy: {user.UpdatedBy}");
-Console.WriteLine($"DomainEvents: {user.DomainEvents.Count}");
-Console.WriteLine();
-
-Console.WriteLine("--- SoftDeletableEntityBase ---");
-
-Product product = new()
-{
-    Name = "Laptop",
-    Price = 1499.99m
-};
-
-product.SetCreatedInfo(DateTimeOffset.UtcNow, "system");
-Console.WriteLine($"Product: {product.Name}, IsDeleted={product.IsDeleted}");
-
-product.MarkAsDeleted(DateTimeOffset.UtcNow, "system");
-Console.WriteLine($"After soft delete: IsDeleted={product.IsDeleted}, DeletedAt={product.DeletedAt}, DeletedBy={product.DeletedBy}");
-
-product.Restore();
-Console.WriteLine($"After restore: IsDeleted={product.IsDeleted}");
-Console.WriteLine();
-
-Console.WriteLine("--- Hard Delete ---");
-
-Product hardDeleteProduct = new()
-{
-    Name = "Temporary Item",
-    Price = 9.99m
-};
-
-hardDeleteProduct.SetCreatedInfo(DateTimeOffset.UtcNow, "system");
-Console.WriteLine($"Before hard delete: IsHardDeleted={hardDeleteProduct.IsHardDeleted}");
-
-hardDeleteProduct.MarkAsHardDeleted();
-Console.WriteLine($"After mark as hard deleted: IsHardDeleted={hardDeleteProduct.IsHardDeleted}");
-Console.WriteLine();
-
-Console.WriteLine("--- EntityBase<Guid> ---");
-
-Guid categoryId = Guid.NewGuid();
-Category category = new(categoryId)
-{
-    Name = "Electronics"
-};
-
-Console.WriteLine($"Category Id: {category.Id}");
-Console.WriteLine($"Category Name: {category.Name}");
-Console.WriteLine();
-
-Console.WriteLine("--- Domain Events ---");
-
-Order order = new() { OrderNumber = "ORD-001", Total = 250.00m };
-order.Raise(new OrderCreatedEvent(order.OrderNumber));
-
-Console.WriteLine($"Order: {order.OrderNumber}");
-Console.WriteLine($"Events: {order.DomainEvents.Count}");
-
-foreach (IDomainEvent evt in order.DomainEvents)
-{
-    Console.WriteLine($"  - {evt.GetType().Name}");
-}
-
+Console.WriteLine("2. Domain events");
+IDomainEvent[] events = [.. order.DomainEvents];
 order.ClearDomainEvents();
-Console.WriteLine($"After clear: {order.DomainEvents.Count}");
-Console.WriteLine();
-
-Console.WriteLine("--- Interfaces ---");
-
-static void PrintAuditInfo(ICreationAudit entity)
+foreach (IDomainEvent e in events)
 {
-    Console.WriteLine($"  CreatedAt: {entity.CreatedAt}");
-    Console.WriteLine($"  CreatedBy: {entity.CreatedBy}");
+    DomainEventTiming timing = e.GetType().GetCustomAttributes(typeof(DomainEventTimingAttribute), false)
+        is [DomainEventTimingAttribute attribute] ? attribute.Timing : DomainEventTiming.AfterSave;
+    Console.WriteLine($"   {e.GetType().Name} ({timing})");
+}
+Console.WriteLine($"   Left on the entity after ClearDomainEvents: {order.DomainEvents.Count}");
+
+Console.WriteLine("3. DomainEvent record with a fixed clock");
+OrderPlaced placed = new(order.Id, new FixedClock(new DateTimeOffset(2026, 1, 15, 9, 30, 0, TimeSpan.Zero)));
+Console.WriteLine($"   OccurredAt {placed.OccurredAt:O}, EventId {placed.EventId} (version {placed.EventId.ToString()[14]})");
+
+Console.WriteLine("4. Soft delete, restore, hard delete");
+Product[] products = [new("Pen"), new("Notebook")];
+products[0].MarkAsDeleted(DateTimeOffset.UtcNow, "alice");
+Console.WriteLine($"   {products[0].Name}: IsDeleted={products[0].IsDeleted}, DeletedBy={products[0].DeletedBy}, DeletedAt={products[0].DeletedAt:t}");
+products[0].Restore();
+Console.WriteLine($"   {products[0].Name} after Restore: IsDeleted={products[0].IsDeleted}");
+products.HardDelete();
+Console.WriteLine($"   After HardDelete(): {string.Join(", ", products.Select(p => $"{p.Name} IsHardDeleted={p.IsHardDeleted}"))}");
+
+Console.WriteLine("5. Code against the interfaces");
+PrintAudit(order);
+PrintAudit(products[1]);
+
+static void PrintAudit(ICreationAudit entity) =>
+    Console.WriteLine($"   {entity.GetType().Name}: CreatedBy={entity.CreatedBy ?? "(not set)"}");
+
+public sealed record OrderPlaced : DomainEvent
+{
+    public OrderPlaced(Guid orderId, TimeProvider clock) : base(clock) => OrderId = orderId;
+
+    public OrderPlaced(Guid orderId) => OrderId = orderId;
+
+    public Guid OrderId { get; init; }
 }
 
-static void PrintModificationInfo(IModificationAudit entity)
+[DomainEventTiming(DomainEventTiming.BeforeSave)]
+public sealed record OrderTotalChanged(Guid OrderId, decimal Total) : IDomainEvent;
+
+public sealed class Order : EntityBase<Guid>
 {
-    Console.WriteLine($"  UpdatedAt: {entity.UpdatedAt}");
-    Console.WriteLine($"  UpdatedBy: {entity.UpdatedBy}");
-}
+    private Order() { }
 
-static void PrintSoftDeleteInfo(ISoftDeletable entity)
-{
-    Console.WriteLine($"  IsDeleted: {entity.IsDeleted}");
-    Console.WriteLine($"  DeletedAt: {entity.DeletedAt}");
-    Console.WriteLine($"  DeletedBy: {entity.DeletedBy}");
-}
+    public string CustomerId { get; private set; } = "";
+    public decimal Total { get; private set; }
 
-User auditUser = new() { FirstName = "Bob", LastName = "Jones", Email = "bob@example.com" };
-auditUser.SetCreatedInfo(DateTimeOffset.UtcNow, "admin");
-Console.WriteLine("ICreationAudit demo:");
-PrintAuditInfo(auditUser);
-
-Product softProduct = new() { Name = "Mouse", Price = 29.99m };
-softProduct.MarkAsDeleted(DateTimeOffset.UtcNow, "admin");
-Console.WriteLine("\nISoftDeletable demo:");
-PrintSoftDeleteInfo(softProduct);
-
-User modUser = new() { FirstName = "Charlie", LastName = "Brown", Email = "charlie@example.com" };
-modUser.SetCreatedInfo(DateTimeOffset.UtcNow, "system");
-modUser.SetUpdatedInfo(DateTimeOffset.UtcNow, "admin");
-Console.WriteLine("\nIModificationAudit demo:");
-PrintModificationInfo(modUser);
-Console.WriteLine();
-
-Console.WriteLine("========================================");
-Console.WriteLine("Demo complete.");
-Console.WriteLine("========================================");
-
-public class User : EntityBase
-{
-    public string FirstName { get; set; } = string.Empty;
-    public string LastName { get; set; } = string.Empty;
-    public string Email { get; set; } = string.Empty;
-}
-
-public class Product : SoftDeletableEntityBase
-{
-    public string Name { get; set; } = string.Empty;
-    public decimal Price { get; set; }
-}
-
-public class Category : EntityBase<Guid>
-{
-    public Category(Guid id)
+    public static Order Place(string customerId, decimal total)
     {
-        Id = id;
+        Order order = new() { Id = Guid.NewGuid(), CustomerId = customerId, Total = total };
+        order.Raise(new OrderPlaced(order.Id));
+        return order;
     }
 
-    public string Name { get; set; } = string.Empty;
+    public void ChangeTotal(decimal total)
+    {
+        Total = total;
+        Raise(new OrderTotalChanged(Id, total));
+    }
 }
 
-public class Order : EntityBase
+public sealed class Product : SoftDeletableEntityBase<int>
 {
-    public string OrderNumber { get; set; } = string.Empty;
-    public decimal Total { get; set; }
+    private static int _nextId;
+
+    public Product(string name)
+    {
+        Id = ++_nextId;
+        Name = name;
+    }
+
+    public string Name { get; }
 }
 
-public record OrderCreatedEvent(string OrderNumber) : IDomainEvent;
+public sealed class FixedClock(DateTimeOffset now) : TimeProvider
+{
+    public override DateTimeOffset GetUtcNow() => now;
+}

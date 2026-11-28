@@ -66,14 +66,14 @@ The middleware now knows whether the endpoint's handler started. `.WithIdempoten
 | Response that cannot be stored (`Content-Encoding` set by the handler, `text/event-stream`, body larger than `MaxResponseBodySize`) | Released | Released on 4xx only; any other status stays in flight until `InFlightTimeout` |
 | Request with a key but no scope | Ran without idempotency | Same, and a warning `Idempotency.UnscopedKeySkipped` is logged (the key itself is never logged) |
 
-- **5xx is stored.** A handler that fails after its side effect would run twice if the 500 released the key. Applications that map business errors to 500 now replay that error for `ServerErrorRetention`. Set `ServerErrorRetention = RetentionPeriod` for the strictest behavior on payment endpoints, or keep the default so clients are not locked out of a key for a full day.
-- **503, 504, exceptions and aborts stay in flight.** The handler may have done its work, so the key is neither stored nor released. A retry within `InFlightTimeout` gets 409 with `Retry-After`; after it, the handler runs exactly once more.
-- **Responses that cannot be stored stay in flight** unless they are 4xx, for the same reason. Before 7.0 they released the key.
-- **`IdempotencyStorePolicies.SuccessOnly`** restores the 6.x storing rule: it stores 2xx only and releases 3xx and 5xx, so a handler that fails after its side effect can run again on retry. `NeverStoreStatusCodes`, exceptions and aborts still keep the key in flight under this policy.
-- **3xx is stored**, for example a `303 See Other` that points to the created resource.
-- **`Retry-After` is replayed**: it is in the default `ReplayedHeaders`.
-- **An idempotent endpoint without the filter** (for example a `RequestDelegate` endpoint given `IdempotentAttribute` metadata by hand, or an MVC action opted in through `WithIdempotency()` without `[Idempotent]`) cannot tell a handler failure from an earlier one. It keeps the 6.x storing rule: 2xx is stored, and every other outcome, including 3xx, 5xx, 503/504 and exceptions before the response started, releases the key. A 2xx that cannot be stored keeps the key in flight. A warning `Idempotency.ExecutionFilterMissing` is logged once per endpoint; set `RequireExecutionFilter = true` to throw instead. Add `.WithIdempotency()` or `[Idempotent]` to get the rest of the table above.
-- **A request timeout longer than `InFlightTimeout`** logs `Idempotency.RequestTimeoutExceedsLease` once per endpoint: a retry after the lease could run while the first request is still running.
+- 5xx is stored. A handler that fails after its side effect would run twice if the 500 released the key. Applications that map business errors to 500 now replay that error for `ServerErrorRetention`. Set `ServerErrorRetention = RetentionPeriod` for the strictest behavior on payment endpoints, or keep the default so clients are not locked out of a key for a full day.
+- 503, 504, exceptions and aborts stay in flight. The handler may have done its work, so the key is neither stored nor released. A retry within `InFlightTimeout` gets 409 with `Retry-After`; after it, the handler runs exactly once more.
+- Responses that cannot be stored stay in flight unless they are 4xx, for the same reason. Before 7.0 they released the key.
+- `IdempotencyStorePolicies.SuccessOnly` restores the 6.x storing rule: it stores 2xx only and releases 3xx and 5xx, so a handler that fails after its side effect can run again on retry. `NeverStoreStatusCodes`, exceptions and aborts still keep the key in flight under this policy.
+- 3xx is stored, for example a `303 See Other` that points to the created resource.
+- `Retry-After` is replayed: it is in the default `ReplayedHeaders`.
+- An idempotent endpoint without the filter (for example a `RequestDelegate` endpoint given `IdempotentAttribute` metadata by hand, or an MVC action opted in through `WithIdempotency()` without `[Idempotent]`) cannot tell a handler failure from an earlier one. It keeps the 6.x storing rule: 2xx is stored, and every other outcome, including 3xx, 5xx, 503/504 and exceptions before the response started, releases the key. A 2xx that cannot be stored keeps the key in flight. A warning `Idempotency.ExecutionFilterMissing` is logged once per endpoint; set `RequireExecutionFilter = true` to throw instead. Add `.WithIdempotency()` or `[Idempotent]` to get the rest of the table above.
+- A request timeout longer than `InFlightTimeout` logs `Idempotency.RequestTimeoutExceedsLease` once per endpoint: a retry after the lease could run while the first request is still running.
 
 New startup validation in `AddIdempotency`:
 
@@ -125,7 +125,7 @@ public sealed class SqlIdempotencyRecordStoreTests : IdempotencyRecordStoreContr
 
 Set `UseRealClock => true` for a store whose expiry runs on its own clock (Redis TTL, a database `now()`), and `IsReservationAtomic => false` for a best-effort store. See the [Testing package Readme](../../CSharpEssentials.Idempotency.Testing/Readme.MD).
 
-A Redis store written against the 7.0 interface (one Lua script per operation on a hash with token, fingerprint and payload, keyed by `key.ToStorageKey()`) is in the [External stores](../../CSharpEssentials.Idempotency/Readme.MD#external-stores) section of the Idempotency Readme, together with the atomicity requirements and a DynamoDB note. Start from it when you port a 6.x Redis store.
+A Redis store written against the 7.0 interface (one Lua script per operation on a hash with token, fingerprint and payload, keyed by `key.ToStorageKey()`) is in `examples/Examples.Idempotency.Redis`. The [External stores](../../CSharpEssentials.Idempotency/Readme.MD#external-stores) section of the Idempotency Readme describes its algorithm, together with the atomicity requirements and a DynamoDB note. Start from it when you port a 6.x Redis store.
 
 ## Stored records
 

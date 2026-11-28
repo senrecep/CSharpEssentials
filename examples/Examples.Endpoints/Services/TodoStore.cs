@@ -20,4 +20,17 @@ public sealed class TodoStore : ITodoStore
         _todos[todo.Id] = todo;
         return todo;
     }
+
+    public bool MarkDone(int id)
+    {
+        if (!_todos.TryGetValue(id, out Todo? todo))
+        {
+            return false;
+        }
+
+        _todos[id] = todo with { IsDone = true };
+        return true;
+    }
+
+    public bool Remove(int id) => _todos.TryRemove(id, out _);
 }

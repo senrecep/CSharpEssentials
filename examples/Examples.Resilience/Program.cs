@@ -1,191 +1,193 @@
+using System.Diagnostics;
 using CSharpEssentials.Errors;
 using CSharpEssentials.Resilience;
 using CSharpEssentials.ResultPattern;
+using Polly;
+using Polly.Retry;
 
-Console.WriteLine("========================================");
-Console.WriteLine("CSharpEssentials.Resilience Example");
-Console.WriteLine("========================================\n");
+// Small delays keep the demo fast. Real code usually keeps the 1 s default.
+TimeSpan shortDelay = TimeSpan.FromMilliseconds(20);
 
-Console.WriteLine("--- 1. Basic Policy (Empty Pipeline) ---");
-
-ResiliencePolicy policy = ResiliencePolicy.Create();
-
-Result result = await policy.ExecuteAsync(_ => Task.FromResult(Result.Success()));
-Console.WriteLine($"Empty pipeline: IsSuccess={result.IsSuccess}");
-
-Result<int> valueResult = await policy.ExecuteAsync(_ => Task.FromResult(Result.Success(42)));
-Console.WriteLine($"Empty pipeline (generic): Value={valueResult.Value}");
-Console.WriteLine();
-
-Console.WriteLine("--- 2. Retry Policy ---");
-
-int retryAttempts = 0;
-ResiliencePolicy retryPolicy = ResiliencePolicy.Create()
-    .WithRetry(maxAttempts: 3, delay: TimeSpan.FromMilliseconds(100));
-
-Result retryResult = await retryPolicy.ExecuteAsync(_ =>
+Section("1. Empty policy: exceptions become failed results");
 {
-    retryAttempts++;
-    if (retryAttempts < 3)
-        throw new InvalidOperationException($"Attempt {retryAttempts} failed");
-    return Task.FromResult(Result.Success());
-});
-
-Console.WriteLine($"Retry result: IsSuccess={retryResult.IsSuccess}, Total attempts={retryAttempts}");
-Console.WriteLine();
-
-Console.WriteLine("--- 3. Retry with Exponential Backoff ---");
-
-ResiliencePolicy exponentialPolicy = ResiliencePolicy.Create()
-    .WithRetry(maxAttempts: 3, delay: TimeSpan.FromMilliseconds(50), exponentialBackoff: true);
-
-ResiliencePolicy constantPolicy = ResiliencePolicy.Create()
-    .WithRetry(maxAttempts: 3, delay: TimeSpan.FromMilliseconds(50), exponentialBackoff: false);
-
-Console.WriteLine("Exponential backoff: delays grow exponentially (50ms, 100ms, 200ms)");
-Console.WriteLine("Constant backoff: delays stay constant (50ms, 50ms, 50ms)");
-Console.WriteLine();
-
-Console.WriteLine("--- 4. Timeout Policy ---");
-
-ResiliencePolicy timeoutPolicy = ResiliencePolicy.Create()
-    .WithTimeout(TimeSpan.FromSeconds(1));
-
-Result timeoutResult = await timeoutPolicy.ExecuteAsync(async ct =>
-{
-    await Task.Delay(TimeSpan.FromSeconds(5), ct);
-    return Result.Success();
-});
-
-Console.WriteLine($"Timeout result: IsSuccess={timeoutResult.IsSuccess}, Error={timeoutResult.FirstError.Code}");
-Console.WriteLine();
-
-Console.WriteLine("--- 5. Circuit Breaker Policy ---");
-
-ResiliencePolicy cbPolicy = ResiliencePolicy.Create()
-    .WithCircuitBreaker(
-        minimumThroughput: 3,
-        samplingDuration: TimeSpan.FromSeconds(1),
-        breakDuration: TimeSpan.FromSeconds(5),
-        failureRatio: 0.5);
-
-int cbAttempts = 0;
-for (int i = 0; i < 5; i++)
-{
-    Result cbResult = await cbPolicy.ExecuteAsync(_ =>
-    {
-        cbAttempts++;
-        throw new InvalidOperationException("Service unavailable");
-    });
-    Console.WriteLine($"  Attempt {i + 1}: IsFailure={cbResult.IsFailure}, Code={cbResult.FirstError.Code}");
+    ResiliencePolicy policy = ResiliencePolicy.Create();
+    Result ok = await policy.ExecuteAsync(_ => Task.CompletedTask);
+    Result<int> thrown = await policy.ExecuteAsync<int>(_ => throw new InvalidOperationException("Disk full."));
+    Console.WriteLine($"ok: {ok.IsSuccess}, thrown: {thrown.FirstError.Type} {thrown.FirstError.Code}");
 }
 
-Console.WriteLine($"Circuit opened after threshold failures");
-Console.WriteLine();
-
-Console.WriteLine("--- 6. Combined Policies ---");
-
-ResiliencePolicy combinedPolicy = ResiliencePolicy.Create()
-    .WithRetry(maxAttempts: 2, delay: TimeSpan.FromMilliseconds(50))
-    .WithTimeout(TimeSpan.FromSeconds(1))
-    .WithCircuitBreaker(minimumThroughput: 10, samplingDuration: TimeSpan.FromSeconds(1));
-
-Result combinedResult = await combinedPolicy.ExecuteAsync(_ => Task.FromResult(Result.Success()));
-Console.WriteLine($"Combined pipeline: IsSuccess={combinedResult.IsSuccess}");
-Console.WriteLine();
-
-Console.WriteLine("--- 7. Generic ResiliencePolicy<T> ---");
-
-int genAttempts = 0;
-ResiliencePolicy<int> genericPolicy = ResiliencePolicy<int>.Create()
-    .WithRetry(maxAttempts: 3, delay: TimeSpan.FromMilliseconds(50));
-
-Result<int> genResult = await genericPolicy.ExecuteAsync(_ =>
+Section("2. Retry: exceptions and transient failures");
 {
-    genAttempts++;
-    if (genAttempts < 2)
-        return Task.FromResult(Result<int>.Failure(Error.Unexpected("Transient", "Temporary failure")));
-    return Task.FromResult(Result<int>.Success(100));
-});
-
-Console.WriteLine($"Generic result: Value={genResult.Value}, Attempts={genAttempts}");
-Console.WriteLine();
-
-Console.WriteLine("--- 8. Fallback Policy ---");
-
-ResiliencePolicy<string> fallbackPolicy = ResiliencePolicy<string>.Create()
-    .WithFallback(_ => Task.FromResult(Result<string>.Success("fallback value")));
-
-Result<string> fallbackResult = await fallbackPolicy.ExecuteAsync(_ =>
-    Task.FromResult(Result<string>.Failure(Error.Unexpected())));
-
-Console.WriteLine($"Fallback result: Value={fallbackResult.Value}");
-Console.WriteLine();
-
-Console.WriteLine("--- 9. Create from ResiliencePolicyOptions ---");
-
-ResiliencePolicyOptions options = new()
-{
-    Retry = new RetryOptions { MaxAttempts = 2, Delay = TimeSpan.FromMilliseconds(50), ExponentialBackoff = false },
-    Timeout = new TimeoutOptions { Timeout = TimeSpan.FromSeconds(2) },
-    CircuitBreaker = new CircuitBreakerOptions
+    int calls = 0;
+    ResiliencePolicy policy = ResiliencePolicy.Create().WithRetry(maxAttempts: 3, delay: shortDelay);
+    Result result = await policy.ExecuteAsync(_ =>
     {
-        MinimumThroughput = 10,
-        SamplingDuration = TimeSpan.FromSeconds(1),
-        BreakDuration = TimeSpan.FromSeconds(1),
-        FailureRatio = 0.5
-    }
-};
+        calls++;
+        if (calls < 3)
+            throw new TimeoutException($"call {calls} failed");
+        return Task.CompletedTask;
+    });
+    Console.WriteLine($"success: {result.IsSuccess} after {calls} calls");
+}
 
-ResiliencePolicy optionsPolicy = ResiliencePolicy.Create(options);
-Result optionsResult = await optionsPolicy.ExecuteAsync(_ => Task.FromResult(Result.Success()));
-Console.WriteLine($"Options-based pipeline: IsSuccess={optionsResult.IsSuccess}");
-Console.WriteLine();
-
-Console.WriteLine("--- 10. Func Extensions (Inline Execution) ---");
-
-Func<Task<int>> computeValue = () => Task.FromResult(42);
-Result<int> funcResult = await computeValue.ExecuteAsync();
-Console.WriteLine($"Func<Task<int>>: Value={funcResult.Value}");
-
-Func<CancellationToken, Task<Result<string>>> fetchString = ct => Task.FromResult(Result<string>.Success("hello"));
-Result<string> funcResult2 = await fetchString.ExecuteAsync();
-Console.WriteLine($"Func<CT, Task<Result<string>>>: Value={funcResult2.Value}");
-Console.WriteLine();
-
-Console.WriteLine("--- 11. RetryIfFailed Extension ---");
-
-int rifAttempts = 0;
-Func<CancellationToken, Task<Result<int>>> unreliableOperation = ct =>
+Section("3. Backoff: exponential, constant, jitter and a cap");
 {
-    rifAttempts++;
-    if (rifAttempts < 3)
-        return Task.FromResult(Result<int>.Failure(Error.Conflict("RateLimited", "Too many requests")));
-    return Task.FromResult(Result<int>.Success(999));
-};
+    foreach ((string name, ResiliencePolicy<int> policy) in new[]
+    {
+        ("exponential", ResiliencePolicy<int>.Create().WithRetry(3, TimeSpan.FromMilliseconds(50))),
+        ("constant", ResiliencePolicy<int>.Create().WithRetry(3, TimeSpan.FromMilliseconds(50), exponentialBackoff: false)),
+        ("capped jitter", ResiliencePolicy<int>.Create().WithRetry(3, TimeSpan.FromMilliseconds(50), useJitter: true, maxDelay: TimeSpan.FromMilliseconds(60))),
+    })
+    {
+        var watch = Stopwatch.StartNew();
+        await policy.ExecuteAsync(_ => Task.FromResult(Result<int>.Failure(Error.Unexpected("Down", "Down."))));
+        Console.WriteLine($"{name}: 3 retries waited about {watch.ElapsedMilliseconds} ms");
+    }
+}
 
-Result<int> rifResult = await unreliableOperation.RetryIfFailed(
-    maxAttempts: 5,
-    delay: TimeSpan.FromMilliseconds(50));
+Section("4. Which error types are retried");
+{
+    foreach (Error error in new[]
+    {
+        Error.Validation("Bad", "Bad input."),
+        Error.NotFound("Missing", "Not found."),
+        Error.Domain("Rule", "Rule broken."),
+        Error.Conflict("Busy", "Busy."),
+        Error.Unexpected("Crash", "Crashed."),
+    })
+    {
+        int calls = 0;
+        await ResiliencePolicy<int>.Create().WithRetry(2, shortDelay)
+            .ExecuteAsync(_ => { calls++; return Task.FromResult(Result<int>.Failure(error)); });
+        Console.WriteLine($"{error.Type,-10} -> {calls} call(s)");
+    }
+}
 
-Console.WriteLine($"RetryIfFailed: Value={rifResult.Value}, Attempts={rifAttempts}");
+Section("5. Timeout per attempt and for all attempts");
+{
+    int attempts = 0;
+    Result<int> perAttempt = await ResiliencePolicy<int>.Create()
+        .WithRetry(2, shortDelay)
+        .WithTimeout(TimeSpan.FromSeconds(1))
+        .ExecuteAsync(async ct =>
+        {
+            attempts++;
+            if (attempts == 1)
+                await Task.Delay(TimeSpan.FromSeconds(10), ct);
+            return 7;
+        });
+    Console.WriteLine($"retry then timeout: {perAttempt.Value} after {attempts} attempts");
+
+    Result<int> total = await ResiliencePolicy<int>.Create()
+        .WithTimeout(TimeSpan.FromSeconds(1))
+        .WithRetry(10, TimeSpan.FromMilliseconds(300), exponentialBackoff: false)
+        .ExecuteAsync(_ => Task.FromResult(Result<int>.Failure(Error.Conflict("Busy", "Busy."))));
+    Console.WriteLine($"timeout then retry: {total.FirstError.Code}");
+}
+
+Section("6. Circuit breaker");
+{
+    ResiliencePolicy<string> breaker = ResiliencePolicy<string>.Create()
+        .WithCircuitBreaker(minimumThroughput: 2, samplingDuration: TimeSpan.FromSeconds(10), breakDuration: TimeSpan.FromSeconds(30), failureRatio: 0.5);
+    for (int i = 1; i <= 3; i++)
+    {
+        Result<string> result = await breaker.ExecuteAsync(_ =>
+            Task.FromResult(Result<string>.Failure(Error.Unexpected("Price.Down", "Price service is down."))));
+        Console.WriteLine($"call {i}: {result.FirstError.Code}");
+    }
+}
+
+Section("7. Fallback with a value and with a Result");
+{
+    ResiliencePolicy<string> retry = ResiliencePolicy<string>.Create().WithRetry(1, shortDelay);
+    Result<string> fromValue = await retry
+        .WithFallback(_ => Task.FromResult("cached"))
+        .ExecuteAsync(_ => Task.FromResult(Result<string>.Failure(Error.Unexpected("Down", "Down."))));
+    Result<string> fromResult = await retry
+        .WithFallback(_ => Task.FromResult(Result<string>.Failure(Error.Failure("NoCache", "Cache is empty."))))
+        .ExecuteAsync(_ => Task.FromResult(Result<string>.Failure(Error.Unexpected("Down", "Down."))));
+    Console.WriteLine($"value fallback: {fromValue.Value}, Result fallback: {fromResult.FirstError.Code}");
+}
+
+Section("8. Options records");
+{
+    var options = new ResiliencePolicyOptions
+    {
+        Retry = new RetryOptions { MaxAttempts = 2, Delay = shortDelay, ExponentialBackoff = false },
+        Timeout = new TimeoutOptions { Timeout = TimeSpan.FromSeconds(5) },
+        CircuitBreaker = new CircuitBreakerOptions { MinimumThroughput = 10 },
+    };
+    int calls = 0;
+    Result<int> result = await ResiliencePolicy.Create(options).ExecuteAsync(_ =>
+    {
+        calls++;
+        return Task.FromResult(calls == 1 ? Result<int>.Failure(Error.Unexpected("Flaky", "Flaky.")) : Result<int>.Success(5));
+    });
+    ResiliencePolicy<int> typed = ResiliencePolicy<int>.Create()
+        .WithRetry(options.Retry).WithTimeout(options.Timeout).WithCircuitBreaker(options.CircuitBreaker);
+    Console.WriteLine($"Create(options): {result.Value} after {calls} calls, typed policy ok: {(await typed.ExecuteAsync(_ => Task.FromResult(1))).IsSuccess}");
+}
+
+Section("9. Delegate extensions and RetryIfFailed");
+{
+    Func<Task<int>> broken = () => throw new InvalidOperationException("boom");
+    Result<int> wrapped = await broken.ExecuteAsync();
+    Console.WriteLine($"Func<Task<int>>.ExecuteAsync: {wrapped.FirstError.Code}");
+
+    int calls = 0;
+    Func<CancellationToken, Task<Result<string>>> load = _ =>
+    {
+        calls++;
+        return Task.FromResult(calls < 2 ? Result<string>.Failure(Error.Conflict("Locked", "Locked.")) : Result<string>.Success("order 17"));
+    };
+    Result<string> order = await load.RetryIfFailed(maxAttempts: 3, delay: shortDelay);
+    Console.WriteLine($"RetryIfFailed: {order.Value} after {calls} calls");
+
+    calls = 0;
+    Func<CancellationToken, Task<Result>> save = _ =>
+    {
+        calls++;
+        return Task.FromResult(Result.Failure(Error.Failure("Db.Deadlock", "Deadlock.")));
+    };
+    Result saved = await save.RetryIfFailed(error => error.Code == "Db.Timeout", maxAttempts: 3, delay: shortDelay);
+    Console.WriteLine($"RetryIfFailed with predicate: {saved.FirstError.Code} after {calls} call");
+}
+
+Section("10. Caller cancellation throws");
+{
+    using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(50));
+    try
+    {
+        await ResiliencePolicy<int>.Create().WithRetry(3, shortDelay)
+            .ExecuteAsync(async ct => { await Task.Delay(TimeSpan.FromSeconds(10), ct); return 1; }, cts.Token);
+    }
+    catch (OperationCanceledException)
+    {
+        Console.WriteLine("OperationCanceledException, not a failed Result");
+    }
+}
+
+Section("11. Polly interop");
+{
+    ResiliencePolicy<string> custom = ResiliencePolicy<string>.Create(builder => builder.AddRetry(new RetryStrategyOptions<Result<string>>
+    {
+        MaxRetryAttempts = 1,
+        Delay = shortDelay,
+        ShouldHandle = args => ValueTask.FromResult(args.Outcome.Result.IsFailure),
+    }));
+    ResiliencePipeline<Result<string>> pipeline = custom.ToPipeline();
+    Result<string> viaPipeline = await ResiliencePolicy<string>.FromPipeline(pipeline).ExecuteAsync(_ => Task.FromResult("ok"));
+
+    ResiliencePolicy untyped = ResiliencePolicy.Create(builder => builder.AddTimeout(TimeSpan.FromSeconds(2)));
+    Result fromUntyped = await ResiliencePolicy.FromPipeline(untyped.ToPipeline()).ExecuteAsync(_ => Task.CompletedTask);
+    Console.WriteLine($"typed pipeline: {viaPipeline.Value}, untyped pipeline: {fromUntyped.IsSuccess}");
+}
+
 Console.WriteLine();
+Console.WriteLine("Done.");
 
-Console.WriteLine("--- 12. Error Type Handling ---");
-
-ResiliencePolicy errorPolicy = ResiliencePolicy.Create()
-    .WithRetry(maxAttempts: 1, delay: TimeSpan.FromMilliseconds(10));
-
-Result validationError = await errorPolicy.ExecuteAsync(_ =>
-    Task.FromResult(Result.Failure(Error.Validation("InvalidInput", "Name is required"))));
-
-Result notFoundError = await errorPolicy.ExecuteAsync(_ =>
-    Task.FromResult(Result.Failure(Error.NotFound("User not found"))));
-
-Console.WriteLine($"Validation error: Code={validationError.FirstError.Code}, Type={validationError.FirstError.Type}");
-Console.WriteLine($"NotFound error: Code={notFoundError.FirstError.Code}, Type={notFoundError.FirstError.Type}");
-Console.WriteLine();
-
-Console.WriteLine("========================================");
-Console.WriteLine("Demo complete.");
-Console.WriteLine("========================================");
+static void Section(string title)
+{
+    Console.WriteLine();
+    Console.WriteLine($"--- {title} ---");
+}

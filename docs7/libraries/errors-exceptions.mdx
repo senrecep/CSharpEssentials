@@ -1,74 +1,62 @@
 ---
-title: "Exception types in CSharpEssentials"
+title: "Exception types"
 ---
 
-Two exception types carry `Error` values, so code that throws can still hand typed errors to the `Result` pattern. Both live in the `CSharpEssentials.Exceptions` namespace of the `CSharpEssentials.Errors` package.
+`DomainException` and `EnhancedValidationException` carry `Error` values, for code that has to throw but whose caller works with errors. Both are in the `CSharpEssentials.Exceptions` namespace of the `CSharpEssentials.Errors` package.
+
+```bash
+dotnet add package CSharpEssentials.Errors
+```
 
 ```csharp
 using CSharpEssentials.Errors;
 using CSharpEssentials.Exceptions;
 ```
 
-## DomainException
+| Type | Constructor | Property | `Message` |
+|---|---|---|---|
+| `DomainException` | `(Error error)` | `Error` | the error's `Description` |
+| `EnhancedValidationException` | `(Error[] errors)`, `null` throws `ArgumentNullException` | `Errors` | `Validation failed with {n} errors` |
 
-For a single business rule violation. The constructor takes an `Error`, the `Error` property returns it, and `Message` is the error's `Description`.
+## Example
 
-```csharp
+Catch the exception at the boundary and return its errors as a `Result`. `Error` and `Error[]` convert implicitly to `Result<T>` (from `CSharpEssentials.Results`).
+
+```csharp Program.cs
+// dotnet add package CSharpEssentials.Errors
+// dotnet add package CSharpEssentials.Results
+using CSharpEssentials.Errors;
+using CSharpEssentials.Exceptions;
+using CSharpEssentials.ResultPattern;
+
+Print(CreateUser("ada@example.com", "s3cret!pass"));   // created ada@example.com
+Print(CreateUser("not-an-email", "s3cret!pass"));      // INVALID_EMAIL
+Print(CreateUser("ada@example.com", "short"));         // PASSWORD_LENGTH, PASSWORD_COMPLEXITY
+
 try
 {
-    var error = Error.Validation(
-        code: "INVALID_AGE",
-        description: "User must be at least 18 years old");
-    throw new DomainException(error);
-}
-catch (DomainException ex)
-{
-    // ex.Message is "User must be at least 18 years old"
-    Error originalError = ex.Error;
-}
-```
-
-## EnhancedValidationException
-
-For several validation errors reported at once. The constructor takes an `Error[]` (`null` throws `ArgumentNullException`), the `Errors` property returns it, and `Message` is `Validation failed with {n} errors`.
-
-```csharp
-try
-{
-    var errors = new[]
-    {
-        Error.Validation("EMAIL_INVALID", "Invalid email format"),
-        Error.Validation("PASSWORD_TOO_SHORT", "Password must be at least 8 characters")
-    };
-    throw new EnhancedValidationException(errors);
+    throw new EnhancedValidationException([Error.Validation("A", "a"), Error.Validation("B", "b")]);
 }
 catch (EnhancedValidationException ex)
 {
-    foreach (Error error in ex.Errors)
-        Console.WriteLine($"Code: {error.Code}, Description: {error.Description}");
+    Console.WriteLine(ex.Message);                      // Validation failed with 2 errors
 }
-```
 
-## Returning the errors as a result
-
-Where the caller works with `Result`, catch the exception and return its errors. The `Result` types come from the `CSharpEssentials.Results` package (`using CSharpEssentials.ResultPattern;`), and an `Error` or an `Error[]` converts implicitly to `Result<T>`:
-
-```csharp
-public Result<User> CreateUser(UserDto dto)
+static Result<User> CreateUser(string email, string password)
 {
     try
     {
-        if (!IsValidEmail(dto.Email))
-            throw new DomainException(Error.Validation("INVALID_EMAIL", "Email format is not valid"));
+        if (!email.Contains('@'))
+            throw new DomainException(Error.Validation("INVALID_EMAIL", "Email format is not valid."));
 
-        if (!IsValidPassword(dto.Password))
+        if (password.Length < 8)
             throw new EnhancedValidationException(
             [
-                Error.Validation("PASSWORD_LENGTH", "Password must be at least 8 characters"),
-                Error.Validation("PASSWORD_COMPLEXITY", "Password must contain special characters")
+                Error.Validation("PASSWORD_LENGTH", "Password must be at least 8 characters."),
+                Error.Validation("PASSWORD_COMPLEXITY", "Password must contain a special character."),
             ]);
 
-        return new User(dto);
+        return new User(email);
     }
     catch (DomainException ex)
     {
@@ -79,8 +67,17 @@ public Result<User> CreateUser(UserDto dto)
         return ex.Errors;
     }
 }
+
+static void Print(Result<User> result) =>
+    Console.WriteLine(result.Match(
+        onSuccess: user => $"created {user.Email}",
+        onError: errors => string.Join(", ", errors.Select(e => e.Code))));
+
+public sealed record User(string Email);
 ```
 
 ## ASP.NET Core
 
-With `CSharpEssentials.AspNetCore`, the global exception handler (`DefaultExceptionProblemMapper`) turns either exception into a ProblemDetails response built from its errors, with the HTTP status of their `ErrorType`.
+With `CSharpEssentials.AspNetCore`, the global exception handler (`DefaultExceptionProblemMapper`) turns either exception into a problem details response built from its errors, with the HTTP status of their `ErrorType`.
+
+Prefer returning a `Result` over throwing. These exceptions are for places where throwing is the only option, such as a constructor or a third-party callback.

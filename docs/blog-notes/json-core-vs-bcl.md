@@ -95,7 +95,7 @@ Format: mean (ratio against the CSE row), allocated. A ratio below 1.00 means th
 Measured, with the reason from the code:
 
 - Polymorphism against `[JsonPolymorphic]`, every TFM (Serialize ratio 0.67 to 0.72, Deserialize 0.54 to 0.60). CSE writes by serializing the value to UTF-8 bytes (`CSharpEssentials.Json/PolymorphicJsonConverterFactory.cs:120`) and copying them behind a cached `$type` prefix (`:129`). It reads by scanning the object once with a copy of the reader to find `$type` (`:84`) and then deserializing the derived type (`:76`). STJ reads and writes once.
-- The late-list DateTime, every TFM (ratio 0.22 to 0.26). CSE gets the string (`MultiFormatDateTimeConverter.cs:128`) and calls `TryParseExact` once per format until one matches (`:136`); `dd-MMM-yyyy` is entry 27 of 34.
+- The late-list DateTime, every TFM (ratio 0.22 to 0.26). CSE gets the string (`MultiFormatDateTimeConverter.cs:129`) and calls `TryParseExact` once per format until one matches (`:139`); `dd-MMM-yyyy` is entry 27 of 34.
 - DateTime Iso against the built-in converter, every TFM (ratio 0.83 to 0.87), even with CSE's byte-level ISO fast path (`:157`).
 - Enum Write and Read against STJ on net9.0 to net11.0 (Write 0.92 to 0.97, Read 0.88 to 0.95), and ReadNumber against STJ on every TFM (0.86 to 0.90). Enum Read against Macross on net10.0 (0.95) and net11.0 (0.94). Enum InvalidThrow against Macross, every TFM (0.97 to 0.98).
 - Flags, every TFM: STJ and Macross ratio 0.54 to 0.86, and CSE FlagsWrite allocates 56 B against 48 B. The payloads differ (array against comma string).

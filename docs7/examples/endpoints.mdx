@@ -2,24 +2,27 @@
 title: "CSharpEssentials.Endpoints + DependencyInjection Native AOT example"
 ---
 
-A minimal Native AOT web app that uses the source-generated registries of `CSharpEssentials.Endpoints` and `CSharpEssentials.DependencyInjection`. CI publishes it with `PublishAot=true` and fails on any trim or AOT warning.
-
-## What it shows
-
-| Feature | File | Description |
-|---------|------|-------------|
-| Endpoint | `Health.cs` | `IEndpoint` with a static `Map` method |
-| Endpoint group | `Todos/TodosGroup.cs` | `IEndpointGroup` with the `todos` prefix and the `Todos` tag |
-| Grouped endpoints | `Todos/*.cs` | `[EndpointGroup<TodosGroup>]` on list, get and create endpoints |
-| Attribute registration | `Services/TodoStore.cs` | `[RegisterSingleton]`, registered as `ITodoStore` by the `I{TypeName}` rule |
-| Decorator | `Services/LoggingTodoStore.cs` | `[Decorates(typeof(ITodoStore))]`, built by a generated factory |
-| Generated aggregates | `Program.cs` | `AddAllServices()` and `MapAllEndpoints()`, neither of which scans assemblies; `MapAllEndpoints` sets `OperationNaming.TypeName`, so every endpoint gets a unique name such as `ListTodos` |
+A small todo API built with `CSharpEssentials.Endpoints` and `CSharpEssentials.DependencyInjection`. Both packages use generated registries, so the app scans no assemblies and publishes as Native AOT. CI publishes it with `PublishAot=true` and fails on any trim or AOT warning.
 
 ## Running
 
 ```bash
 dotnet run --project examples/Examples.Endpoints
 ```
+
+Then, with the URL the app prints (for example `http://localhost:5000`):
+
+```bash
+curl http://localhost:5000/health
+curl -X POST http://localhost:5000/todos/ -H 'content-type: application/json' -d '{"title":"write docs"}'
+curl -X PUT http://localhost:5000/todos/1/done
+curl http://localhost:5000/todos/1
+curl http://localhost:5000/todos/admin/stats      # 401: the admin group requires the admin role
+curl http://localhost:5000/endpoints              # endpoint types in mapping order
+curl -X DELETE http://localhost:5000/todos/1
+```
+
+Every response carries an `X-Endpoint-Type` header naming the class that mapped the route.
 
 ## Publishing with Native AOT
 
@@ -28,13 +31,39 @@ dotnet publish examples/Examples.Endpoints -c Release -r linux-x64   # or anothe
 ./examples/Examples.Endpoints/bin/Release/net10.0/linux-x64/publish/Examples.Endpoints
 ```
 
-The project sets `TreatWarningsAsErrors`, which the Native AOT compiler also applies to trim and AOT warnings, so a warning fails the publish.
+The project sets `TreatWarningsAsErrors`, which the Native AOT compiler also applies to trim and AOT warnings.
 
 ## Endpoints
 
-| Method | Route | Description |
-|--------|-------|-------------|
-| GET | `/health` | Returns `healthy` |
-| GET | `/todos/` | Lists todos |
-| GET | `/todos/{id:int}` | Gets a todo, or 404 |
-| POST | `/todos/` | Creates a todo from `{ "title": "..." }` |
+| Method | Route | Class | Result |
+|---|---|---|---|
+| GET | `/health` | `Health` | `healthy` |
+| GET | `/endpoints` | `ListEndpoints` | Names from `ExamplesEndpointsEndpointRegistry.EndpointTypes` |
+| GET | `/todos/` | `ListTodos` | All todos |
+| GET | `/todos/{id:int}` | `GetTodo` | The todo, or 404 |
+| POST | `/todos/` | `CreateTodo` | 201 with the new todo |
+| PUT | `/todos/{id:int}/done` | `TodoCommands` | 204, or 404 |
+| DELETE | `/todos/{id:int}` | `TodoCommands` | 204, or 404 |
+| GET | `/todos/admin/stats` | `GetTodoStats` | Totals; needs the `admin` role |
+
+## What each file shows
+
+| Feature | File |
+|---|---|
+| Endpoint at the root | `Health.cs` |
+| Group with prefix and tag | `Todos/TodosGroup.cs` |
+| Endpoints in a group with `[EndpointGroup<TodosGroup>]` | `Todos/ListTodos.cs`, `GetTodo.cs`, `CreateTodo.cs` |
+| One endpoint type mapping two routes | `Todos/TodoCommands.cs` |
+| Nested group with `RequireRoles("admin")` in `Configure` | `Todos/Admin/TodoAdminGroup.cs`, `GetTodoStats.cs` |
+| `[ExcludeFromMapping]`: `/debug` is never mapped | `Internal/DebugDump.cs` |
+| Generated `EndpointTypes` list | `ListEndpoints.cs` |
+| `MapAllEndpoints` with `OperationNaming.TypeName`, `AutoTagFromGroup` and `ConfigureEach` | `Program.cs` |
+| `EndpointTypeMetadata` read in middleware | `Program.cs` |
+| `[RegisterSingleton]`, registered as `ITodoStore` by the `I{TypeName}` rule | `Services/TodoStore.cs` |
+| `[Decorates(typeof(ITodoStore))]` with a source-generated logger | `Services/LoggingTodoStore.cs` |
+| Generated `AddAllServices()` | `Program.cs` |
+| JSON source generation for AOT | `AppJsonSerializerContext.cs` |
+
+`ListEndpoints` gives its lambda an explicit return type (`Ok<string[]> () => ...`). The Request Delegate Generator, which Native AOT turns on, cannot see types written by another source generator such as `ExamplesEndpointsEndpointRegistry`, so it needs the return type spelled out.
+
+Typed result conversion (`Result<T, E>` with `.ToHttpResult()`) and `RouteOf<T>` are not used here: the first needs `CSharpEssentials.AspNetCore`, the second is not trim safe. Both are shown as complete programs in the [package Readme](/libraries/endpoints).

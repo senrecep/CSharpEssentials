@@ -1,178 +1,345 @@
 # CSharpEssentials.Core
 
-Utilities and extensions for everyday .NET development, with no internal dependencies.
+Small helpers for everyday C#: string case conversion, time-ordered and URL-safe GUIDs, collection and null helpers, task helpers, HTTP status constants and a transaction abstraction. It has no dependencies on other CSharpEssentials packages.
 
 Benchmarks against the BCL, Humanizer.Core 3.0.10 and CSharpVitamins.ShortGuid 2.0.0 (case conversion, GUID text and creation, random items, `WithCancellation`) are in [BENCHMARKS.md](./BENCHMARKS.md).
 
-## Features
-
-- String case conversions: Pascal, Camel, Snake, Kebab, Macro, Train, Title, UnderscoreCamel.
-- Collection helpers for conditional add and filter, null filtering, random selection, set comparison and `AllTrue` / `AllFalse`.
-- `IsBetween` / `IsBetweenExclusive` range checks for any `IComparable<T>`.
-- Null-safe execution (`IfNotNull`, `IfNull`, `IfTrue`, `IfFalse`), `IsNull` / `IsNotNull`, and string `IsEmpty` / `IsNotEmpty`.
-- `WithCancellation` (for `Task`, `Task<T>`, `ValueTask`, `ValueTask<T>`), `AsTask` and `AsValueTask`.
-- URL-safe Base64 encoding of GUIDs, and version 7 and strictly increasing version 7 GUIDs on every target.
-- Helpers that flatten inner exceptions and their messages.
-- Common HTTP status codes as `int` constants (`HttpCodes`).
-- `ITransactionRunner`, a transaction abstraction that data-access packages implement.
-
-## Installation
+## Install
 
 ```bash
 dotnet add package CSharpEssentials.Core
 ```
 
-Targets `net11.0`, `net10.0`, `net9.0`, `netstandard2.1` and `netstandard2.0`.
+Targets `net11.0`, `net10.0`, `net9.0`, `netstandard2.1` and `netstandard2.0`. The meta-package `CSharpEssentials` includes it.
 
-## Usage
+## Quick start
 
-### String case conversions
+```csharp Program.cs
+// dotnet add package CSharpEssentials.Core
+using CSharpEssentials.Core;
 
-```csharp
+Console.WriteLine("orderLineItem".ToSnakeCase());   // order_line_item
+Console.WriteLine("order_line_item".ToPascalCase()); // OrderLineItem
+
+Guid id = Guider.NewGuid();                // version 7, sorts by creation time
+string shortId = id.ToStringFromGuid();    // 22 URL-safe characters
+Console.WriteLine($"{id} -> {shortId}");
+Console.WriteLine(shortId.ToGuidFromString() == id); // True
+
+List<string> tags = ["dotnet"];
+bool includeBeta = true;
+tags.IfAdd(includeBeta, "beta");
+Console.WriteLine(string.Join(",", tags));  // dotnet,beta
+
+Console.WriteLine(5.IsBetween(1, 10));      // True
+Console.WriteLine("   ".IsEmpty());         // True: null, "" and whitespace count as empty
+```
+
+## String case conversions
+
+All eight converters are extension methods on `string` and take an optional `CultureInfo` (invariant when omitted).
+
+```csharp Program.cs
+// dotnet add package CSharpEssentials.Core
+using System.Globalization;
 using CSharpEssentials.Core;
 
 string text = "helloWorld";
+Console.WriteLine(text.ToPascalCase());          // HelloWorld
+Console.WriteLine(text.ToCamelCase());           // helloWorld
+Console.WriteLine(text.ToSnakeCase());           // hello_world
+Console.WriteLine(text.ToKebabCase());           // hello-world
+Console.WriteLine(text.ToMacroCase());           // HELLO_WORLD
+Console.WriteLine(text.ToTrainCase());           // Hello-World
+Console.WriteLine(text.ToTitleCase());           // Hello World
+Console.WriteLine(text.ToUnderscoreCamelCase()); // _helloWorld
 
-text.ToPascalCase();          // "HelloWorld"
-text.ToCamelCase();           // "helloWorld"
-text.ToSnakeCase();           // "hello_world"
-text.ToKebabCase();           // "hello-world"
-text.ToMacroCase();           // "HELLO_WORLD"
-text.ToTrainCase();           // "Hello-World"
-text.ToTitleCase();           // "Hello World"
-text.ToUnderscoreCamelCase(); // "_helloWorld"
+Console.WriteLine("HTTPStatus".ToSnakeCase());   // httpstatus
+Console.WriteLine("user用户Name".ToSnakeCase());  // user用户_name
+Console.WriteLine("istanbul".ToPascalCase(CultureInfo.GetCultureInfo("tr-TR"))); // İstanbul
 ```
 
-The converters keep letters of every script, combining marks and decimal digits (Unicode categories `Lu`, `Ll`, `Lt`, `Lm`, `Lo`, `Mn`, `Mc` and `Nd`); any other character starts a new word and is dropped. A word starts at an uppercase or titlecase letter, at a digit, and after a dropped character. Letters without case, such as CJK, Arabic, Hebrew or Thai, are kept as they are and continue the current word, so `"用户名".ToSnakeCase()` is `"用户名"` and `"user用户Name".ToSnakeCase()` is `"user用户_name"`. Titlecase letters such as `ǅ` are lowercased like uppercase letters. Letters outside the Basic Multilingual Plane (surrogate pairs) are still dropped. EF Core `LegacySnakeCase` storage and the Enums generator's `SnakeCase` and `KebabCase` output use the same rule.
+How words are split:
 
-### Collection extensions
+- Letters of any script, combining marks and decimal digits are kept (Unicode categories `Lu`, `Ll`, `Lt`, `Lm`, `Lo`, `Mn`, `Mc`, `Nd`). Every other character, such as a space, `-` or `_`, ends the word and is dropped.
+- A new word starts where an uppercase letter, a titlecase letter or a digit follows a character of another kind. A run of capitals is one word, so `HTTPStatus` becomes `httpstatus`. The Enums generator's wire names follow `JsonNamingPolicy` instead and give `http_status`.
+- Letters without case (CJK, Arabic, Hebrew, Thai) are kept and continue the current word.
+- Letters outside the Basic Multilingual Plane (surrogate pairs) are dropped.
 
-```csharp
-var list = new List<string> { "a", "b" };
+Each call allocates only the result string. Inputs up to 512 characters use a stack buffer, longer ones a pooled array. More detail is in [Extensions/Readme.MD](./Extensions/Readme.MD).
 
-list.IfAdd(true, "c");
-list.IfAddRange(true, ["d", "e"]);
+## GUID utilities
 
-IEnumerable<string> source = list;
-source.ForEach(Console.WriteLine).ToList();
+`Guider` creates GUIDs and converts them to and from a 22-character URL-safe string.
 
-var filtered = list.WhereIf(true, x => x != "a");
-var clean = new List<string?> { "a", null, "b" }.WithoutNulls();
+```csharp Program.cs
+// dotnet add package CSharpEssentials.Core
+using CSharpEssentials.Core;
 
-var numbers = new[] { 1, 2, 3 };
-numbers.GetRandomItem();
-numbers.GetRandomItems(2);
+Guid v7 = Guider.NewGuid();                         // version 7: Unix milliseconds + random bits
+Guid stamped = Guider.NewGuid(new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero));
+Guid fromClock = Guider.NewGuid(TimeProvider.System); // .NET 9 and later builds
+Guid ordered = Guider.NewMonotonicGuid();           // strictly increasing within this process
+Guid sqlKey = Guider.NewSqlServerGuid();            // version 8, sequential in SQL Server uniqueidentifier order
+Guid named = Guider.NewGuidV5(GuidNamespaces.Dns, "www.example.com"); // same input, same GUID
 
-new List<string> { "a", "b" }.HasSameElements(["b", "a"]);  // true (order and duplicates ignored)
-new[] { true, true }.AllTrue();                                // true
-new[] { false, false }.AllFalse();                             // true
+Console.WriteLine(named);                           // 2ed6657d-e927-568b-95e1-2665a8aea6a2
+Console.WriteLine(Guider.NewMonotonicGuid().CompareTo(ordered) > 0); // True
+
+string shortId = Guider.ToStringFromGuid(v7);       // or v7.ToStringFromGuid()
+Guid parsed = Guider.ToGuidFromString(shortId);     // or shortId.ToGuidFromString()
+Console.WriteLine($"{shortId} {parsed == v7}");
+
+try
+{
+    Guider.ToGuidFromString("not-a-guid");
+}
+catch (FormatException ex)
+{
+    Console.WriteLine(ex.Message);
+}
 ```
 
-`ForEach` on `IEnumerable<T>` is lazy: it runs the action for each item while the result is enumerated, so nothing happens until you iterate it (for example with `ToList()`). On a `List<T>` the built-in `List<T>.ForEach` is chosen instead. `GetRandomItem` and `GetRandomItems` use `RandomNumberGenerator`, pick unique items and work on `T[]`, `List<T>` and `Span<T>`.
+| Method | Version | Use it for |
+|---|---|---|
+| `NewGuid()` | 7 | Primary keys and IDs that should sort roughly by creation time |
+| `NewGuid(DateTimeOffset)`, `NewGuid(TimeProvider)` | 7 | IDs stamped with a given time, or a clock a test controls |
+| `NewMonotonicGuid()` | 7 | IDs whose order inside one process must match creation order |
+| `NewSqlServerGuid()` | 8 | Keys of a SQL Server `uniqueidentifier` column |
+| `NewGuidV5(namespace, name)` | 5 | A stable ID derived from a natural key |
 
-### Range checks
+Notes:
 
-```csharp
-5.IsBetween(1, 10);            // true  (inclusive)
-10.IsBetweenExclusive(1, 10);  // false (exclusive)
-orderDate.IsBetween(start, end);
+- A version 7 GUID shows when it was created. Use `Guid.NewGuid()` where an ID must not reveal that.
+- `ToGuidFromString` accepts exactly 22 characters from `A-Z`, `a-z`, `0-9`, `-` and `_`, and throws `FormatException` for anything else. There is no `TryParse` form.
+- The string is RFC 4648 base64url without padding, so `System.Buffers.Text.Base64Url` and other base64url codecs read and write the same text.
+- The `TimeProvider` overload is not in the `netstandard2.0` and `netstandard2.1` builds (a .NET 8 app uses `netstandard2.1`). Pass `timeProvider.GetUtcNow()` to the `DateTimeOffset` overload there.
+- In a cloned virtual machine or a checkpointed and restored process, turn off the random pool with the `CSharpEssentials.Guider.DisableRandomPool` switch. See [Cloned processes](Guids/Readme.MD#cloned-processes).
+- In XML docs, write `<see cref="Guider.NewGuid()"/>`. A bare `Guider.NewGuid` is ambiguous since 9.0 (CS0419).
+
+The layout of each GUID, the random pool and its cost are in [Guids/Readme.MD](./Guids/Readme.MD).
+
+## Collections
+
+```csharp Program.cs
+// dotnet add package CSharpEssentials.Core
+using CSharpEssentials.Core;
+
+List<string> items = ["a"];
+items.IfAdd(true, "b");                  // adds only when the condition is true
+items.IfAdd(false, "skipped");
+items.IfAddRange(true, ["c", "d"]);
+Console.WriteLine(string.Join(",", items)); // a,b,c,d
+
+int[] numbers = [1, 2, 3, 4, 5];
+bool onlyLarge = true;
+Console.WriteLine(string.Join(",", numbers.WhereIf(onlyLarge, n => n > 2)));          // 3,4,5
+Console.WriteLine(string.Join(",", numbers.AsQueryable().WhereIf(false, n => n > 2))); // 1,2,3,4,5
+
+string?[] raw = ["x", null, "y"];
+IEnumerable<string> clean = raw.WithoutNulls();
+Console.WriteLine(string.Join(",", clean)); // x,y
+
+Customer?[] customers = [new("Ada", "ada@example.com"), new("Bob", null), null];
+Console.WriteLine(customers.WithoutNulls(c => c.Email).Count()); // 1
+
+Console.WriteLine(new[] { 1, 2, 2 }.HasSameElements([2, 1])); // True: a set comparison
+Console.WriteLine(new[] { true, true }.AllTrue());           // True
+Console.WriteLine(new[] { false, false }.AllFalse());        // True
+
+List<string> seen = [];
+List<int> doubled = numbers.ForEach(n => seen.Add($"#{n}")).Select(n => n * 2).ToList();
+Console.WriteLine($"{seen.Count} {string.Join(",", doubled)}"); // 5 2,4,6,8,10
+
+int one = numbers.GetRandomItem();
+int[] three = numbers.GetRandomItems(3);
+Console.WriteLine($"{one} {three.Length}");
+
+record Customer(string Name, string? Email);
 ```
 
-### Functional extensions
+- `WhereIf` exists for `IEnumerable<T>` (with or without the index) and `IQueryable<T>`. On a query the predicate stays an expression, so EF Core translates it.
+- `WithoutNulls()` returns a sequence typed as non-nullable. `WithoutNulls(selector)` also drops items whose selected property is null.
+- `HasSameElements` ignores order and duplicates.
+- `ForEach` on `IEnumerable<T>` is lazy. It runs the action as the result is enumerated and yields each item, so nothing happens until you iterate. On a variable typed `List<T>`, the built-in `List<T>.ForEach` (returns `void`) wins; call `list.AsEnumerable().ForEach(...)` to get this one.
+- `GetRandomItem` and `GetRandomItems` work on `T[]`, `List<T>` and `Span<T>` and use `RandomNumberGenerator`. `GetRandomItems` picks items at distinct positions; a count at or above the length returns all items shuffled, and a negative count throws `ArgumentOutOfRangeException`.
 
-```csharp
-object? data = GetData();
+## Null, empty and boolean checks
 
-if (data.IsNull()) { /* ... */ }
-if (data.IsNotNull()) { /* ... */ }
+```csharp Program.cs
+// dotnet add package CSharpEssentials.Core
+using CSharpEssentials.Core;
 
-data.IfNotNull(d => Process(d));
-data.IfNull(() => Initialize());
+string? name = Environment.GetEnvironmentVariable("CSE_DEMO_NAME_THAT_IS_NOT_SET");
+Console.WriteLine(name.IsEmpty());    // True for null, "" and whitespace
+Console.WriteLine(name.IsNull());     // True
 
-string? name = null;
-name.IsEmpty();      // true for null, "" and whitespace
-name.IsNotEmpty();   // false
+if (name.IsNotEmpty())
+    Console.WriteLine(name.Length);   // no warning: IsNotEmpty marks name as not null
+
+bool ran = name.IfNotNull(n => Console.WriteLine(n), () => Console.WriteLine("no name"));
+Console.WriteLine(ran);               // False: the value was null, so the else action ran
+
+name.IfNull(() => Console.WriteLine("still null"));
+
+bool isAdmin = true;
+isAdmin.IfTrue(() => Console.WriteLine("admin"));
+isAdmin.IfFalse(() => Console.WriteLine("not printed"));
+Console.WriteLine(isAdmin.IsTrue() && !isAdmin.IsFalse()); // True
 ```
 
-Each overload returns a `bool`: whether the value was not null (`IfNotNull`) or null (`IfNull`). Both also take an else action:
+- `IsEmpty` and `IsNotEmpty` are for `string?`. `IsNull` and `IsNotNull` work on any `T?`. All four carry `[NotNullWhen]`, so flow analysis knows the value is not null after a passing check.
+- `IfNotNull` and `IfNull` take an action, or an action and an else action. The value-taking overloads pass the value: `IfNotNull(Action<T>)`, `IfNotNull(Action<T>, Action)`, `IfNull(Action, Action<T>)`. They return `true` when the value was not null (`IfNotNull`) or null (`IfNull`).
+- `IfTrue` and `IfFalse` return the condition.
 
-```csharp
-data.IfNotNull(d => Process(d), () => Initialize());
-data.IfNull(() => Initialize(), d => Process(d));
+## Tasks
 
-true.IfTrue(() => Console.WriteLine("yes"));
-false.IfFalse(() => Console.WriteLine("no"));
+```csharp Program.cs
+// dotnet add package CSharpEssentials.Core
+using CSharpEssentials.Core;
+
+Task<int> ready = 42.AsTask();              // Task.FromResult
+ValueTask<string> vt = "hi".AsValueTask();
+Console.WriteLine($"{await ready} {await vt}");
+
+using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(50));
+Task slow = Task.Delay(TimeSpan.FromSeconds(30));
+try
+{
+    await slow.WithCancellation(cts.Token);
+}
+catch (OperationCanceledException)
+{
+    Console.WriteLine($"stopped waiting; the task itself is still running: {!slow.IsCompleted}");
+}
 ```
 
-### Task helpers
+`WithCancellation` exists for `Task`, `Task<T>`, `ValueTask` and `ValueTask<T>`. It stops waiting when the token is cancelled; it does not cancel the wrapped operation. A completed task, or a token that cannot be cancelled, comes back unchanged. On the .NET 9 and later builds it uses `Task.WaitAsync` and throws `TaskCanceledException` (a subclass of `OperationCanceledException`); the `netstandard` builds throw `OperationCanceledException` itself. Catch `OperationCanceledException`, not the exact type.
 
-```csharp
-await SomeTask().WithCancellation(cts.Token);
+## Other helpers
 
-string value = "hello";
-Task<string> task = value.AsTask();
-ValueTask<string> vt = value.AsValueTask();
-```
+```csharp Program.cs
+// dotnet add package CSharpEssentials.Core
+using CSharpEssentials.Core;
 
-`WithCancellation` stops waiting and throws `OperationCanceledException` when the token is cancelled. On .NET 9 and later it is `Task.WaitAsync`, so the exception is the `TaskCanceledException` subclass and carries the token. It does not cancel the underlying task, and it returns the original task when the token cannot be cancelled.
+Console.WriteLine(10.IsBetween(1, 10));           // True: inclusive
+Console.WriteLine(10.IsBetweenExclusive(1, 10));  // False
+Console.WriteLine(new DateOnly(2025, 6, 1).IsBetween(new DateOnly(2025, 1, 1), new DateOnly(2025, 12, 31))); // True
 
-### GUID utilities
-
-```csharp
-Guid id = Guider.NewGuid();          // Version 7 on every target
-Guid stamped = Guider.NewGuid(timeProvider); // Version 7 stamped with the provider's time (DateTimeOffset overload too)
-Guid named = Guider.NewGuidV5(GuidNamespaces.Url, url); // Version 5, the same GUID for the same namespace and name
-Guid ordered = Guider.NewMonotonicGuid(); // Version 7, strictly increasing in this process
-Guid sqlKey = Guider.NewSqlServerGuid();  // Version 8, ordered for SQL Server uniqueidentifier
-string shortId = id.ToStringFromGuid(); // URL-safe, 22 chars
-Guid parsed = shortId.ToGuidFromString();
-```
-
-The string is RFC 4648 base64url without padding: standard Base64 with `+` replaced by `-` and `/` replaced by `_`. Any base64url codec, such as `System.Buffers.Text.Base64Url` on .NET 9+, decodes it to the same GUID, and `ToGuidFromString` accepts strings that codec produces. A last character with non-zero unused bits decodes to the same GUID as the canonical string on every runtime; any other malformed input throws `FormatException`.
-
-`Guider.ToStringFromGuid` and `Guider.ToGuidFromString` are the static forms. See [Guids](Guids/Readme.MD).
-
-### Other helpers
-
-`ex.GetInnerExceptions()` and `ex.GetInnerExceptionsMessages()` return lazy sequences that start with `ex` itself, followed by each inner exception. `HttpCodes` holds `int` constants such as `HttpCodes.Ok`, `HttpCodes.NotFound` and `HttpCodes.BadRequest`.
-
-```csharp
 object boxed = 42;
-int number = boxed.ExplicitCast<int>();
+int number = boxed.ExplicitCast<int>();           // (int)boxed
+Console.WriteLine(number);
 
-DateTime when = 1700000000000L.MsToDateTime();   // Unix milliseconds, Kind is Utc
+DateTime when = 1700000000000L.MsToDateTime();    // Unix milliseconds
+Console.WriteLine($"{when:O} {when.Kind}");       // 2023-11-14T22:13:20.0000000Z Utc
 
-HttpGroup group = HttpStatus.BadRequest.GetTypeGroup<HttpGroup, HttpStatus>();  // HttpGroup.ClientError
+Console.WriteLine(Status.NotFound.GetTypeGroup<StatusGroup, Status>()); // ClientError
 
-public enum HttpStatus { Ok = 200, BadRequest = 400 }
-public enum HttpGroup { Success = 200, ClientError = 400 }
+var error = new InvalidOperationException("outer", new ArgumentException("inner"));
+Console.WriteLine(string.Join(" | ", error.GetInnerExceptionsMessages())); // outer | inner
+Console.WriteLine(error.GetInnerExceptions().Count());                       // 2
+
+Console.WriteLine(HttpCodes.UnprocessableEntity); // 422
+
+enum Status { Ok = 200, Created = 201, BadRequest = 400, NotFound = 404 }
+enum StatusGroup { Success = 200, ClientError = 400 }
 ```
 
-`GetTypeGroup` rounds the enum value down to a multiple of `group` (default 100) and converts it to the target enum.
+- `IsBetween` and `IsBetweenExclusive` work for any `IComparable<T>`.
+- `MsToDateTime` returns a `DateTime` with `Kind = Utc`.
+- `GetTypeGroup<TGroup, TType>(group = 100)` rounds the enum value down to a multiple of `group` and converts it to `TGroup`.
+- `GetInnerExceptions()` yields the exception itself, then each inner exception. `GetInnerExceptionsMessages()` yields their messages. Both are lazy.
+- `HttpCodes` is a struct of `int` constants for common status codes, from `Ok` (200) to `NetworkAuthenticationRequired` (511).
 
-On .NET 10 and later, `using CSharpEssentials;` also brings the C# 14 extension members `IEnumerable<T>.IsEmpty` (property, `!source.Any()`) and `string.IsPalindrome` (property).
+### C# 14 extension properties (.NET 10 and later)
 
-### Transaction runner abstraction
+`using CSharpEssentials;` adds two extension properties: `IEnumerable<T>.IsEmpty` (`!source.Any()`) and `string.IsPalindrome`.
 
-`ITransactionRunner` (namespace `CSharpEssentials.Transactions`) runs a unit of work in a transaction and commits only when `shouldCommit` returns `true`. It has no dependencies, so data-access packages implement it (`EfCoreTransactionRunner<TDbContext>` in `CSharpEssentials.EntityFrameworkCore`) and pipelines consume it (`TransactionBehavior` in `CSharpEssentials.Mediator`).
+```csharp Program.cs
+// dotnet add package CSharpEssentials.Core
+using CSharpEssentials;
 
-```csharp
-using CSharpEssentials.ResultPattern;
+int[] none = [];
+Console.WriteLine(none.IsEmpty);        // True
+Console.WriteLine("level".IsPalindrome); // True
+```
+
+A file that imports both `CSharpEssentials` and `CSharpEssentials.Core` cannot call `IsEmpty` on a `string`: `text.IsEmpty()` and `text.IsEmpty` fail with CS9339, because `string` is an `IEnumerable<char>`. Keep the two `using` directives in separate files, or call `GeneralExtensions.IsEmpty(text)`. The two also differ: the property is `false` for `"   "`, the method is `true`.
+
+## Transactions
+
+`ITransactionRunner` and `ITransactionCallbacks` (namespace `CSharpEssentials.Transactions`) are interfaces with no dependencies. Data-access packages implement them (`EfCoreTransactionRunner<TDbContext>` in [CSharpEssentials.EntityFrameworkCore](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.EntityFrameworkCore/Readme.MD)) and pipelines use them (`TransactionBehavior` in [CSharpEssentials.Mediator](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.Mediator/Readme.MD)).
+
+- `ExecuteAsync(work, shouldCommit, cancellationToken)` runs `work` in a transaction, or joins the one in progress. It commits when `shouldCommit(result)` returns `true` and rolls back otherwise or when `work` throws.
+- `OnCommittedAsync(callback, cancellationToken)` queues `callback` to run after the outermost commit. A rollback drops it. With no transaction open, it runs `callback` at once. A queued callback gets `CancellationToken.None`.
+
+This program shows the contract with a hand-written runner that has no database:
+
+```csharp Program.cs
+// dotnet add package CSharpEssentials.Core
 using CSharpEssentials.Transactions;
 
-Result result = await transactionRunner.ExecuteAsync(
-    ct => handler.Handle(command, ct),
-    outcome => outcome.IsSuccess,
-    cancellationToken);
-```
+var runner = new InMemoryRunner();
 
-Here `handler.Handle` returns `ValueTask<Result>`; `Result` comes from [CSharpEssentials.Results](../CSharpEssentials.Results/Readme.MD).
+bool saved = await runner.ExecuteAsync(
+    async ct =>
+    {
+        await runner.OnCommittedAsync(_ => { Console.WriteLine("publish OrderPlaced"); return ValueTask.CompletedTask; }, ct);
+        return true;
+    },
+    ok => ok);
+Console.WriteLine($"committed: {saved}");
+
+await runner.ExecuteAsync(
+    async ct =>
+    {
+        await runner.OnCommittedAsync(_ => { Console.WriteLine("not printed"); return ValueTask.CompletedTask; }, ct);
+        return false;
+    },
+    ok => ok);
+
+sealed class InMemoryRunner : ITransactionRunner, ITransactionCallbacks
+{
+    private List<Func<CancellationToken, ValueTask>>? _pending;
+
+    public async ValueTask<T> ExecuteAsync<T>(Func<CancellationToken, ValueTask<T>> work, Func<T, bool> shouldCommit, CancellationToken cancellationToken = default)
+    {
+        _pending = [];
+        try
+        {
+            T result = await work(cancellationToken);
+            if (shouldCommit(result))
+                foreach (var callback in _pending)
+                    await callback(CancellationToken.None);
+            return result;
+        }
+        finally
+        {
+            _pending = null;
+        }
+    }
+
+    public ValueTask OnCommittedAsync(Func<CancellationToken, ValueTask> callback, CancellationToken cancellationToken = default)
+    {
+        if (_pending is null)
+            return callback(cancellationToken);
+        _pending.Add(callback);
+        return ValueTask.CompletedTask;
+    }
+}
+```
 
 ## Upgrading to 8.0
 
-- `GetRandomItems` throws `ArgumentOutOfRangeException` (parameter `count`) for a negative `count`. It threw `OverflowException` before; update any `catch` that relied on that.
-- `MsToDateTime` returns a `DateTime` with `Kind = Utc`. It returned `Kind = Unspecified` before, with the same ticks. `ToUniversalTime()` no longer shifts it by the local offset, System.Text.Json now writes a trailing `Z`, and Npgsql maps it to `timestamp with time zone`. If you stored or compared the old value, call `DateTime.SpecifyKind(value, DateTimeKind.Unspecified)` to keep the old behaviour.
-- `ToSnakeCase`, `ToKebabCase` and the other case converters keep letters without case (CJK, Arabic, Hebrew, Thai), titlecase letters and combining marks. 7.x dropped them, so `"用户名".ToSnakeCase()` was `""` and `"user用户Name"` was `"user_name"`; they are now `"用户名"` and `"user用户_name"`. Output for names written only in Latin letters and digits does not change. If you stored converted values of non-Latin names, for example through EF Core `LegacySnakeCase` enum storage, rewrite them with the new output.
-- `ToStringFromGuid` and `ToGuidFromString` use the RFC 4648 base64url alphabet (`+` as `-`, `/` as `_`). 7.x used the reverse mapping, so a short ID stored by 7.x that contains `-` or `_` now decodes to a different GUID. Convert stored IDs once by swapping every `-` with `_` and every `_` with `-`, for example `id.Replace('-', '*').Replace('_', '-').Replace('*', '_')`.
-- `Guider.NewGuid()` on the `netstandard2.0` and `netstandard2.1` assets, and so on .NET 8 and .NET Framework, returns RFC 9562 version 7 GUIDs instead of version 4. The first 6 bytes hold the creation time. Use `Guid.NewGuid()` where an ID must not reveal when it was created. On every target the random bits now come from a per-thread pool; apps that run in a cloned virtual machine or a checkpointed and restored process should read [Cloned processes](Guids/Readme.MD#cloned-processes).
-- `WithCancellation` on the .NET 9, 10 and 11 targets throws `TaskCanceledException`, a subclass of `OperationCanceledException`, when the token is cancelled. 7.x threw `OperationCanceledException` itself. A `catch (OperationCanceledException)` still catches it, but an exact type check such as `ex.GetType() == typeof(OperationCanceledException)` or xUnit `Assert.ThrowsAsync<OperationCanceledException>` no longer matches. The `netstandard2.0` and `netstandard2.1` assets still throw `OperationCanceledException`.
+- `GetRandomItems` throws `ArgumentOutOfRangeException` for a negative `count` (it threw `OverflowException`).
+- `MsToDateTime` returns `Kind = Utc` (it was `Unspecified`, with the same ticks). `ToUniversalTime()` no longer shifts it, System.Text.Json writes a trailing `Z`, and Npgsql maps it to `timestamp with time zone`. Use `DateTime.SpecifyKind(value, DateTimeKind.Unspecified)` to keep the old value.
+- The case converters keep letters without case, titlecase letters and combining marks. 7.x dropped them: `"用户名".ToSnakeCase()` was `""` and is now `"用户名"`. Latin-only names do not change. Rewrite stored values of non-Latin names, for example EF Core `LegacySnakeCase` enum columns.
+- `ToStringFromGuid` and `ToGuidFromString` use the RFC 4648 base64url alphabet (`+` as `-`, `/` as `_`). 7.x used the reverse, so an old short ID with `-` or `_` now decodes to another GUID. Convert stored IDs once: `id.Replace('-', '*').Replace('_', '-').Replace('*', '_')`.
+- `Guider.NewGuid()` returns version 7 on the `netstandard` builds too (so on .NET 8 and .NET Framework), and every target takes random bits from a per-thread pool. See [Cloned processes](Guids/Readme.MD#cloned-processes).
+- `WithCancellation` on the .NET 9 and later builds throws `TaskCanceledException`. A `catch (OperationCanceledException)` still catches it; an exact type check such as `Assert.ThrowsAsync<OperationCanceledException>` does not.
+
+## See also
+
+- [Extensions/Readme.MD](./Extensions/Readme.MD): every extension method with its edge cases.
+- [Guids/Readme.MD](./Guids/Readme.MD): GUID layouts, the random pool and its cost.
+- [Agent skill](https://github.com/senrecep/CSharpEssentials/blob/main/.well-known/agent-skills/csharpessentials-core/SKILL.md) and [example project](https://github.com/senrecep/CSharpEssentials/blob/main/examples/Examples.Core).

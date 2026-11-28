@@ -4,6 +4,7 @@
 
 - `Error.Exception(...)` defaults to `ErrorType.Unexpected` instead of `ErrorType.Failure`, in all three overloads.
 - `ErrorType` has a new member, `Domain` (numeric value 8), which maps to HTTP 422. The values of the existing members do not change.
+- `CSharpEssentials.AspNetCore`: with `ExposeExceptionDetails` off (the default), a problem with status 500 or higher no longer shows error descriptions or exception metadata to the client. See [5xx problems hide server details](#5xx-problems-hide-server-details-csharpessentialsaspnetcore).
 - `CSharpEssentials.Http` maps a 422 response to `ErrorType.Domain` instead of `ErrorType.Validation`.
 - `ErrorType.Unknown` is the `[EnumFallback]` member: data reads map a type name or number they do not know to `Unknown`.
 - `CSharpEssentials.Validation` stores the property path under the `field` metadata key on every error its built-in rules and `AddError(code, message)` record, so those errors no longer equal an `Error` built without metadata, and the AspNetCore `AllErrors` output (also `All` and `UseLegacyDefaults()`) writes that metadata.
@@ -11,7 +12,7 @@
 - `CSharpEssentials.AspNetCore`: `POST`, `PUT`, `PATCH` and `DELETE` operations with `WithIfMatch()` or `[IfMatch]` declare `400` and `412` `application/problem+json` responses in OpenAPI, plus `428` when the header is required. MVC actions get them with `AddConditionalRequests()`, from the attribute or from `MapControllers().WithIfMatch()`. A status the operation already declares is kept. Regenerate API clients and update OpenAPI snapshot tests.
 - `CSharpEssentials.Core`: `Guider.NewGuid` has overloads that take a `DateTimeOffset` and, on .NET 8 and later, a `TimeProvider`. An XML doc reference `<see cref="Guider.NewGuid"/>` is now ambiguous (CS0419, an error with warnings as errors); write `Guider.NewGuid()`.
 - `CSharpEssentials.Resilience`: `ResiliencePolicy.WithRetry` and `ResiliencePolicy<T>.WithRetry` take two more optional parameters, `useJitter` and `maxDelay`. Source that calls them compiles unchanged; an assembly compiled against 8.x must be recompiled (`MissingMethodException` otherwise).
-- `CSharpEssentials.Resilience`: every `RetryIfFailed` overload (with and without `shouldRetry`, for `Result` and `Result<T>`) take two more optional parameters, `useJitter` and `maxDelay`, before `cancellationToken`. A call that passes the token by name compiles unchanged; one that passes it positionally after `exponentialBackoff` must name it. An assembly compiled against 8.x must be recompiled (`MissingMethodException` otherwise).
+- `CSharpEssentials.Resilience`: every `RetryIfFailed` overload (with and without `shouldRetry`, for `Result` and `Result<T>`) takes two more optional parameters, `useJitter` and `maxDelay`, before `cancellationToken`. A call that passes the token by name compiles unchanged; one that passes it positionally after `exponentialBackoff` must name it. An assembly compiled against 8.x must be recompiled (`MissingMethodException` otherwise).
 - `CSharpEssentials.Json`: `EnhancedJsonSerializerOptions.StrictOptions` requires every constructor parameter that is a non-nullable value type and has no default (`JsonTypeInfoModifiers.RequireValueTypeConstructorParameters`). A payload that omits such a property now throws `JsonException` instead of binding `0`, the first enum member or `default`. Give the parameter a default value or make it nullable to keep it optional. A property without a setter (get-only, assigned in the constructor) stays optional.
 - `CSharpEssentials.Time`: `DateTimeProvider.TimeZone` returns the `LocalTimeZone` of the wrapped `TimeProvider` instead of always `TimeZoneInfo.Local`. With `TimeProvider.System` nothing changes. Over `FakeTimeProvider` it is UTC unless the test calls `SetLocalTimeZone`, and `GetAge(dateTimeProvider)` follows it.
 - `CSharpEssentials.Results`: `default(Result)` and `default(Result<T>)` are no longer successes. They report a failure with one `Error.Unexpected` coded `Result.Default`, and every member that passes the errors to a delegate or builds a new failure from them throws `InvalidOperationException` on them. See [Default results fail closed](#default-results-fail-closed-csharpessentialsresults-csharpessentialsrules).
@@ -51,13 +52,27 @@ What to change:
 
 - The problem title becomes `Unexpected Error` instead of `Server Failure`.
 - `Result.TryCatch`, the Mediator `ExceptionHandlingBehavior`, a throwing validator in `ValidationBehavior` and a throwing rule in `CSharpEssentials.Rules` return `Unexpected` errors.
-- The Mediator `IdempotencyBehavior` keeps a stored failure whose first error is `Unexpected` for the failure retention (`IdempotencyExecutorOptions.FailureRetention`), not for the success retention. An exception caught by `ExceptionHandlingBehavior` now falls under that shorter retention, so the request can be retried sooner.
-- Code that tested `error.Type == ErrorType.Failure` to find exceptions should test `ErrorType.Unexpected`, or check the `exceptionType` metadata key.
+- The Mediator `IdempotencyBehavior` keeps a stored failure whose first error is `Unexpected` for the failure retention (`IdempotencyExecutorOptions.FailureRetention`), not for the success retention. This covers a handler that returns an `Unexpected` failure. A thrown exception is different: with the default order, `ExceptionHandlingBehavior` sits outside `IdempotencyBehavior`, so nothing is stored and a retry before the lease ends gets `Idempotency.InFlight` (see the Mediator Readme).
+- Code that tested `error.Type == ErrorType.Failure` to find exceptions should test `ErrorType.Unexpected`, or check the `exceptionType` metadata key. That key is only there on the server: a 5xx problem response strips it (see the next section).
 
 The default is a compile-time value. An assembly compiled against 8.x keeps passing `Failure` until it is recompiled. Pass the type explicitly to keep the old behavior:
 
 ```csharp
 Error error = Error.Exception(ex, ErrorType.Failure);
+```
+
+## 5xx problems hide server details (`CSharpEssentials.AspNetCore`)
+
+When the status of a problem is 500 or higher and `EnhancedProblemDetailsOptions.ExposeExceptionDetails` is `false` (the default), the problem details factory redacts it:
+
+- `detail` becomes `An unexpected error occurred.`
+- Every error in `errors` whose own status is 500 or higher gets that text as its description. 4xx errors in the same response keep theirs.
+- The metadata keys `exception`, `exceptionType`, `exceptionMessage`, `exceptionStackTrace`, `innerException` and `stackTrace` are removed from each error and from the problem extensions.
+
+This hits every error that maps to 500: `Error.Failure`, `Error.Unexpected`, `Error.Exception` and `ErrorType.Unknown`. A client that read the description of a `Failure` error gets the generic text now. Give business-rule errors a 4xx type the client is meant to read (`Domain`, `Validation`, `Conflict`, `Forbidden`). To keep the old output in development, turn the option on there:
+
+```csharp
+builder.Services.AddEnhancedProblemDetails(o => o.ExposeExceptionDetails = builder.Environment.IsDevelopment());
 ```
 
 ## `ErrorType.Domain` and HTTP 422
@@ -73,7 +88,7 @@ Error error = Error.Exception(ex, ErrorType.Failure);
 | Problem title | | `Domain Error` |
 | Resilience retry | | not retried, like `Validation` |
 
-5xx descriptions are hidden by the AspNetCore problem details unless `ExposeExceptionDetails` is on. Business-rule rejections that used `Failure` so far reached the client as a 500 with a generic message. Move them to `Error.Domain` if the client should read the description.
+A business-rule rejection that used `Failure` reaches the client as a 500 with the generic text (see above). Move it to `Error.Domain` if the client should read the description.
 
 When a response carries several errors, the default `DefaultErrorStatusCodeMapper.SelectPrimaryError` picks the one with the highest status, so a `Domain` error (422) wins over `Conflict` (409) and the 4xx below it, and loses to any 5xx.
 
@@ -95,6 +110,36 @@ A failed built-in rule records `Error.Validation("Name.NotEmpty", "...", new Err
 - `Error` equality and hashing compare metadata. An expected `Error.Validation("Name.NotEmpty", "...")` with no metadata is no longer equal to the recorded error. Compare `Code` and `Description`, or build the expected error with the same `field` metadata.
 - With `ProblemErrorFields.AllErrors` (part of `All` and `UseLegacyDefaults()`) the `errors` array writes `"metadata": { "field": "Name" }` for these errors where 8.x wrote `"metadata": null`.
 - `ValidationErrorsFormat.ByField` is new and opt-in. It groups `errors` by `field`, run through the HTTP JSON naming policy.
+
+## Check the new defaults
+
+This program prints the 9.0 behavior of the changes above that need no web host.
+
+```csharp Program.cs
+// dotnet add package CSharpEssentials.Results
+// dotnet add package CSharpEssentials.Errors
+using CSharpEssentials.Errors;
+using CSharpEssentials.ResultPattern;
+
+Result uninitialized = default;
+Console.WriteLine($"default(Result).IsFailure: {uninitialized.IsFailure}");
+Console.WriteLine($"FirstError.Code: {uninitialized.FirstError.Code}");
+Console.WriteLine($"default == Success(): {uninitialized == Result.Success()}");
+
+try
+{
+    uninitialized.Match(onSuccess: () => "ok", onFailure: errors => errors[0].Code);
+}
+catch (InvalidOperationException)
+{
+    Console.WriteLine("Match on default throws InvalidOperationException");
+}
+
+Error fromException = Error.Exception(new TimeoutException("db timeout"));
+Console.WriteLine($"Error.Exception type: {fromException.Type}");
+Console.WriteLine($"Domain status: {ErrorType.Domain.ToHttpStatusCode()}");
+Console.WriteLine($"422 maps to: {422.ToErrorType()}");
+```
 
 ## New: typed results (`CSharpEssentials.Results`, `CSharpEssentials.Errors`)
 

@@ -8,14 +8,12 @@ public sealed class ConsoleDomainEventPublisher : IDomainEventPublisher
 {
     public Task PublishAsync(IDomainEvent domainEvent, CancellationToken cancellationToken = default)
     {
-        string message = domainEvent switch
+        Console.WriteLine(domainEvent switch
         {
-            ProductCreatedEvent e => $"  [BeforeSave] Product creating: {e.ProductName}",
-            ProductPriceChangedEvent e => $"  [AfterSave]  Price changed: ${e.OldPrice} -> ${e.NewPrice} (ProductId: {e.ProductId})",
-            _ => $"  [Event] {domainEvent.GetType().Name}"
-        };
-
-        Console.WriteLine(message);
+            ProductCreatedEvent e => $"   [BeforeSave] creating {e.ProductName}",
+            ProductPriceChangedEvent e => $"   [AfterSave] price {e.OldPrice} -> {e.NewPrice}",
+            _ => $"   {domainEvent.GetType().Name}",
+        });
         return Task.CompletedTask;
     }
 }

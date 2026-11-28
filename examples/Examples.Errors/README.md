@@ -1,27 +1,28 @@
 # CSharpEssentials.Errors example
 
-Console app that runs the `CSharpEssentials.Errors` API.
+A console app that runs the `CSharpEssentials.Errors` API section by section and prints the results. It references only `CSharpEssentials.Errors`.
 
-## Features demonstrated
-
-| Feature | Description |
-|---------|-------------|
-| Error creation | `Error.NotFound`, `Error.Validation`, `Error.Conflict`, `Error.Unauthorized`, `Error.Forbidden`, `Error.Unexpected`, `Error.Failure` |
-| Error[] conversion | Implicit `Error` to `Error[]` conversion |
-| Combining errors | The `+` operator and `Error.CreateMany` |
-| HTTP status mapping | Convert `ErrorType` to HTTP status codes and status codes back with `ToErrorType` |
-| Error metadata | Attach custom key-value metadata to errors with `ErrorMetadata` |
-| Multiple errors | Collect and report several validation errors in an array |
-| DomainException | Throw and catch a single `Error` wrapped in an exception |
-| EnhancedValidationException | Throw and catch an `Error[]` wrapped in an exception |
-| Exception bridge | `Error.Exception(ex)` and `Error.Exception(code, ex)` |
-| Sentinel values | `Error.NoFirstError`, `Error.NoErrors`, `Error.False` |
-| ErrorType enum | `ToIntType` and the `ErrorType` members |
-| IError interface | Read `Code`, `Description`, `Type`, `NumericType` and `Metadata` through `IError` |
-
-## Running
+## Run
 
 ```bash
 cd examples/Examples.Errors
 dotnet run
 ```
+
+The project targets net10.0.
+
+## What each section shows
+
+| Section | Members |
+|---|---|
+| Factories and HTTP status | every `Error` factory, `Error.Create`, default code and description, `ToHttpStatusCode`, `ToErrorType`, `ToIntType` |
+| IError and equality | reading an error through `IError`, value equality that ignores metadata key order |
+| Combining errors | `+`, `Error.CreateMany`, the implicit `Error` to `Error[]` conversion |
+| Metadata | `AddMetadata` (keeps the first value), `Combine`, `ErrorMetadata.FieldKey` and `GetField`, `AddStackTrace`, `CreateWithStackTrace`, `AddException`, `AddExceptionDetailed`, `CreateWithException`, `CreateWithExceptionDetailed` |
+| Errors from exceptions | `Error.Exception` with its `Unexpected` default, the nested `innerException` metadata, an explicit code and `ErrorType` |
+| Error catalog | a static class of `Error` fields and methods, `Error.Domain` with metadata |
+| Typed error kinds | all eight kinds (`NotFoundError`, `ConflictError`, `DomainError`, `UnauthorizedError`, `ForbiddenError`, `FailureError`, `UnexpectedError`, `ValidationError`), `ValidationError.Field`, a `Codes` class for pattern matching, a derived record, `ToError`, equality rules, `[ErrorKind]` on a struct error |
+| Exceptions that carry errors | `DomainException` and `EnhancedValidationException` |
+| Sentinels | `Error.NoErrors`, `Error.NoFirstError`, `Error.NoLastError`, `Error.False` |
+
+See the [package Readme](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.Errors/Readme.MD) for the full API.

@@ -2,25 +2,26 @@
 title: "CSharpEssentials.Validation example"
 ---
 
-Console application for `CSharpEssentials.Validation` and its `Result` integration.
+A console app that validates users and orders with `CSharpEssentials.Validation`. It needs no external services.
 
-| Feature | What the sample does |
-|---------|----------------------|
-| String validators | `NotEmpty`, `MinLength`, `MaxLength`, `EmailAddress`, `Matches`, `StartsWith`, `EndsWith`, `NotNull` |
-| Comparable validators | `GreaterThan`, `LessThan`, `LessThanOrEqualTo`, `InclusiveBetween`, `ExclusiveBetween`, `Equal`, `NotEqual` on `int` and `decimal`, and string `Equal` / `NotEqual` |
-| Nullable structs | Rules on `int?` are skipped when the value is `null` |
-| Collections | Rules on `List<T>?` and `T[]?` |
-| CascadeMode | `CascadeMode.Continue` collects every error of a field |
-| Must / MustAsync | Custom predicates |
-| Nested objects | `SetValidatorAsync` on a nested property; a `null` nested object is skipped |
-| ForEach / ForEachAsync | Validates each item of a collection |
-| Conditional rules | A plain C# `if` inside the validator |
-| Include | Composes one validator from others |
-| ValidateWith | Validates inside a `Result<T>` chain |
-
-## Running
+## Run
 
 ```bash
 cd examples/Examples.Validation
 dotnet run
 ```
+
+## What each part shows
+
+1. A `Validator<T>` class with string, comparable, enum and collection rules, run on a valid and an invalid command.
+2. `Validator.ValidateAsync` with an inline delegate.
+3. `Cascade(CascadeMode.Continue)` collecting every password error.
+4. `Must` with a custom code, `Must` with the generated code, and `MustAsync`.
+5. `SetValidatorAsync` for a nested address, `ForEach` over order lines and plain `if` conditions.
+6. `Include` to reuse another validator, and an `Order` override.
+7. A custom rule (`Even`), `rules.For(value, name)` and `AddFailure`.
+8. `ValidateWith` and `ValidateWithAsync` on a `Result<T>`, including a failed source result that skips validation.
+9. Reading the `field` metadata from a built-in error.
+10. `AddValidator` registration and how a repeated call does not add a duplicate.
+11. The remaining built-in rules (`StartsWith`, `Contains`, `ExclusiveBetween`, `Null`, `CountBetween`, `HasOnlyDefinedFlags`, `IsOneOf` and others) and `ForEachAsync`.
+12. `AddValidatorsFromAssemblies` scanning the example assembly.

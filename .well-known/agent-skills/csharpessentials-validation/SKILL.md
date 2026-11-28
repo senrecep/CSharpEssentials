@@ -1,387 +1,262 @@
 ---
 name: csharpessentials-validation
-description: Use when writing model validation that returns Result<T>. Covers Validator<T> with Configure(model, rules, ct), rules.For(() => model.X).NotEmpty()/MaxLength()/GreaterThan() chains, Must/MustAsync, SetValidatorAsync for nested objects, ForEach/ForEachAsync for collections, native if/switch for conditional rules, Include and Order for composition, AddValidator/AddValidatorsFromAssembly (idempotent), ValidateWith/ValidateWithAsync railway bindings. Also use when migrating from FluentValidation.
+description: Use when writing model validation that returns Result<T>, or migrating from FluentValidation. Covers Validator<T>.Configure(model, rules, ct), rules.For(() => model.X) with NotEmpty/MaxLength/EmailAddress/GreaterThan/InclusiveBetween/IsDefinedEnum/MinCount, Must/MustAsync, SetValidatorAsync, ForEach/ForEachAsync, CascadeMode, Include, Order, AddValidator/AddValidatorsFromAssembly and ValidateWith/ValidateWithAsync.
 ---
 
 # CSharpEssentials.Validation
 
-Model-first validation. `Configure` receives the live model, so rules are plain C#: no expression trees, no `When()` DSL. Returns `Result<T>`.
-
-Migrating from FluentValidation: see the [migration guide](#fluentvalidation-migration-guide) at the bottom.
-
-## Installation
+`Configure` receives the live model, so conditions are plain `if`/`switch`. `ValidateAsync` returns `ValueTask<Result<T>>`.
 
 ```bash
 dotnet add package CSharpEssentials.Validation
 ```
 
-## Namespace
-
 ```csharp
-using CSharpEssentials.Validation;             // Validator<T>, RuleContext<T>, ValidateWith...
-using CSharpEssentials.Validation.Validators;  // NotEmpty, MaxLength, GreaterThan, SetValidatorAsync, ...
-using CSharpEssentials.Validation.Extensions;  // AddValidator, AddValidatorsFromAssembly(ies)
+using CSharpEssentials.Validation;             // Validator<T>, IValidator<T>, RuleContext<T>, RuleChain<T,TProp>, CascadeMode, ValidateWith/ValidateWithAsync
+using CSharpEssentials.Validation.Validators;  // every built-in rule and SetValidatorAsync (required)
+using CSharpEssentials.Validation.Extensions;  // AddValidator, AddValidatorsFromAssembly, AddValidatorsFromAssemblies
+using CSharpEssentials.ResultPattern;          // Result<T>
+using CSharpEssentials.Errors;                 // Error
 ```
 
-Without the `Validators` using, `rules.For(...).NotEmpty()` does not compile. `Result<T>` is in `CSharpEssentials.ResultPattern`, `Error` in `CSharpEssentials.Errors`.
+## Quick start
 
----
+```csharp Program.cs
+// dotnet add package CSharpEssentials.Validation
+using CSharpEssentials.Errors;
+using CSharpEssentials.ResultPattern;
+using CSharpEssentials.Validation;
+using CSharpEssentials.Validation.Validators;
 
-## Defining a validator
+var validator = new CreateOrderValidator();
+var order = new CreateOrder(
+    CustomerEmail: "bad-email",
+    Kind: OrderKind.Business,
+    CompanyName: null,
+    ShippingAddress: new Address("", "34000"),
+    Lines: [new OrderLine("SKU-1", 2), new OrderLine("", 0)]);
 
-```csharp
-public class CreateUserCommandValidator : Validator<CreateUserCommand>
+Result<CreateOrder> result = await validator.ValidateAsync(order);
+foreach (Error error in result.Errors)
+    Console.WriteLine($"{error.Code}: {error.Description}");
+
+internal enum OrderKind { Personal, Business }
+internal sealed record Address(string? City, string? PostalCode);
+internal sealed record OrderLine(string? Sku, int Quantity);
+internal sealed record CreateOrder(string? CustomerEmail, OrderKind Kind, string? CompanyName, Address? ShippingAddress, List<OrderLine>? Lines);
+
+internal sealed class AddressValidator : Validator<Address>
 {
-    protected override ValueTask Configure(CreateUserCommand model, RuleContext<CreateUserCommand> rules, CancellationToken ct = default)
+    protected override ValueTask Configure(Address model, RuleContext<Address> rules, CancellationToken ct = default)
     {
-        rules.For(() => model.Email).NotEmpty().EmailAddress();
-        rules.For(() => model.Name).NotEmpty().MaxLength(100);
-        rules.For(() => model.Age).GreaterThan(0).LessThan(120);
+        rules.For(() => model.City).NotEmpty();
+        rules.For(() => model.PostalCode).Length(5, 5);
         return ValueTask.CompletedTask;
+    }
+}
+
+internal sealed class CreateOrderValidator : Validator<CreateOrder>
+{
+    protected override async ValueTask Configure(CreateOrder model, RuleContext<CreateOrder> rules, CancellationToken ct = default)
+    {
+        rules.For(() => model.CustomerEmail).NotEmpty().EmailAddress();
+        rules.For(() => model.Kind).IsDefinedEnum();
+        rules.For(() => model.Lines).NotEmpty().MaxCount(50);
+
+        if (model.Kind == OrderKind.Business)
+            rules.For(() => model.CompanyName).NotEmpty().MaxLength(200);
+
+        await rules.For(() => model.ShippingAddress)
+            .Must(a => a is not null, "ShippingAddress.Required", "Shipping address is required.")
+            .SetValidatorAsync(new AddressValidator(), ct);
+
+        rules.ForEach(() => model.Lines, (line, lineRules) =>
+        {
+            lineRules.For(() => line.Sku).NotEmpty();
+            lineRules.For(() => line.Quantity).GreaterThan(0);
+        });
     }
 }
 ```
 
-```csharp
-var validator = new CreateUserCommandValidator();
-Result<CreateUserCommand> result = await validator.ValidateAsync(command);
+Output:
 
-if (result.IsFailure)
-    foreach (Error error in result.Errors)
-        Console.WriteLine($"{error.Code}: {error.Description}"); // "Email.NotEmpty: 'Email' must not be empty."
+```text
+CustomerEmail.EmailAddress: 'CustomerEmail' is not a valid email address.
+CompanyName.NotEmpty: 'CompanyName' must not be empty.
+ShippingAddress.City.NotEmpty: 'ShippingAddress.City' must not be empty.
+Lines[1].Sku.NotEmpty: 'Lines[1].Sku' must not be empty.
+Lines[1].Quantity.GreaterThan: 'Lines[1].Quantity' must be greater than 0.
 ```
 
-There is no sync `Validate()`. A validator without async work completes synchronously, so `ValidateAsync(...).GetAwaiter().GetResult()` is safe at sync call sites.
+## Defining a validator
 
-### Inline (static) usage
+In the snippets below, `command` is a model instance, `ct` a `CancellationToken`, `services` an `IServiceCollection`, and `store` your own async service. Fragments that use `model` and `rules` run inside `Configure`.
 
 ```csharp
-// Sync delegate
-Result<CreateUserCommand> result = await Validator.ValidateAsync(command, (m, rules) =>
+public sealed class CreateUserValidator : Validator<CreateUser>
 {
-    rules.For(() => m.Email).NotEmpty().EmailAddress();
-    rules.For(() => m.Name).NotEmpty().MaxLength(100);
-});
+    protected override ValueTask Configure(CreateUser model, RuleContext<CreateUser> rules, CancellationToken ct = default)
+    {
+        rules.For(() => model.Email).NotEmpty().EmailAddress();
+        rules.For(() => model.Name).NotEmpty().MaxLength(100);
+        rules.For(() => model.Age).InclusiveBetween(18, 120);
+        return ValueTask.CompletedTask;   // sync Configure must return this
+    }
+}
 
-// Async delegate, when MustAsync or SetValidatorAsync is needed
-Result<CreateUserCommand> checkedResult = await Validator.ValidateAsync(command, async (m, rules, ct) =>
-{
-    rules.For(() => m.Name).NotEmpty();
-    await rules.For(() => m.Email)
-               .MustAsync(async (email, c) => await _db.IsUniqueAsync(email, c),
-                          "Email.NotUnique", "Email is already taken.", ct);
-}, cancellationToken);
+Result<CreateUser> result = await new CreateUserValidator().ValidateAsync(command, ct);
 ```
 
----
-
-## Built-in validators
-
-The fragments below run inside `Configure`, where `model` and `rules` are in scope.
+Inline, without a class:
 
 ```csharp
-// Strings: NotEmpty/NotNull fail on null; all others skip null
-rules.For(() => model.Name)
-    .NotEmpty()           // null, "" or whitespace fails
-    .MinLength(2)
-    .MaxLength(100)
-    .Length(2, 100)
-    .Matches(@"^[A-Za-z ]+$")
-    .Contains("a")
-    .StartsWith("A")
-    .EndsWith("z");
+Result<CreateUser> r1 = await Validator.ValidateAsync(command, (m, rules) => rules.For(() => m.Name).NotEmpty());
+Result<CreateUser> r2 = await Validator.ValidateAsync(command, async (m, rules, token) =>
+    await rules.For(() => m.Email).MustAsync((e, t) => store.IsFreeAsync(e, t), "Email.Taken", "Email is taken.", token), ct);
+```
 
+## Built-in rules
+
+All take an optional `message` and have an overload that takes an `Error` (custom code). Default code: `{Property}.{Rule}`.
+
+```csharp
+// string?: NotEmpty and NotNull fail on null; the rest skip null
+rules.For(() => model.Name).NotEmpty().NotNull().MinLength(2).MaxLength(100).Length(2, 100)
+    .Matches("^[A-Za-z ]+$").Contains("a").StartsWith("A").EndsWith("z")
+    .Equal("Ada", StringComparison.OrdinalIgnoreCase).NotEqual("admin");
 rules.For(() => model.Email).EmailAddress();
 
-// Comparable values (int, decimal, DateTime, ...)
-rules.For(() => model.Age)
-    .GreaterThanOrEqualTo(18)
-    .LessThanOrEqualTo(120)
-    .InclusiveBetween(18, 65)
-    .NotEqual(0);
+// IComparable<T> values
+rules.For(() => model.Age).GreaterThan(0).GreaterThanOrEqualTo(18).LessThan(130).LessThanOrEqualTo(120)
+    .InclusiveBetween(18, 120).ExclusiveBetween(0, 130).NotEqual(42);
 
-// Collections (List<T>?, IEnumerable<T>?, T[]?, ...)
-rules.For(() => model.Tags)
-    .NotEmpty()           // null or empty fails
-    .MinCount(1)
-    .MaxCount(10)
-    .CountBetween(1, 10);
+// Nullable<T>: comparisons skip null; NotNull() and Null(); no Equal/NotEqual
+rules.For(() => model.ExpiresAt).NotNull().GreaterThan(DateTime.UtcNow);
 
-// Nullable structs: null is skipped (Equal/NotEqual are not available; use NotNull()/Null())
-rules.For(() => model.ExpiresAt).GreaterThan(DateTime.UtcNow);
+// IEnumerable reference types: NotEmpty and NotNull fail on null; counts skip null
+rules.For(() => model.Tags).NotEmpty().MinCount(1).MaxCount(10).CountBetween(1, 10);
 
-// Strings also have Equal/NotEqual (ordinal, or pass a StringComparison) and Matches(Regex)
-// Enums: IsDefinedEnum(), IsOneOf(...), HasOnlyDefinedFlags()
+// Enums (TEnum and TEnum?)
+rules.For(() => model.Role).IsDefinedEnum().IsOneOf(Role.User, Role.Admin).HasOnlyDefinedFlags();
+
+// Custom code
+rules.For(() => model.Name).NotEmpty(Error.Validation("User.NameRequired", "Name is required."));
 ```
 
-Every validator takes an optional `message`, and most have an overload that takes a full `Error` for a custom code: `.NotEmpty(Error.Validation("User.NameRequired", "Name is required."))`.
+There is no `NotNull()` for other reference types (`Address?`). Use `Must(a => a is not null, code, message)`.
 
----
-
-## CascadeMode
-
-Default is `CascadeMode.Stop`: the first failure stops the chain. Use `Continue` to collect every error for one property.
+## Cascade
 
 ```csharp
 rules.For(() => model.Password)
-    .Cascade(CascadeMode.Continue)
+    .Cascade(CascadeMode.Continue)   // default Stop: first failure ends the chain
     .MinLength(8)
-    .Matches(@"[A-Z]", message: "Must contain an uppercase letter.")
-    .Matches(@"[0-9]", message: "Must contain a digit.");
+    .Matches("[A-Z]", message: "Needs an uppercase letter.")
+    .Matches("[0-9]", message: "Needs a digit.");
 ```
-
----
 
 ## Custom predicates
 
 ```csharp
-// Sync, with an explicit code
-rules.For(() => model.Username)
-    .Must(name => name != "admin", "Username.Reserved", "The name 'admin' is reserved.");
+rules.For(() => model.Name).Must(n => n != "admin", "Name.Reserved", "Name is reserved.");
+rules.For(() => model.Age).Must(a => a % 2 == 0);   // code "Age.Must", message includes the lambda text
 
-// Async: Task<bool> or ValueTask<bool> predicates
 await rules.For(() => model.Email)
-           .MustAsync(async (email, c) => await _db.IsUniqueAsync(email, c),
-                      "Email.NotUnique", "Email is already taken.", ct);
+    .MustAsync((email, token) => store.IsFreeAsync(email, token), "Email.Taken", "Email is taken.", ct);
 ```
 
-`Must(predicate)` without a code produces `"<Property>.Must"` with the predicate text in the message.
-
----
-
-## Nested objects
-
-`SetValidatorAsync` skips `null`, so nullable properties need no `!`. Child error codes are prefixed with the property path (`"Address.City.NotEmpty"`). Use it inside an `async` `Configure`.
+## Nested objects and collections
 
 ```csharp
-await rules.For(() => model.Address).SetValidatorAsync(new AddressValidator(), ct);
-await rules.For(() => model.BillingAddress).SetValidatorAsync(new AddressValidator(), ct); // Address?, null is skipped
+await rules.For(() => model.Address).SetValidatorAsync(new AddressValidator(), ct);  // null skipped; codes "Address.City.NotEmpty"
+
+rules.ForEach(() => model.Lines, (line, lineRules) =>
+    lineRules.For(() => line.Sku).NotEmpty());                                         // "Lines[0].Sku.NotEmpty"
+
+await rules.ForEachAsync(() => model.Lines, async (line, lineRules, token) =>
+    await lineRules.For(() => line.Sku).MustAsync((s, t) => store.SkuExistsAsync(s, t), "Sku.Unknown", "Unknown SKU.", token), ct);
 ```
 
-A `null` intermediate member is tolerated: `rules.For(() => model.Address.City)` with a `null` `Address` treats the value as `null`, so `NotEmpty()` fails and null-tolerant validators are skipped. A `null` collection in `ForEach` produces no errors.
-
----
-
-## Collection items
+## Custom rules and manual errors
 
 ```csharp
-rules.ForEach(() => model.Tags, (tag, tagRules) =>
-    tagRules.For(() => tag).NotEmpty().MaxLength(50));
-// Error codes: "Tags[0].NotEmpty", "Tags[1].MaxLength"
-
-await rules.ForEachAsync(() => model.Items, async (item, itemRules, c) =>
-{
-    itemRules.For(() => item.Sku).NotEmpty();
-    await itemRules.For(() => item.Sku)
-                   .MustAsync(async (sku, token) => await _db.SkuExistsAsync(sku, token), "Sku.NotFound", "SKU not found.", c);
-}, ct);
-```
-
----
-
-## Native C# conditional rules
-
-```csharp
-public class OrderValidator : Validator<Order>
-{
-    protected override ValueTask Configure(Order model, RuleContext<Order> rules, CancellationToken ct = default)
-    {
-        rules.For(() => model.CustomerId).NotEmpty();
-
-        if (model.OrderType == OrderType.Business)
-        {
-            rules.For(() => model.CompanyName).NotEmpty().MaxLength(200);
-            rules.For(() => model.TaxId).Matches(@"^\d{10}$");
-        }
-        else
-        {
-            rules.For(() => model.FirstName).NotEmpty().MaxLength(100);
-        }
-
-        switch (model.Country)
-        {
-            case "TR": rules.For(() => model.NationalId).MinLength(11); break;
-            case "US": rules.For(() => model.SSN).Matches(@"^\d{3}-\d{2}-\d{4}$"); break;
-        }
-
-        if (!model.AcceptsTerms) return ValueTask.CompletedTask;
-        rules.For(() => model.Signature).NotEmpty();
-        return ValueTask.CompletedTask;
-    }
-}
-```
-
-`CSharpEssentials.Core` helpers compose too: `model.Coupon.IfNotNull(c => rules.For(() => c.Code).NotEmpty())`, `rules.ForEach(() => model.Items.WhereIf(onlyActive, i => i.IsActive), ...)`, `rules.ForEach(() => model.Tags.WithoutNulls(), ...)`. The property name in the error code comes from the lambda text. Method calls, `!` and `?` are dropped, so the filtered collections give `Tags[1].NotEmpty` and `Items[0].Sku.NotEmpty`. For the `IfNotNull` form the lambda only sees `c`, so the code is `Code.NotEmpty`; use `rules.For(model.Coupon.Code, "Coupon.Code")` to name the full path.
-
----
-
-## Custom rules and manual failures
-
-```csharp
-public static class EvenValidators
+public static class AgeRules
 {
     public static RuleChain<T, int> Even<T>(this RuleChain<T, int> chain, string? message = null)
     {
         if (!chain.HasFailed && chain.Value % 2 != 0)
-            chain.AddError(Error.Validation($"{chain.PropertyName}.Even", message ?? $"'{chain.PropertyName}' must be even."));
+            chain.AddError($"{chain.PropertyName}.Even", message ?? $"'{chain.PropertyName}' must be even.");
         return chain;
     }
 }
 
-rules.AddFailure("Order.Total", "The total does not match the line items."); // model-level failure
-rules.For(model.Name, nameof(model.Name)).NotEmpty();                         // pre-evaluated value, no lambda
+rules.AddFailure("Order.Total", "Total does not match the lines.");   // model-level, no field metadata
+rules.For(model.Name, "Profile.DisplayName").MaxLength(50);          // value + explicit name, no lambda
 ```
 
----
-
-## Composition and ordering
-
-`Include` merges another validator's rules into the same result:
+## Composition, order and DI
 
 ```csharp
-public class BaseOrderValidator : Validator<Order>
+public sealed class PaidOrderValidator : Validator<Order>
 {
-    protected override ValueTask Configure(Order model, RuleContext<Order> rules, CancellationToken ct = default)
-    {
-        rules.For(() => model.CustomerId).NotEmpty();
-        rules.For(() => model.Items).NotEmpty();
-        return ValueTask.CompletedTask;
-    }
-}
+    public override int Order => 1;   // Mediator ValidationBehavior runs lower Order groups first
 
-public class PaidOrderValidator : Validator<Order>
-{
     protected override async ValueTask Configure(Order model, RuleContext<Order> rules, CancellationToken ct = default)
     {
-        await Include(new BaseOrderValidator(), model, rules, ct);
+        await Include(new OrderValidator(), model, rules, ct);   // merge another validator's rules
         rules.For(() => model.PaymentReference).NotEmpty();
     }
 }
+
+services.AddValidator<CreateUser, CreateUserValidator>();                       // Scoped by default
+services.AddValidator<Order, OrderValidator>(ServiceLifetime.Singleton);
+services.AddValidatorsFromAssembly(typeof(CreateUserValidator).Assembly);      // reflection; not for trimmed/AOT apps
 ```
 
-When several `IValidator<T>` are registered for one model, the Mediator `ValidationBehavior` groups them by `Order`:
+Registration uses `TryAddEnumerable`, so repeated calls do not duplicate a validator.
+
+## Railway helpers
 
 ```csharp
-public class BusinessRulesValidator(IReadOnlySet<string> blocklist) : Validator<CreateUserCommand>
-{
-    public override int Order => 1; // runs after the Order = 0 group
-
-    protected override ValueTask Configure(CreateUserCommand model, RuleContext<CreateUserCommand> rules, CancellationToken ct = default)
-    {
-        rules.For(() => model.Email).Must(email => !blocklist.Contains(email!), "Email.Blocked", "Email is blocked.");
-        return ValueTask.CompletedTask;
-    }
-}
+Result<CreateUser> parsed = command;
+Result<CreateUser> a = parsed.ValidateWith((m, rules) => rules.For(() => m.Name).NotEmpty());  // sync, Result<T> only
+Result<CreateUser> b = await parsed.ValidateWithAsync(new CreateUserValidator());             // Result<T>, Task<Result<T>>, ValueTask<Result<T>>
 ```
 
-- Validators with the same `Order` run concurrently; lower groups run before higher groups.
-- All groups run regardless of earlier failures; errors are merged and deduplicated.
+A failed source result is returned unchanged.
 
----
+## Rules
 
-## DI registration
+- Add `using CSharpEssentials.Validation.Validators;` or `NotEmpty()` and the other rules do not resolve.
+- There is no sync `Validate()`. Call `ValidateAsync`. A validator with no async work completes synchronously.
+- `MustAsync`, `SetValidatorAsync` and `ForEachAsync` return a `ValueTask`. Always `await` them, and mark `Configure` `async`. Do not chain sync rules after `MustAsync(...)` without awaiting.
+- A sync `Configure` ends with `return ValueTask.CompletedTask;`.
+- Use `rules.For(() => model.X)` with a lambda. `rules.For(model.X)` without a name does not compile. The two-argument form is `rules.For(value, "Name")`.
+- Names are `MinLength`/`MaxLength` (not `MinimumLength`), `GreaterThanOrEqualTo`, `InclusiveBetween`, `MinCount`/`MaxCount`/`CountBetween`, `IsDefinedEnum`.
+- No `When`/`Unless`/`RuleSet`/`WithMessage`/`WithErrorCode`. Use `if`, separate validators, `message:` and an `Error` argument.
+- Built-in rules, `Must`, `MustAsync` and `AddError(code, message)` add `field` metadata. `AddFailure` and rules given an `Error` do not. `Error` equality compares metadata, so in tests compare `Code` and `Description`.
+- Inside `if (model.X is not null)`, write `rules.For<string?>(() => model.X)`. Without the type argument the narrowed `string` chain gives warning CS8620 on string rules.
+- `Matches(string)` caches each pattern forever. Pass fixed patterns or a `Regex`.
+- `Validator<T>` with a scoped dependency (`DbContext`) must stay `Scoped`.
+- With `CSharpEssentials.Mediator`, `services.AddMediatorValidationBehavior()` runs the registered validators before the handler. See the `csharpessentials-mediator` skill.
 
-```csharp
-services.AddValidator<CreateUserCommand, CreateUserCommandValidator>();
-services.AddValidatorsFromAssembly(typeof(CreateUserCommandValidator).Assembly);
-services.AddValidatorsFromAssemblies([typeof(CreateUserCommandValidator).Assembly, typeof(OrderValidator).Assembly]);
-```
-
-- Default lifetime is `Scoped`; pass a `ServiceLifetime` to change it.
-- Registration uses `TryAddEnumerable`: calling `AddValidator` or `AddValidatorsFromAssembly` twice does not register the same validator twice. Different validators for the same model are all kept.
-
----
-
-## Railway bindings
-
-`ValidateWith` (sync) and `ValidateWithAsync` work on `Result<T>`, `Task<Result<T>>` and `ValueTask<Result<T>>`. A failed source result short-circuits.
-
-```csharp
-Result<CreateUserCommand> validated = GetUserCommand()
-    .ValidateWith((cmd, rules) => rules.For(() => cmd.Email).NotEmpty().EmailAddress());
-
-Result<CreateUserCommand> viaValidator = await GetUserCommand()
-    .ValidateWithAsync(new CreateUserCommandValidator());
-```
-
----
-
-## Mediator pipeline integration
-
-```csharp
-services.AddMediatorValidationBehavior();
-// or all behaviors:
-services.AddMediatorBehaviors();
-```
-
-Validation runs before the handler; on failure the handler is not invoked. `Result` / `Result<T>` handlers get the failure as their return value; other return types get an `EnhancedValidationException`, which the AspNetCore `GlobalExceptionHandler` turns into a 400 problem response. A validator that throws (other than `OperationCanceledException`) becomes a `"Validator.Exception"` error. See the `csharpessentials-mediator` skill.
-
----
-
-## Best practices
-
-- Put guards (`NotEmpty` / `NotNull`) first; the default stop mode skips the rest of the chain on null or empty values.
-- Use `if` / `switch` for conditional rules.
-- Use `SetValidatorAsync` for nested objects and `ForEach` for collections.
-- Validators without scoped dependencies can be `Singleton`; validators that inject `DbContext` or other scoped services must be `Scoped`.
-- Use `CascadeMode.Continue` only when the client needs every error for a field (password strength).
-
----
-
-## FluentValidation migration guide
-
-### 1. Swap the package
-
-```bash
-dotnet remove package FluentValidation
-dotnet remove package FluentValidation.DependencyInjectionExtensions
-dotnet add package CSharpEssentials.Validation
-```
-
-### 2. Map the concepts
+## FluentValidation mapping
 
 | FluentValidation | CSharpEssentials.Validation |
 |---|---|
-| `AbstractValidator<T>` + constructor | `Validator<T>` + `override ValueTask Configure(T model, RuleContext<T> rules, CancellationToken ct)` |
+| `AbstractValidator<T>`, constructor rules | `Validator<T>`, `Configure(model, rules, ct)` |
 | `RuleFor(x => x.Name)` | `rules.For(() => model.Name)` |
-| `When(x => cond, () => { ... })` / `.When(...)` / `.Unless(...)` | `if (cond) { ... }` |
-| `RuleForEach(x => x.Tags).NotEmpty()` | `rules.ForEach(() => model.Tags, (tag, r) => r.For(() => tag).NotEmpty())` |
-| `.SetValidator(new AddressValidator())` | `await rules.For(() => model.Address).SetValidatorAsync(new AddressValidator(), ct)` |
-| `Include(new BaseValidator())` | `await Include(new BaseValidator(), model, rules, ct)` |
-| `MinimumLength(n)` / `MaximumLength(n)` | `MinLength(n)` / `MaxLength(n)` |
-| `Must(pred)` / `MustAsync(pred)` | `Must(pred, code, message)` / `await MustAsync(pred, code, message, ct)` |
-| `.WithMessage("...")` | `message:` argument, e.g. `.NotEmpty(message: "...")` |
-| `.WithErrorCode("X")` | Pass an `Error`: `.NotEmpty(Error.Validation("X", "..."))` |
-| `validator.Validate(x)` → `ValidationResult.IsValid` / `.Errors` | `await validator.ValidateAsync(x)` → `Result<T>.IsFailure` / `.Errors` (`Code`, `Description`) |
-| `services.AddValidatorsFromAssemblyContaining<T>()` | `services.AddValidatorsFromAssembly(typeof(T).Assembly)` |
-| `RuleSet` | Separate validators, or composition with `Include` |
-| `ValidationContext` / root context data | Constructor injection on the validator |
+| `When(...)` / `Unless(...)` | `if` |
+| `RuleForEach(x => x.Tags)` | `rules.ForEach(() => model.Tags, (tag, r) => r.For(() => tag)...)` |
+| `SetValidator(v)` | `await rules.For(() => model.Address).SetValidatorAsync(v, ct)` |
+| `Include(v)` | `await Include(v, model, rules, ct)` |
+| `MinimumLength` / `MaximumLength` | `MinLength` / `MaxLength` |
+| `.WithMessage("...")` | `message: "..."` |
+| `.WithErrorCode("X")` | `.NotEmpty(Error.Validation("X", "..."))` |
+| `Validate(x).IsValid` | `(await ValidateAsync(x)).IsSuccess` |
+| `AddValidatorsFromAssemblyContaining<T>()` | `AddValidatorsFromAssembly(typeof(T).Assembly)` |
 
-Unchanged names: `NotEmpty`, `NotNull`, `Length`, `EmailAddress`, `Matches`, `GreaterThan`, `LessThan`, `InclusiveBetween`, `ExclusiveBetween`, `Equal`, `NotEqual`, `Cascade(CascadeMode.Continue)`.
+## Diagnostics
 
-### 3. Example
-
-```csharp
-// FluentValidation:
-//   RuleFor(x => x.Email).NotEmpty().EmailAddress();
-//   RuleFor(x => x.DriversLicense).NotEmpty().When(x => x.Age >= 18);
-//   RuleFor(x => x.Address).SetValidator(new AddressValidator());
-public class ApplicantValidator : Validator<Applicant>
-{
-    protected override async ValueTask Configure(Applicant model, RuleContext<Applicant> rules, CancellationToken ct = default)
-    {
-        rules.For(() => model.Email).NotEmpty().EmailAddress();
-
-        if (model.Age >= 18)
-            rules.For(() => model.DriversLicense).NotEmpty();
-
-        await rules.For(() => model.Address).SetValidatorAsync(new AddressValidator(), ct);
-    }
-}
-```
-
-### Pitfalls
-
-- Error codes are generated as `"<Property>.<Validator>"` (`"Email.NotEmpty"`). Use the `Error` overloads or `Must(pred, code, message)` for custom codes.
-- Sync validators must `return ValueTask.CompletedTask;`. Use `async ValueTask` when awaiting `SetValidatorAsync`, `MustAsync`, `ForEachAsync` or `Include`.
-- Custom `IRuleBuilderOptions<T, TProperty>` extensions become extensions on `RuleChain<T, TProp>`.
+This package reports no analyzer diagnostics.

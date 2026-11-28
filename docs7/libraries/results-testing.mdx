@@ -2,7 +2,9 @@
 title: "CSharpEssentials.Results.Testing"
 ---
 
-Assertion helpers for `Result`, `Result<T>`, the typed `Result<T, E1..E3>`, `Maybe<T>` and problem details HTTP responses. A failed assertion throws `ResultAssertionException`, and its message lists every error with its type, code, description and metadata. The package references no test framework, so it works from xUnit (v2 or v3), NUnit, MSTest or a console check, next to any assertion library.
+Assertion helpers for `Result`, `Result<T>`, the typed `Result<T, E1..E3>`, `Maybe<T>` and problem details HTTP responses. A failed assertion throws `ResultAssertionException` with a message that lists every error. The package references no test framework, so it works in xUnit, NUnit, MSTest or a plain console check, next to any assertion library.
+
+Targets `net11.0`, `net10.0`, `net9.0` and `netstandard2.1`. Depends on `CSharpEssentials.Results` and `CSharpEssentials.Maybe`. The problem details helpers read the body with `System.Text.Json` and need no ASP.NET Core reference.
 
 ## Installation
 
@@ -10,86 +12,164 @@ Assertion helpers for `Result`, `Result<T>`, the typed `Result<T, E1..E3>`, `May
 dotnet add package CSharpEssentials.Results.Testing
 ```
 
-Targets `net11.0`, `net10.0`, `net9.0` and `netstandard2.1`. It depends only on `CSharpEssentials.Results` and `CSharpEssentials.Maybe`. The problem details helpers read the body with `System.Text.Json`, so they need no ASP.NET Core reference.
-
 ```csharp
 using CSharpEssentials.ResultPattern.Testing;
 ```
 
-## Results
+## Quick start
 
-```csharp
-OrderDto order = (await service.GetAsync(id)).ShouldBeSuccess();
+The helpers return what they checked, so a test can assert and read in one line. This console program uses them without a test framework:
 
-Error[] errors = service.Create(invalid).ShouldBeFailure();
+```csharp Program.cs
+// dotnet add package CSharpEssentials.Results.Testing
+using CSharpEssentials.Errors;
+using CSharpEssentials.Maybe;
+using CSharpEssentials.ResultPattern;
+using CSharpEssentials.ResultPattern.Testing;
 
-Error error = service.Create(invalid).ShouldHaveError("Order.Name.Required");
-service.Create(invalid).ShouldHaveError(ErrorType.Validation);
-service.Create(invalid).ShouldHaveError(ErrorType.Validation, "Order.Name.Required");
+int value = Divide(10, 2).ShouldBeSuccess();
+Console.WriteLine(value);                                                  // 5
+
+Error[] errors = Divide(1, 0).ShouldBeFailure();
+Error byCode = Divide(1, 0).ShouldHaveError("Math.DivideByZero");
+Divide(1, 0).ShouldHaveError(ErrorType.Validation);
+Divide(1, 0).ShouldHaveError(ErrorType.Validation, "Math.DivideByZero");
+Console.WriteLine($"{errors.Length} {byCode.Description}");                // 1 Cannot divide by zero.
+
+try
+{
+    Divide(1, 0).ShouldBeSuccess();
+}
+catch (ResultAssertionException ex)
+{
+    Console.WriteLine(ex.Message);
+}
+
+string name = Maybe.From<string>("Ada").ShouldHaveValue();
+Maybe<string>.None.ShouldBeNone();
+Console.WriteLine(name);                                                   // Ada
+
+static Result<int> Divide(int a, int b)
+{
+    if (b == 0)
+        return Error.Validation("Math.DivideByZero", "Cannot divide by zero.");
+    return a / b;
+}
 ```
 
-When a result is not what the test expected, the message shows every error:
+The failed `ShouldBeSuccess` prints:
 
 ```text
-Expected a success, but the result failed with 2 errors:
-  [0] Validation Name.Required: Name is required. metadata [{ field: Name }]
-  [1] NotFound User.NotFound: User 7 was not found.
+Expected a success, but the result failed with 1 error:
+  [0] Validation Math.DivideByZero: Cannot divide by zero.
 ```
 
+## Results
+
 | Member | What it does |
-|--------|-------------|
-| `ShouldBeSuccess()` | On `Result`: passes on success. On `Result<T>` and the typed results: returns the value |
-| `ShouldBeFailure()` | Returns the errors. A typed result gives its one error converted to an `Error`. On success, the message shows the value of `Result<T>` and the typed results |
-| `ShouldHaveError(code)` / `(type)` / `(type, code)` | Returns the first error that matches. The code is compared ordinally |
-| `ShouldBeFailureOf<TError>()` | Typed results only: returns the error when the result holds a `TError` (a slot type or a base type of one) |
+|---|---|
+| `ShouldBeSuccess()` | On `Result`: passes on success. On `Result<T>` and the typed results: returns the value. |
+| `ShouldBeFailure()` | Returns the errors. A typed result gives its one error converted to an `Error`. On success, the message shows the value. |
+| `ShouldHaveError(code)`, `ShouldHaveError(type)`, `ShouldHaveError(type, code)` | Returns the first error that matches. Codes are compared ordinally. Works on any `IResultBase`, typed results included. |
 
 `default(Result<T>)` fails with the `Result.Default` error, as at runtime. A `default` typed result holds no case, and the message says so.
 
 ## Typed results
 
-```csharp
-Result<OrderDto, NotFoundError, ConflictError> result = await service.ReserveAsync(id);
+`ShouldBeFailureOf<TError>()` returns the error when the result holds a `TError` (a slot type or a base type of one).
 
-ConflictError conflict = result.ShouldBeFailureOf<ConflictError>();
+```csharp Program.cs
+// dotnet add package CSharpEssentials.Results.Testing
+using CSharpEssentials.Errors;
+using CSharpEssentials.ResultPattern;
+using CSharpEssentials.ResultPattern.Testing;
+
+Result<Order, NotFoundError, ConflictError> taken = new ConflictError("Order.Taken", "Order is taken.");
+Result<Order, NotFoundError, ConflictError> ok = new Order(1);
+
+ConflictError conflict = taken.ShouldBeFailureOf<ConflictError>();
+TypedError asBase = taken.ShouldBeFailureOf<TypedError>();          // a base type matches too
+Order order = ok.ShouldBeSuccess();
+Console.WriteLine($"{conflict.Code} {asBase.Type} {order.Id}");     // Order.Taken Conflict 1
+
+try
+{
+    taken.ShouldBeFailureOf<NotFoundError>();
+}
+catch (ResultAssertionException ex)
+{
+    Console.WriteLine(ex.Message);
+}
+
+public sealed record Order(int Id);
 ```
 
-When the result holds another case, the message names it:
+The wrong case prints:
 
 ```text
-Expected an error of type NotFoundError, but the result holds the error ConflictError { Code = Order.Taken, ... }.
+Expected an error of type NotFoundError, but the result holds the error ConflictError { Code = Order.Taken, Description = Order is taken., Type = Conflict, NumericType = 3, Metadata =  }.
 ```
 
-`Result` and `Result<T>` have no `ShouldBeFailureOf`. They hold `Error` values, never `NotFoundError` or another typed error, so a type check could only match `Error` itself. Use `ShouldHaveError(type)` or `ShouldHaveError(code)` on them instead.
+`Result` and `Result<T>` have no `ShouldBeFailureOf`. They hold `Error` values, never a `NotFoundError`, so use `ShouldHaveError(type)` or `ShouldHaveError(code)` on them.
 
 ## Maybe
 
-```csharp
-Customer customer = repository.Find(id).ShouldHaveValue();
-repository.Find(missingId).ShouldBeNone();
-```
+`ShouldHaveValue()` returns the value of a `Maybe<T>`. `ShouldBeNone()` passes when it has none.
 
 ## Problem details responses
 
-```csharp
-using HttpResponseMessage response = await client.PostAsJsonAsync("/orders", new CreateOrder(""));
+```csharp Program.cs
+// dotnet add package CSharpEssentials.Results.Testing
+using System.Net;
+using System.Text;
+using System.Text.Json;
+using CSharpEssentials.ResultPattern.Testing;
 
-JsonElement problem = await response.ShouldBeValidationProblemAsync("Name.NotEmpty");
+// In a real test the response comes from WebApplicationFactory's HttpClient.
+using var invalid = Problem(HttpStatusCode.BadRequest,
+    """{"status":400,"title":"Validation Error","errors":[{"code":"Name.NotEmpty","description":"'Name' must not be empty."}]}""");
+JsonElement body = await invalid.ShouldBeValidationProblemAsync("Name.NotEmpty");
+Console.WriteLine(body.GetProperty("title").GetString());   // Validation Error
 
-using HttpResponseMessage missing = await client.GetAsync("/orders/42");
+using var missing = Problem(HttpStatusCode.NotFound,
+    """{"status":404,"title":"Not Found","errorCodes":["Order.NotFound"]}""");
 await missing.ShouldBeProblemAsync(404, "Order.NotFound");
+
+try
+{
+    using var wrong = Problem(HttpStatusCode.BadRequest, """{"status":400}""");
+    await wrong.ShouldBeProblemAsync(404);
+}
+catch (ResultAssertionException ex)
+{
+    Console.WriteLine(ex.Message.Split(Environment.NewLine)[0]);   // Expected status 404, but it was 400.
+}
+
+static HttpResponseMessage Problem(HttpStatusCode status, string json) => new(status)
+{
+    Content = new StringContent(json, Encoding.UTF8, "application/problem+json"),
+    RequestMessage = new HttpRequestMessage(HttpMethod.Post, "http://localhost/orders"),
+};
 ```
 
 | Member | What it does |
-|--------|-------------|
-| `ShouldBeProblemAsync(status?, code?)` | Checks the `application/problem+json` content type, the status and an error code, and returns the body as a `JsonElement`. The code is looked up in `errorCodes` and in `errors` |
-| `ShouldBeValidationProblemAsync(params keys)` | Checks for a 400 problem whose `errors` has every key: the codes of a list (`ValidationErrorsFormat.List`) or the property names of an object (`Dictionary` or `ByField`) |
+|---|---|
+| `ShouldBeProblemAsync(status?, code?)` | Checks the `application/problem+json` content type, the status and an error code, and returns the body as a `JsonElement`. The code is looked up in `errorCodes` and in `errors` (a list of `{ code, description }` or an object keyed by code). |
+| `ShouldBeValidationProblemAsync(params keys)` | Checks for a 400 problem whose `errors` has every key: the codes of a list (`ValidationErrorsFormat.List`) or the property names of an object (`Dictionary` or `ByField`). |
 
-The message shows the request method and URI, the status and the body:
+On failure the message shows the expectation, then the request method and URI, the status and the body:
 
 ```text
 Expected status 404, but it was 400.
 POST http://localhost/orders returned 400 BadRequest with body:
-{"status":400,"title":"Validation Error","errors":[{"code":"Name.NotEmpty","description":"'Name' must not be empty."}]}
+{"status":400}
 ```
 
-The helpers read the field names that `CSharpEssentials.AspNetCore` writes (`errorCodes`, `errors` and the `code` of each list entry), so they also work for any RFC 9457 producer that uses the same names.
+The helpers read the field names that `CSharpEssentials.AspNetCore` writes (`errorCodes`, `errors` and the `code` of each list entry), so they also work for any RFC 9457 producer that uses the same names. The returned `JsonElement` stays valid after the response is disposed.
+
+## See also
+
+- [Example project](https://github.com/senrecep/CSharpEssentials/tree/main/examples/Examples.Results.Testing): xUnit tests that use every helper
+- [CSharpEssentials.Results](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.Results/Readme.MD)
+- [CSharpEssentials.Maybe](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.Maybe/Readme.MD)
+- [CSharpEssentials.AspNetCore](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.AspNetCore/Readme.MD): writes the problem details these helpers read

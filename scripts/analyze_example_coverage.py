@@ -35,6 +35,17 @@ LIB_EXAMPLE_MAP = {
     "CSharpEssentials.Rules": "Examples.Rules",
     "CSharpEssentials.Time": "Examples.Time",
     "CSharpEssentials.Validation": "Examples.Validation",
+    "CSharpEssentials.AspNetCore.OpenApi": "Examples.AspNetCore.OpenApi",
+    "CSharpEssentials.AspNetCore.Swashbuckle": "Examples.AspNetCore.Swashbuckle",
+    "CSharpEssentials.DependencyInjection": "Examples.DependencyInjection",
+    "CSharpEssentials.EntityFrameworkCore.HealthChecks": "Examples.EntityFrameworkCore.Operations",
+    "CSharpEssentials.EntityFrameworkCore.Hosting": "Examples.EntityFrameworkCore.Operations",
+    "CSharpEssentials.EntityFrameworkCore.Locking": "Examples.EntityFrameworkCore.Operations",
+    "CSharpEssentials.Idempotency": "Examples.Idempotency",
+    "CSharpEssentials.Idempotency.Testing": "Examples.Idempotency.Testing",
+    "CSharpEssentials.Mediator.Testing": "Examples.Mediator.Testing",
+    "CSharpEssentials.Results.Testing": "Examples.Results.Testing",
+    "CSharpEssentials.These": "Examples.These",
     "CSharpEssentials": "Examples.Main",
 }
 

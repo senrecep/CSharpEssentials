@@ -1,9 +1,8 @@
 # CSharpEssentials.Mediator.Testing
 
-Test helpers for the resource locks of `CSharpEssentials.Mediator`:
-
-- `ResourceLockContract`: contract scenarios for any `IResourceLock`. Give it your lock and run the scenarios that the built-in locks pass. It references no test framework, so it works from xUnit (v2 or v3), NUnit or MSTest.
-- `RecordingResourceLock`: a public in-process `IResourceLock` that records every acquire and release, for testing handlers behind `LockBehavior`.
+Test helpers for the resource locks of `CSharpEssentials.Mediator`. Use `ResourceLockContract` to check that your own
+`IResourceLock` behaves like the built-in ones, and `RecordingResourceLock` to see which keys `LockBehavior` took in a
+test. Neither depends on a test framework, so they work from xUnit, NUnit, MSTest or a plain console app.
 
 ## Installation
 
@@ -11,57 +10,151 @@ Test helpers for the resource locks of `CSharpEssentials.Mediator`:
 dotnet add package CSharpEssentials.Mediator.Testing
 ```
 
-Add it to a test project of any framework. Targets `net11.0`, `net10.0`, `net9.0` and `net8.0`.
+Targets `net11.0`, `net10.0`, `net9.0` and `net8.0`. Namespace: `CSharpEssentials.Locking.Testing`.
 
-## Contract tests
+## Quick start
 
-Each scenario is a public method that throws `ResourceLockContractException` when the lock breaks the contract. `ScenarioNames` lists them and `RunAsync(name)` runs one, so a single parameterized test covers all of them. With xUnit:
+```csharp Program.cs
+// dotnet add package CSharpEssentials.Mediator.Testing
+using CSharpEssentials.Locking;
+using CSharpEssentials.Locking.Testing;
+
+int failed = 0;
+foreach (string scenario in ResourceLockContract.ScenarioNames)
+{
+    try
+    {
+        await new ResourceLockContract(new InProcessResourceLock()).RunAsync(scenario);
+        Console.WriteLine($"pass  {scenario}");
+    }
+    catch (ResourceLockContractException exception)
+    {
+        failed++;
+        Console.WriteLine($"FAIL  {scenario}: {exception.Message}");
+    }
+}
+
+Console.WriteLine($"{ResourceLockContract.ScenarioNames.Count - failed}/{ResourceLockContract.ScenarioNames.Count} scenarios passed");
+return failed == 0 ? 0 : 1;
+```
+
+Replace `new InProcessResourceLock()` with your lock.
+
+## Contract scenarios
+
+`ResourceLockContract` holds the scenarios every `IResourceLock` must pass. Each one is a public method that throws
+`ResourceLockContractException` when the lock breaks the contract. `ScenarioNames` lists them and `RunAsync(name)` runs
+one, so one parameterized test covers them all. With xUnit:
 
 ```csharp
 using CSharpEssentials.Locking;
 using CSharpEssentials.Locking.Testing;
 
-public sealed class RedisResourceLockTests
+public sealed class MyLockTests
 {
     public static TheoryData<string> Scenarios => new(ResourceLockContract.ScenarioNames);
 
     [Theory]
     [MemberData(nameof(Scenarios))]
-    public Task Scenario(string name) => new ResourceLockContract(new RedisResourceLock(Connection)).RunAsync(name);
+    public Task Scenario(string name) => new ResourceLockContract(new MyResourceLock()).RunAsync(name);
 }
 ```
 
-With NUnit, use `[TestCaseSource]` over `ResourceLockContract.ScenarioNames`; with MSTest, `[DynamicData]`.
+NUnit uses `[TestCaseSource]` over `ResourceLockContract.ScenarioNames`, MSTest `[DynamicData]`. You can also call the
+scenario methods one by one, for example `await contract.ParallelAcquirersHoldTheKeyOneAtATimeAsync()`.
 
-The scenarios cover:
+The scenarios check that:
 
-- try-acquire of a free key, of a held key, and after the holder disposed its handle;
-- independent keys;
-- `TimeoutException` when the key stays held, including a zero timeout;
-- a waiting acquire that completes when the holder releases, and one cancelled while it waits;
-- a second dispose of a handle that does not release the next holder;
-- parallel acquirers that never overlap;
-- empty and null keys.
+- `TryAcquireAsync` returns a handle for a free key, and `None` while the key is held;
+- disposing the handle releases the key, and a second dispose does not release the next holder;
+- different keys do not block each other;
+- `AcquireAsync` throws `TimeoutException` when the key stays held, also with a zero timeout;
+- a waiting `AcquireAsync` completes when the holder releases, and throws `OperationCanceledException` when cancelled;
+- parallel acquirers never hold the key at the same time;
+- empty and null keys throw `ArgumentException`.
 
-Each scenario uses keys of its own, so the scenarios can share one database or cache. The waits are real: `ShortWait` (300 ms) is how long a held key must keep a waiter out, and `LongWait` (10 seconds) bounds every wait that must succeed. Pass other values to the constructor for a slow backend, and make a polling lock poll more often than `ShortWait`.
+`new ResourceLockContract(lock, shortWait, longWait)` takes two optional waits:
+
+| Parameter | Default | Meaning |
+|-----------|---------|---------|
+| `shortWait` | 300 ms | How long a held key must keep a waiter out |
+| `longWait` | 10 s | The longest wait for an acquire that must succeed |
+
+The waits are real. Raise them for a slow backend, and make a polling lock poll more often than `shortWait`. Each
+scenario uses its own keys, so all of them can share one database or cache.
 
 ## Recording lock
 
-```csharp
+`RecordingResourceLock` locks for real through `InProcessResourceLock` and records every call. Register it before
+`AddMediatorLockBehavior`, which keeps an existing `IResourceLock`:
+
+```csharp Program.cs
+// dotnet add package CSharpEssentials.Mediator.Testing
+// dotnet add package Mediator.SourceGenerator
+// dotnet add package Microsoft.Extensions.DependencyInjection --version 10.0.1
+using CSharpEssentials.Locking;
+using CSharpEssentials.Locking.Testing;
+using CSharpEssentials.Mediator;
+using CSharpEssentials.ResultPattern;
+using Mediator;
+using Microsoft.Extensions.DependencyInjection;
+
 RecordingResourceLock locks = new();
+ServiceCollection services = new();
 services.AddSingleton<IResourceLock>(locks);
+services.AddMediator(options => options.ServiceLifetime = ServiceLifetime.Scoped);
+services.AddMediatorLockBehavior();
 
-await mediator.Send(new CapturePaymentCommand(orderId));
+await using ServiceProvider provider = services.BuildServiceProvider();
+await using AsyncServiceScope scope = provider.CreateAsyncScope();
+ISender sender = scope.ServiceProvider.GetRequiredService<ISender>();
 
-locks.Acquisitions.Should().ContainSingle().Which.Key.Should().Be($"order:{orderId}");
-locks.HeldKeys.Should().BeEmpty();
+await sender.Send(new CapturePayment(42));
+LockAcquisition acquisition = locks.Acquisitions.Single();
+Console.WriteLine($"took {acquisition.Key} with timeout {acquisition.Timeout}, released {locks.Releases.Single()}, held now {locks.HeldKeys.Count}");
+
+locks.FailWith = new TimeoutException("lock service down");
+try
+{
+    await sender.Send(new CapturePayment(43));
+}
+catch (TimeoutException exception)
+{
+    Console.WriteLine($"FailWith: {exception.Message}, calls recorded {locks.Acquisitions.Count}");
+}
+
+public sealed record CapturePayment(int OrderId) : ICommand<Result>, ILockedRequest
+{
+    public string LockKey => $"order:{OrderId}";
+    public TimeSpan? LockTimeout => TimeSpan.FromSeconds(5);
+}
+
+public sealed class CapturePaymentHandler : ICommandHandler<CapturePayment, Result>
+{
+    public ValueTask<Result> Handle(CapturePayment command, CancellationToken cancellationToken) => new(Result.Success());
+}
 ```
 
-| Member | What it does |
-|--------|-------------|
-| `Acquisitions` | Every `AcquireAsync` and `TryAcquireAsync` call in order, as `LockAcquisition(Key, Timeout, TryOnly)`, including calls that failed |
-| `Releases` | The key of every released handle, in order. A second dispose of a handle is not recorded |
-| `HeldKeys` | The keys held right now |
+Output:
+
+```text
+took order:42 with timeout 00:00:05, released order:42, held now 0
+FailWith: lock service down, calls recorded 2
+```
+
+| Member | Meaning |
+|--------|---------|
+| `Acquisitions` | Every `AcquireAsync` and `TryAcquireAsync` call in order, as `LockAcquisition(Key, Timeout, TryOnly)`, failed calls included |
+| `Releases` | The key of every released handle, in order. A second dispose is not recorded |
+| `HeldKeys` | The keys held right now, each once |
 | `FailWith` | When set, the next calls are recorded and then throw this exception |
 
-It locks for real through `InProcessResourceLock`, so a test sees the same blocking and `TimeoutException` behavior as the default lock.
+The recording lock passes `ResourceLockContract` itself and is safe to use from several threads. The program above has
+no `ExceptionHandlingBehavior`, so the `FailWith` exception reaches the caller; with `AddMediatorBehaviors` a `Result`
+handler would get it as a failed result.
+
+## Related
+
+- Example: [examples/Examples.Mediator.Testing](https://github.com/senrecep/CSharpEssentials/tree/main/examples/Examples.Mediator.Testing)
+- Locks and `LockBehavior`: [CSharpEssentials.Mediator](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.Mediator/Readme.MD#locks)
+- Database lock: [CSharpEssentials.EntityFrameworkCore.Locking](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.EntityFrameworkCore.Locking/Readme.MD)

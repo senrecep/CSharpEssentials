@@ -1,9 +1,9 @@
 # ADR-006: Source generators ship from separate netstandard2.0 projects inside the runtime package
 
-- **Status:** Accepted
-- **Date:** 2026-10-06
-- **Issues:** #48 (epic), #49 (this ADR), #50 (implementation)
-- **Supersedes:** nothing. ADR-004 (Enums generator merged into `CSharpEssentials.Enums`, recorded in the maintainers' roadmap) was in force for `CSharpEssentials.Enums` when this ADR was written. [ADR-007](ADR-007-enum-conventions.md) moved the Enums generator to this layout in 5.0 (`CSharpEssentials.Enums.Generators`).
+- Status: Accepted
+- Date: 2026-10-06
+- Issues: #48 (epic), #49 (this ADR), #50 (implementation)
+- Supersedes: nothing. ADR-004 (Enums generator merged into `CSharpEssentials.Enums`, recorded in the maintainers' roadmap) was in force for `CSharpEssentials.Enums` when this ADR was written. [ADR-007](ADR-007-enum-conventions.md) moved the Enums generator to this layout in 5.0 (`CSharpEssentials.Enums.Generators`).
 
 ---
 
@@ -15,10 +15,10 @@ The only existing mechanism at the time was ADR-004 (`CSharpEssentials.Enums`): 
 
 That mechanism does not fit the new packages:
 
-1. **Endpoints cannot produce a netstandard2.0 build.** The runtime targets `net11.0;net10.0;net9.0;net8.0` with `<FrameworkReference Include="Microsoft.AspNetCore.App" />`. A `FrameworkReference` is unavailable on `netstandard2.0`, and every runtime type (`IEndpointRouteBuilder`, `RouteGroupBuilder`, static abstract interface members) is unavailable there. Adding a `netstandard2.0` TFM means excluding every runtime file by condition, which amounts to two projects in one `.csproj` without the isolation of two projects.
-2. **A DI runtime dll would be loaded as an analyzer.** `CSharpEssentials.DependencyInjection` targets `netstandard2.1` and depends on `Microsoft.Extensions.DependencyInjection.Abstractions` and `Microsoft.Extensions.Logging.Abstractions`. If its `netstandard2.x` runtime dll is packed under `analyzers/`, the compiler loads it as an analyzer assembly. The compiler cannot resolve those dependencies (or a `netstandard2.1` dll on .NET Framework-hosted compilers in Visual Studio), which produces analyzer load failures (`CS8034`/`AD0001`-class warnings). Every compilation would also pay to load runtime code that has no compile-time role.
-3. **Roslyn dependency leaks into runtime assets.** Under ADR-004, the `lib/netstandard2.0` asset of Enums contains generator types that reference `Microsoft.CodeAnalysis`. This is harmless for Enums, but should not be repeated.
-4. **Compiler version coupling.** `Directory.Packages.props` pins `Microsoft.CodeAnalysis.CSharp` to `[4.13.0,)`. A generator compiled against a Roslyn version newer than the consuming compiler fails to load with `CS9057`. Endpoints supports `net8.0`, so the generator must load on the .NET 8 SDK (8.0.1xx, Roslyn 4.8).
+1. Endpoints cannot produce a netstandard2.0 build. The runtime targets `net11.0;net10.0;net9.0;net8.0` with `<FrameworkReference Include="Microsoft.AspNetCore.App" />`. A `FrameworkReference` is unavailable on `netstandard2.0`, and every runtime type (`IEndpointRouteBuilder`, `RouteGroupBuilder`, static abstract interface members) is unavailable there. Adding a `netstandard2.0` TFM means excluding every runtime file by condition, which amounts to two projects in one `.csproj` without the isolation of two projects.
+2. A DI runtime dll would be loaded as an analyzer. `CSharpEssentials.DependencyInjection` targets `netstandard2.1` and depends on `Microsoft.Extensions.DependencyInjection.Abstractions` and `Microsoft.Extensions.Logging.Abstractions`. If its `netstandard2.x` runtime dll is packed under `analyzers/`, the compiler loads it as an analyzer assembly. The compiler cannot resolve those dependencies (or a `netstandard2.1` dll on .NET Framework-hosted compilers in Visual Studio), which produces analyzer load failures (`CS8034`/`AD0001`-class warnings). Every compilation would also pay to load runtime code that has no compile-time role.
+3. Roslyn dependency leaks into runtime assets. Under ADR-004, the `lib/netstandard2.0` asset of Enums contains generator types that reference `Microsoft.CodeAnalysis`. This is harmless for Enums, but should not be repeated.
+4. Compiler version coupling. `Directory.Packages.props` pins `Microsoft.CodeAnalysis.CSharp` to `[4.13.0,)`. A generator compiled against a Roslyn version newer than the consuming compiler fails to load with `CS9057`. Endpoints supports `net8.0`, so the generator must load on the .NET 8 SDK (8.0.1xx, Roslyn 4.8).
 
 ## Decision
 
@@ -39,14 +39,14 @@ Each generator-backed package consists of two projects:
 ### Roslyn version
 
 - Generator projects reference `Microsoft.CodeAnalysis.CSharp` with `VersionOverride="4.8.0"`. The override applies to generator projects only; the central version (`[4.13.0,)`) is unchanged for every other project.
-- Minimum supported SDK for consumers of generator-backed packages: **8.0.1xx** (Roslyn 4.8). Generators must not use APIs newer than Roslyn 4.8 (`ForAttributeWithMetadataName`, `CreateSyntaxProvider`, and `RegisterSourceOutput` are all available). This prevents `CS9057`.
+- Minimum supported SDK for consumers of generator-backed packages: 8.0.1xx (Roslyn 4.8). Generators must not use APIs newer than Roslyn 4.8 (`ForAttributeWithMetadataName`, `CreateSyntaxProvider`, and `RegisterSourceOutput` are all available). This prevents `CS9057`.
 - An SDK 8.0.1xx load check cannot run on the current local machine (9/10/11 SDKs only). The pin guarantees compatibility; CI may add an explicit 8.0.1xx job.
 
 ### Diagnostics
 
-- Diagnostics are reported **only** by a separate `DiagnosticAnalyzer` in the generator assembly. Generators never call `ReportDiagnostic`. Diagnostic locations and symbols in the generator pipeline would break incremental caching (locations are not value-equatable across edits), and an analyzer reports on the IDE's analysis schedule instead of the generation schedule.
+- Diagnostics are reported only by a separate `DiagnosticAnalyzer` in the generator assembly. Generators never call `ReportDiagnostic`. Diagnostic locations and symbols in the generator pipeline would break incremental caching (locations are not value-equatable across edits), and an analyzer reports on the IDE's analysis schedule instead of the generation schedule.
 - Generator pipeline models are value-equatable records with equatable collections. No `ISymbol`, `SyntaxNode`, `Location` or `Compilation` crosses a pipeline step.
-- When the analyzer reports an **error**, the generator skips the offending type so the error comes from the analyzer and not as a secondary compile error in generated code. The two share the same model-building code.
+- When the analyzer reports an error, the generator skips the offending type so the error comes from the analyzer and not as a secondary compile error in generated code. The two share the same model-building code.
 
 ### Release tracking
 
@@ -68,34 +68,34 @@ IDs are never reused or renumbered, including IDs reserved for deferred (P3) rul
 
 ### Severity policy
 
-- **Error:** only when the generated code would not compile, or would certainly fail at runtime (for example, an inaccessible type, a group nesting cycle, or a decorator without a usable constructor).
-- **Warning:** the code compiles and runs, but almost certainly not as intended.
-- **Info:** a deliberate skip or fallback that the user should be able to see (for example, an abstract endpoint that is not mapped, or a default service resolution that fell back to self-registration).
+- Error: only when the generated code would not compile, or would certainly fail at runtime (for example, an inaccessible type, a group nesting cycle, or a decorator without a usable constructor).
+- Warning: the code compiles and runs, but almost certainly not as intended.
+- Info: a deliberate skip or fallback that the user should be able to see (for example, an abstract endpoint that is not mapped, or a default service resolution that fell back to self-registration).
 
 Users may change severities through `.editorconfig`. The defaults follow this policy.
 
 ### Test harness
 
-- Generator tests use `CSharpGeneratorDriver` with snapshot verification through **Verify.SourceGenerators** and **Verify.Xunit** (the test project uses xUnit v2). These are test-only packages, approved by the owner on 2026-10-05. Versions go into `Directory.Packages.props`, referenced only from `CSharpEssentials.Tests`.
+- Generator tests use `CSharpGeneratorDriver` with snapshot verification through Verify.SourceGenerators and Verify.Xunit (the test project uses xUnit v2). These are test-only packages, approved by the owner on 2026-10-05. Versions go into `Directory.Packages.props`, referenced only from `CSharpEssentials.Tests`.
 - Every generator has an incremental-caching test: a second run over an unchanged (or irrelevantly changed) compilation must report `Cached`/`Unchanged` for its tracked steps (`IncrementalStepRunReason`).
 - Every diagnostic ID has a positive and a negative test.
 
 ## Consequences
 
-**Positive**
+### Positive
 - Runtime TFMs and generator TFMs are independent. Endpoints stays `net8.0+` with `FrameworkReference`, and DI stays `netstandard2.1` + `net8.0+`.
 - The compiler loads only the generator dll, which has no runtime dependencies.
 - Consumers still add one `PackageReference` and get both the runtime API and the generator.
 - Consumers on SDK 8.0.1xx can load the generator (no `CS9057`).
 - Diagnostics do not affect generator caching.
 
-**Negative**
+### Negative
 - Each generator-backed package needs two projects and pack wiring. `build/Generators.props` mitigates this.
 - In-repo consumers need an extra `ProjectReference` to the generator project, because analyzers do not flow through `ProjectReference` the way they flow through packages.
 - Generators are limited to the Roslyn 4.8 API surface.
 - The generator matches runtime types by metadata-name strings. Renaming a runtime attribute or interface requires updating the generator. Snapshot tests catch the mismatch.
 
-**Neutral**
+### Neutral
 - `CSharpEssentials.Enums` kept the ADR-004 mechanism in 4.1. Moving it to this layout was out of scope for 4.1; ADR-007 did it in 5.0.
 - The publish script packs only packable projects, so `*.Generators` projects (`IsPackable=false`) are skipped automatically.
 
@@ -111,8 +111,8 @@ Users may change severities through `.editorconfig`. The defaults follow this po
 
   `build/Generators.props` sets `netstandard2.0`, `IsPackable=false`, `IncludeSymbols=false`, `IsRoslynComponent=true`, `EnforceExtendedAnalyzerRules=true` and `DebugType=embedded` (the pdb travels inside the analyzer dll, so no separate symbol file is needed in `analyzers/dotnet/cs`). It references `Microsoft.CodeAnalysis.CSharp` with `VersionOverride="4.8.0"` and `Microsoft.CodeAnalysis.Analyzers`, both `PrivateAssets="all"`, and adds `AnalyzerReleases.Shipped.md`/`AnalyzerReleases.Unshipped.md` as `AdditionalFiles`. SourceLink and SonarAnalyzer still come from `Directory.Build.props`; generator code satisfies Sonar instead of suppressing it.
 - Roslyn 4.8 brings `System.Collections.Immutable` 7.0, which has no collection builder for `ImmutableArray<T>`. Generator code uses `ImmutableArray.Create(...)` instead of collection expressions for immutable arrays (`CS9210` otherwise).
-- `build-and-publish-nugets.sh` skips directories named `*.Generators`, because it detects non-packable projects by text and the `IsPackable=false` setting lives in the imported props file.
-- Pack wiring (`build/PackGenerator.targets`) landed with the first runtime package that owns a generator (Endpoints, #52), where the nupkg layout is verified by a test. Enums, Endpoints and DependencyInjection use it; each runtime project also packs its `.CodeFixes` project the same way.
+- `build-and-publish-nugets.sh` skips directories named `*.Generators` (and, since the code fix projects arrived, `*.CodeFixes`), because it detects non-packable projects by text and the `IsPackable=false` setting lives in the imported props file.
+- Pack wiring (`build/PackGenerator.targets`) landed with the first runtime package that owns a generator (Endpoints, #52), where the nupkg layout is verified by a test. Enums, Endpoints and DependencyInjection used it first; EntityFrameworkCore, Json and Results adopted the same layout later (update for 9.0). Each runtime project also packs its `.CodeFixes` project the same way.
 - In-repo consumers reference the generator project directly:
 
   ```xml

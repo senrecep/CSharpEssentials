@@ -1,5 +1,3 @@
-using CSharpEssentials.Entity;
-using CSharpEssentials.Entity.Interfaces;
 using CSharpEssentials.EntityFrameworkCore;
 using CSharpEssentials.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -7,54 +5,23 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Examples.EntityFrameworkCore.Data;
 
-/// <summary>
-/// ShopDbContext inherits from BaseDbContext provided by CSharpEssentials.
-/// BaseDbContext automatically logs context lifecycle events and provides
-/// a service provider scope for dependency resolution.
-/// </summary>
-public class ShopDbContext : BaseDbContext<ShopDbContext>
+public sealed class ShopDbContext(DbContextOptions<ShopDbContext> options, IServiceScopeFactory scopes)
+    : BaseDbContext<ShopDbContext>(options, scopes)
 {
-    public ShopDbContext(
-        DbContextOptions<ShopDbContext> options,
-        IServiceScopeFactory serviceScopeFactory) : base(options, serviceScopeFactory) { }
-
     public DbSet<Product> Products => Set<Product>();
     public DbSet<Customer> Customers => Set<Customer>();
 
-    /// <summary>
-    /// ConfigureConventions is called before OnModelCreating and applies
-    /// global conventions. ConfigureEnumConventions stores every mapped [StringEnum]
-    /// enum as its wire name and adds a check constraint for its column.
-    /// </summary>
+    protected override DbContextInterceptors InterceptorsFromServices => DbContextInterceptors.All;
+
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
-        base.ConfigureConventions(configurationBuilder);
         configurationBuilder.ConfigureEnumConventions(EnumConventions.Default);
+        configurationBuilder.ConfigureNullableMaybeConventions();
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        base.OnModelCreating(modelBuilder);
-
-        // Apply all IEntityTypeConfiguration<T> implementations from this assembly
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ShopDbContext).Assembly);
-
-        // Configure soft-delete query filter for all SoftDeletableEntityBase entities
-        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
-        {
-            if (typeof(ISoftDeletableEntityBase).IsAssignableFrom(entityType.ClrType))
-            {
-                var method = typeof(ShopDbContext)
-                    .GetMethod(nameof(ApplySoftDeleteFilter), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
-                    .MakeGenericMethod(entityType.ClrType);
-
-                method.Invoke(null, new object[] { modelBuilder });
-            }
-        }
-    }
-
-    private static void ApplySoftDeleteFilter<TEntity>(ModelBuilder builder) where TEntity : class, ISoftDeletableEntityBase
-    {
-        builder.Entity<TEntity>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.ApplyNamedSoftDeleteQueryFilter();
     }
 }

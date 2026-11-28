@@ -1,20 +1,27 @@
-# CSharpEssentials.GcpSecretManager example
+# Examples.GcpSecretManager
 
-Console demo of the configuration types of `CSharpEssentials.GcpSecretManager`. It does not connect to Google Cloud and does not call `AddGcpSecretManager`; it builds the options and prints them.
+Console app for [CSharpEssentials.GcpSecretManager](../../CSharpEssentials.GcpSecretManager/Readme.MD). Sections 1 to 4 run offline. Section 5 loads real secrets only when you ask for it.
 
-## Features demonstrated
-
-| Feature | Description |
-|---------|-------------|
-| Configuration options | `SecretManagerConfigurationOptions` collects projects with `AddProject` |
-| Project configuration | `ProjectSecretConfiguration` with `ProjectId`, `SecretIds`, `PrefixFilters` and `RawSecretPrefixes`; `IsRawSecret` tells which secrets are kept as raw text instead of being parsed as JSON |
-| Multiple projects | Two projects with different filters in one options object |
-
-## Running
+## Run
 
 ```bash
 cd examples/Examples.GcpSecretManager
 dotnet run
 ```
 
-To load secrets in a real app, call `builder.Configuration.AddGcpSecretManager(...)` with `using CSharpEssentials.GcpSecretManager.Extensions;`. It extends `IConfigurationManager` (`builder.Configuration` of a `WebApplicationBuilder` or `HostApplicationBuilder`), not the `IConfigurationBuilder` that `Program.cs` creates, and loads the secrets when it is called, using Application Default Credentials or `CredentialsPath`. See the [package README](../../CSharpEssentials.GcpSecretManager/Readme.MD).
+To load real secrets, sign in with Application Default Credentials and name a project you can read:
+
+```bash
+gcloud auth application-default login
+CSE_GCP_PROJECT=my-project CSE_GCP_PREFIX=MyApp__ dotnet run
+```
+
+Set `CSE_GCP_CREDENTIALS` to a key file path to use it instead of Application Default Credentials. Section 5 prints the loaded keys with masked values.
+
+## What each section shows
+
+1. `SecretManagerConfigurationOptions` with `AddProject` chaining, `BatchSize`, `PageSize`, `CredentialsPath`, `LoadFromAppSettings`, `ConfigurationSectionName`, `Loader`, and a project with a `Region`.
+2. `RawSecretIds`, `RawSecretPrefixes` and `IsRawSecret`: which secrets are kept as one string instead of being flattened as JSON.
+3. The checks `AddGcpSecretManager` runs before it contacts Google Cloud: no section, no project, invalid `BatchSize` or `PageSize`, a project without `ProjectId`.
+4. A custom `ISecretManagerConfigurationLoader` that maps `--` to `:` and keeps the prefix filter, tried on `Secret` objects built in memory.
+5. `AddGcpSecretManager` on a `ConfigurationManager` with a `LoggerFactory`, against a real project.

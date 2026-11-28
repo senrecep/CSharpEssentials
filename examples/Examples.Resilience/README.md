@@ -1,23 +1,24 @@
 # Examples.Resilience
 
-Console demo of `CSharpEssentials.Resilience`.
+Console app that runs every feature of [CSharpEssentials.Resilience](../../CSharpEssentials.Resilience/Readme.MD) against fake operations. It needs no network and finishes in a few seconds.
 
 ## Run
 
 ```bash
+cd examples/Examples.Resilience
 dotnet run
 ```
 
-## What's covered
+## What each section shows
 
-- Empty policy: `ResiliencePolicy.Create()`
-- Retry with exponential and constant backoff
-- Timeout
-- Circuit breaker
-- Retry, timeout and circuit breaker combined
-- Generic `ResiliencePolicy<T>`
-- Fallback values
-- `Create(ResiliencePolicyOptions)`
-- `ExecuteAsync` on a `Func<Task<T>>`
-- `RetryIfFailed` on a `Func<CancellationToken, Task<Result<T>>>`
-- Error types: `Validation` and `NotFound` failures are returned without retrying; a `Conflict` failure is retried by `RetryIfFailed`
+1. `ResiliencePolicy.Create()` with no strategies: an exception comes back as an `Unexpected` error.
+2. `WithRetry` retrying thrown exceptions until the third call succeeds.
+3. Backoff choices: exponential, constant, and `useJitter` with `maxDelay`. The printed times show the difference.
+4. Which error types are retried. `Validation`, `NotFound` and `Domain` run once; `Conflict` and `Unexpected` are retried.
+5. Strategy order. Retry then timeout limits each attempt; timeout then retry limits all attempts and ends in `Resilience.Timeout`.
+6. `WithCircuitBreaker` opening after two failures, so the third call gets `Resilience.CircuitBroken` without running.
+7. `WithFallback` with a plain value and with a `Result<T>`.
+8. `ResiliencePolicy.Create(ResiliencePolicyOptions)` and the `RetryOptions`, `TimeoutOptions` and `CircuitBreakerOptions` overloads.
+9. `ExecuteAsync` on a `Func<Task<T>>`, and `RetryIfFailed` with and without a `shouldRetry` predicate.
+10. Cancelling the caller's token throws `OperationCanceledException` instead of returning a failure.
+11. `Create(Action<ResiliencePipelineBuilder<...>>)`, `ToPipeline()` and `FromPipeline(...)` for raw Polly pipelines.

@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <AnalysisMode>None</AnalysisMode>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
+    <RunAnalyzersDuringBuild>false</RunAnalyzersDuringBuild>
+    <!-- The libraries need EF Core 10 on net10.0; the central versions pin 9.x for older targets. -->
+    <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" VersionOverride="[10.0.1,11)" />
+    <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../CSharpEssentials.Entity/CSharpEssentials.Entity.csproj" />
+    <ProjectReference Include="../../CSharpEssentials.EntityFrameworkCore/CSharpEssentials.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="../../CSharpEssentials.EntityFrameworkCore.HealthChecks/CSharpEssentials.EntityFrameworkCore.HealthChecks.csproj" />
+    <ProjectReference Include="../../CSharpEssentials.EntityFrameworkCore.Hosting/CSharpEssentials.EntityFrameworkCore.Hosting.csproj" />
+    <ProjectReference Include="../../CSharpEssentials.EntityFrameworkCore.Locking/CSharpEssentials.EntityFrameworkCore.Locking.csproj" />
+  </ItemGroup>
+
+</Project>

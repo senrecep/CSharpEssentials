@@ -1,0 +1,20 @@
+---
+title: "CSharpEssentials.Mediator.Testing example"
+---
+
+An xUnit project that uses both helpers of `CSharpEssentials.Mediator.Testing`.
+
+| File | What it shows |
+|------|---------------|
+| `InProcessResourceLockContractTests.cs` | Every `ResourceLockContract` scenario as one `[Theory]` row, run against `InProcessResourceLock`. Swap in your own `IResourceLock` to test it |
+| `LockBehaviorTests.cs` | `RecordingResourceLock` behind the real `LockBehavior` (generated mediator, `AddMediatorBehaviors` and `AddMediatorLockBehavior`): the key and timeout the behavior took, the release, a held key that times out as a failed `Result`, and `FailWith` |
+| `CapturePayment.cs`, `CapturePaymentHandler.cs` | The locked command under test |
+
+## Running
+
+```bash
+dotnet test examples/Examples.Mediator.Testing/Examples.Mediator.Testing.csproj
+```
+
+No external services are needed. See the
+[Mediator.Testing Readme](/libraries/mediator-testing) for the API.

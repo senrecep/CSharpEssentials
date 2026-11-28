@@ -30,6 +30,7 @@ Current version: 9.0.0 <!-- x-release-please-version -->
 - Pack: `dotnet pack`
 - Publish: `./build-and-publish-nugets.sh` (CI runs it on release; see Releasing)
 - Docs site: `docs7/` is generated from README.MD, `docs/`, the package Readmes, BENCHMARKS.md files and the example READMEs. After editing any of them run `python3 scripts/docs7.py`; CI fails when `docs7/` is out of date. Never edit `docs7/` by hand.
+- Doc examples: a fenced block that opens with ```` ```csharp Program.cs ```` is a complete program. After changing docs, run `python3 scripts/check-doc-examples.py <files>`; it builds every such block and runs the console ones, and must print `N/N programs OK`.
 - Typed results: the combinators of `Result<T, E1..E3>` (`CSharpEssentials.Results/Modules/ResultTE1*.cs`) and their tests (`tests/CSharpEssentials.Results.Typed.Tests/Typed/Emitted/`) are written by `python3 scripts/generate-typed-results.py`. Edit the script, not the files, and rerun it; CI fails when they differ. The layout, conversions, `Match`, `Switch` and `ToResult` stay hand-written in `ResultTE1.cs`, `ResultTE1E2.cs` and `ResultTE1E2E3.cs`.
 - First-time setup: `git config core.hooksPath .githooks` (activates the pre-commit hook that checks and fixes the test and package count badges in README.MD)
 - Naming: PascalCase types, camelCase locals, `_camelCase` private fields

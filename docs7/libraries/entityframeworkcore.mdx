@@ -2,164 +2,476 @@
 title: "CSharpEssentials.EntityFrameworkCore"
 ---
 
-Extensions, interceptors and utilities for Entity Framework Core, covering audit trails, domain events, pagination and CQRS.
+EF Core support for the `CSharpEssentials.Entity` base classes and a set of data access helpers. It fills audit fields, turns deletes into soft deletes, dispatches domain events, pages queries, runs units of work in a transaction and stores events in an outbox.
 
-Benchmarks against plain EF Core, MR.EntityFrameworkCore.KeysetPagination, X.PagedList.EF and EntityFrameworkCore.Exceptions are in [BENCHMARKS.md](/benchmarks/entityframeworkcore). The design-time cost of the bundled CSE3001 analyzer is in [the analyzer BENCHMARKS.md](/benchmarks/entityframeworkcore-generators).
+Benchmarks against plain EF Core, MR.EntityFrameworkCore.KeysetPagination, X.PagedList.EF and EntityFrameworkCore.Exceptions are in [BENCHMARKS.md](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.EntityFrameworkCore/BENCHMARKS.md). The design-time cost of the bundled CSE3001 analyzer is in [the analyzer BENCHMARKS.md](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.EntityFrameworkCore.Generators/BENCHMARKS.md).
 
-## Features
-
-- Audit interceptor: fills in `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy` and turns deletes into soft deletes.
-- Domain event interceptor: dispatches domain events before or after the save, with outbox support.
-- Slow query logging above a configurable threshold.
-- Offset pagination, and composite keyset pagination with opaque, versioned cursors and `Result` errors for bad cursors.
-- Batch soft delete in one `UPDATE` statement.
-- Named query filters (EF Core 10), with the CSE3001 analyzer and code fix for parameterless `IgnoreQueryFilters()`.
-- `BaseDbContext`: opt-in interceptor attachment from DI and domain event dispatch around `SaveChanges`.
-- `Maybe<T>?` properties in nullable columns, per property or by convention.
-- Enum storage by wire name with check constraints, and migration helpers to convert existing columns.
-- CQRS write and read contexts, pooled and factory registrations.
-- Entity mapping helpers for the `CSharpEssentials.Entity` base classes and a JSON column conversion.
-- `Result` helpers (`FirstOrDefaultAsResultAsync`, `SingleOrDefaultAsResultAsync`, `FindAsResultAsync`, `SaveChangesAsResultAsync`), `HardDelete` and `MigrateDataAsync` for seed data.
-- `ITransactionRunner` for EF Core, and an idempotency record store that writes inside the same transaction.
-- Opt-in, provider-aware ordered `Guid` keys.
-- Database error translation from SQLSTATE to `Error` values, with pluggable provider translators.
-- SQL connection factory interfaces for raw SQL and Dapper.
-
-## Installation
+## Install
 
 ```bash
 dotnet add package CSharpEssentials.EntityFrameworkCore
 ```
 
-Targets `net10.0` (EF Core 10), `net9.0` (EF Core 9) and `net8.0` (EF Core 8); there is no `net11.0` target. Use the EF Core major that matches your target framework.
+Targets `net10.0` (EF Core 10), `net9.0` (EF Core 9) and `net8.0` (EF Core 8). There is no `net11.0` target. Use the EF Core major that matches your target framework.
 
-This package is not Native AOT compatible, because EF Core's Native AOT support is experimental, needs precompiled queries and is not available on net8.0 ([EF Core NativeAOT and precompiled queries](https://learn.microsoft.com/ef/core/performance/nativeaot-and-precompiled-queries)).
+The package is not Native AOT compatible: EF Core's Native AOT support is experimental, needs precompiled queries and is not available on net8.0 ([EF Core NativeAOT and precompiled queries](https://learn.microsoft.com/ef/core/performance/nativeaot-and-precompiled-queries)).
 
-## Usage
+Add-on packages:
 
-### Audit interceptor
+- [CSharpEssentials.EntityFrameworkCore.HealthChecks](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.EntityFrameworkCore.HealthChecks/Readme.MD): a readiness check that fails while migrations are pending.
+- [CSharpEssentials.EntityFrameworkCore.Hosting](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.EntityFrameworkCore.Hosting/Readme.MD): a hosted service that relays the outbox.
+- [CSharpEssentials.EntityFrameworkCore.Locking](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.EntityFrameworkCore.Locking/Readme.MD): a database-session lock for the Mediator `LockBehavior`.
 
-```csharp
+## Quick start
+
+Audit fields, soft delete, domain events and paging on an in-memory SQLite database:
+
+```csharp Program.cs
+// dotnet add package CSharpEssentials.EntityFrameworkCore
+// dotnet add package Microsoft.EntityFrameworkCore.Sqlite --version 10.0.1
+using CSharpEssentials.Entity;
+using CSharpEssentials.Entity.Interfaces;
+using CSharpEssentials.EntityFrameworkCore;
 using CSharpEssentials.EntityFrameworkCore.Interceptors;
+using CSharpEssentials.EntityFrameworkCore.Pagination;
+using CSharpEssentials.EntityFrameworkCore.Pagination.Responses;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
-services.AddAuditInterceptor(() => "system-user");
+using SqliteConnection connection = new("DataSource=:memory:");
+connection.Open();
 
-services.AddDbContext<MyDbContext>((sp, options) =>
-    options.UseNpgsql(connectionString)
-           .AddInterceptors(sp.GetRequiredService<AuditInterceptor>()));
+ServiceCollection services = new();
+services.AddLogging();
+services.AddAuditInterceptor(() => "alice");                       // who is saving
+services.AddSingleton<IDomainEventPublisher, ConsolePublisher>();   // where events go
+services.AddDbContext<ShopDb>(options => options.UseSqlite(connection));
+
+await using ServiceProvider provider = services.BuildServiceProvider();
+await using AsyncServiceScope scope = provider.CreateAsyncScope();
+ShopDb db = scope.ServiceProvider.GetRequiredService<ShopDb>();
+await db.Database.EnsureCreatedAsync();
+
+db.Products.AddRange(Product.Create("Pen"), Product.Create("Notebook"), Product.Create("Stapler"));
+await db.SaveChangesAsync();
+// Published ProductCreated { Name = Pen } (three lines)
+
+Product pen = await db.Products.SingleAsync(p => p.Name == "Pen");
+Console.WriteLine($"{pen.Name} created by {pen.CreatedBy}");          // Pen created by alice
+
+db.Products.Remove(pen);
+await db.SaveChangesAsync();                                         // UPDATE ... SET IsDeleted = 1, not DELETE
+int all = await db.Products.IgnoreQueryFilters().CountAsync();
+Console.WriteLine($"Visible: {await db.Products.CountAsync()}, stored: {all}, deleted by {pen.DeletedBy}");
+// Visible: 2, stored: 3, deleted by alice
+
+PaginationResponse<Product> page = await db.Products.OrderBy(p => p.Name).PaginateAsync(pageNumber: 1, pageSize: 1);
+Console.WriteLine($"Page 1 of {page.TotalPages}: {page.Items[0].Name}");   // Page 1 of 2: Notebook
+
+public sealed record ProductCreated(string Name) : IDomainEvent;
+
+public sealed class Product : SoftDeletableEntityBase<Guid>
+{
+    private Product() { }
+
+    public string Name { get; private set; } = "";
+
+    public static Product Create(string name)
+    {
+        Product product = new() { Id = Guid.NewGuid(), Name = name };
+        product.Raise(new ProductCreated(name));
+        return product;
+    }
+}
+
+public sealed class ShopDb(DbContextOptions<ShopDb> options, IServiceScopeFactory scopes) : BaseDbContext<ShopDb>(options, scopes)
+{
+    public DbSet<Product> Products => Set<Product>();
+
+    protected override DbContextInterceptors InterceptorsFromServices => DbContextInterceptors.Audit;
+
+    protected override bool DispatchDomainEventsOnSaveChanges => true;
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Product>().SoftDeletableEntityBaseGuidIdMap();
+        modelBuilder.ApplySoftDeleteQueryFilter();
+    }
+}
+
+public sealed class ConsolePublisher : IDomainEventPublisher
+{
+    public Task PublishAsync(IDomainEvent domainEvent, CancellationToken cancellationToken = default)
+    {
+        Console.WriteLine($"Published {domainEvent}");
+        return Task.CompletedTask;
+    }
+}
 ```
 
-On `SaveChanges`, an `Added` entity that implements `ICreationAudit` gets `SetCreatedInfo`, a `Modified` one that implements `IModificationAudit` gets `SetUpdatedInfo`, and a `Deleted` `ISoftDeletable` that is not marked with `MarkAsHardDeleted()` is turned into a soft delete (`MarkAsDeleted`, state `Modified`). The user name comes from a scoped `IAuditUserIdProvider`, resolved once per save that has entries to stamp, and the time from `TimeProvider`. `AddAuditInterceptor` also registers `TimeProvider.System` and `AuditInterceptor` as singletons, each only when that service is not registered yet, so a `TimeProvider` you registered before is kept and calling it twice adds no second interceptor.
+## Contents
 
-EF Core deletes tracked owned types and `Cascade`/`ClientCascade` dependents as soon as you call `Remove` (the default `CascadeDeleteTiming.Immediate`). When the root becomes a soft delete, the interceptor keeps those entries too: owned types stay, `ISoftDeletable` dependents are soft-deleted, and other dependents go back to `Unchanged`. Pending edits on them are still saved with the default snapshot change tracking; with a notification-based `ChangeTrackingStrategy` they can be lost, so save those edits before removing the root. A dependent marked with `MarkAsHardDeleted()` is still deleted. A dependent that is also cascade-deleted from another principal deleted in the same save is deleted with it. A dependent you removed yourself in the same save looks the same as a cascaded one and is kept, so remove it in its own `SaveChanges`. Optional dependents with `SetNull`/`ClientSetNull` still get their foreign key set to null by EF.
+[Audit interceptor](#audit-interceptor) · [Domain events](#domain-events) · [BaseDbContext](#basedbcontext) · [Entity mapping](#entity-mapping) · [Soft delete and query filters](#soft-delete-and-query-filters) · [Offset pagination](#offset-pagination) · [Keyset pagination](#keyset-pagination) · [Result helpers and seed data](#result-helpers-and-seed-data) · [Transaction runner](#transaction-runner) · [Outbox](#outbox) · [Idempotency records](#idempotency-records) · [Database error translation](#database-error-translation) · [Slow query logging](#slow-query-logging) · [Maybe columns](#maybe-columns) · [Enum storage](#enum-storage) · [Ordered GUID keys](#ordered-guid-keys) · [Registration helpers](#registration-helpers) · [Migrate on startup](#migrate-on-startup) · [Diagnostics](#diagnostics)
 
-`AddAuditInterceptor` takes a `Func<string>`, a `Func<IServiceProvider, string>`, or the typed `Func<TUserId>` / `Func<IServiceProvider, TUserId>` forms (the user id is stored with `ToString()`). To resolve the user from the request, use the `IServiceProvider` form:
+## Namespaces
+
+| Namespace | Contents |
+|---|---|
+| `CSharpEssentials.EntityFrameworkCore` | `BaseDbContext<T>`, `DbContextInterceptors`, entity mapping, query filters, `SoftDeleteAsync`, `HardDelete`, `*AsResultAsync`, `MigrateDataAsync`, Maybe and enum conventions, `UseOrderedGuidKeys`, `ISqlSession` |
+| `.Interceptors` | `AuditInterceptor`, `DomainEventInterceptor`, `SlowQueryInterceptor`, `AddAuditInterceptor`, `AddSlowQueryInterceptor`, `IAuditUserIdProvider`, `IDomainEventPublisher`, `IDomainEventOutbox`, `ISlowQueryHandler` |
+| `.Pagination` | `PaginateAsync`, `Paginate`, `KeysetPaginateAsync`, `PaginationDefaults` |
+| `.Pagination.Requests` / `.Responses` / `.Keyset` | request and response records; `KeysetOrdering<T>`, `KeysetPaginationOptions`, `ICursorProtector`, `KeysetCursorErrors` |
+| `.Extensions` | `AddCqrsDbContexts`, `AddWriteDbContext`, `AddReadDbContext`, `AddPooledDbContext`, `RegisterDbContextFactory`, `UseAsReadContext` |
+| `.Transactions` | `AddEfCoreTransactionRunner`, `EfCoreTransactionRunner<T>` (the interfaces are in `CSharpEssentials.Transactions`) |
+| `.Outbox` | `AddEfCoreOutbox`, `AddOutboxMessages`, `AddOutboxProcessor`, `OutboxMessage`, `IOutboxMessageHandler` |
+| `.Idempotency` | `AddIdempotencyRecords`, `AddEfCoreIdempotencyRecordStore`, `EfCoreIdempotencyRecordStore<T>` |
+| `.DbErrors` | `DbErrorTranslation`, `AddDbErrorTranslation`, `IDbErrorTranslator`, `SqlStateErrorTranslator` |
+| `.Sql` | `AddDbContextSqlSession`, `AddDbDataSourceReadOnlyConnectionFactory` |
+| `.Migrations` | `MigrateDatabaseAsync`, `IDatabaseMigrationLock` |
+| `.Converters` | `NullableMaybeConverter<T>`, enum value converters, `EnumJsonValueReaderWriter<TEnum>` |
+
+## Audit interceptor
+
+`AuditInterceptor` runs in `SaveChanges` and `SaveChangesAsync`:
+
+| Entry state | Interface | Action |
+|---|---|---|
+| `Added` | `ICreationAudit` | `SetCreatedInfo(now, user)` |
+| `Modified` | `IModificationAudit` | `SetUpdatedInfo(now, user)` |
+| `Deleted` | `ISoftDeletable`, not marked with `MarkAsHardDeleted()` | `MarkAsDeleted(now, user)` and the state becomes `Modified` (a soft delete) |
+
+Register it, then attach it, either with `BaseDbContext` (as in the quick start) or on the options:
+
+```csharp
+services.AddAuditInterceptor(() => "system");
+services.AddDbContext<AppDb>((sp, options) => options
+    .UseSqlite(connectionString)
+    .AddInterceptors(sp.GetRequiredService<AuditInterceptor>()));
+```
+
+`AddAuditInterceptor` takes the user in one of four forms: `Func<string>`, `Func<IServiceProvider, string>`, `Func<TUserId>` or `Func<IServiceProvider, TUserId>` (the id is stored with `ToString()`). Use the `IServiceProvider` form to read the current request:
 
 ```csharp
 services.AddAuditInterceptor(sp =>
     sp.GetRequiredService<IHttpContextAccessor>().HttpContext?.User.FindFirst("sub")?.Value ?? "anonymous");
 ```
 
-`AddAuditUserIdProvider` (same overloads) registers only the scoped `IAuditUserIdProvider`, not the interceptor. Use it, or your own `IAuditUserIdProvider` / `IAuditUserIdProvider<TUserId>` class, when you register the interceptor yourself: `services.AddSingleton(TimeProvider.System); services.AddSingleton<AuditInterceptor>();`.
+- It registers a scoped `IAuditUserIdProvider`, `TimeProvider.System` and the singleton `AuditInterceptor`. The last two are added only when not registered yet, so your own `TimeProvider` wins and a second call adds no second interceptor.
+- The user provider and the clock are read once per save, and only when the save has an entry to stamp.
+- `AddAuditUserIdProvider` (same four overloads) registers only the provider. You can also implement `IAuditUserIdProvider` or `IAuditUserIdProvider<TUserId>` yourself and register the interceptor with `services.AddSingleton(TimeProvider.System); services.AddSingleton<AuditInterceptor>();`.
+- `SoftDeletableEntityBaseGuidIdMap()` and the other mapping helpers make `CreatedBy` required. Without the interceptor the insert fails with a `NOT NULL` error.
 
-### Domain event interceptor
+### Soft delete and cascades
+
+EF Core marks tracked owned types and `Cascade`/`ClientCascade` dependents as deleted as soon as you call `Remove` (the default `CascadeDeleteTiming.Immediate`). When the root becomes a soft delete, the interceptor keeps them:
+
+- Owned types stay.
+- `ISoftDeletable` dependents are soft-deleted too.
+- Other dependents go back to `Unchanged`.
+- A dependent marked with `MarkAsHardDeleted()` is still deleted, and so is one that another principal deleted in the same save cascades to.
+- A dependent you removed yourself in the same save looks like a cascaded one and is kept. Remove it in its own `SaveChanges`.
+- Optional dependents with `SetNull`/`ClientSetNull` still get their foreign key set to null by EF.
+
+Pending edits on kept dependents are saved with the default snapshot change tracking. With a notification-based `ChangeTrackingStrategy` they can be lost, so save those edits before you remove the root.
+
+## Domain events
+
+There are two ways to dispatch the events that entities `Raise`. Use one of them, not both.
+
+### With BaseDbContext
+
+Set `DispatchDomainEventsOnSaveChanges => true`, as in the quick start:
+
+- `BeforeSave` events go to `IDomainEventPublisher` before the write.
+- `AfterSave` events go to `IDomainEventPublisher` after the save succeeds. When an `IDomainEventOutbox` is registered they are stored in it instead, before the write, in the same `SaveChanges`.
+- When the save (or the outbox) fails, the `AfterSave` events are put back on their entities so a retry dispatches them, and the rows the outbox added are detached. When the publisher throws while publishing `AfterSave` events, they stay cleared, because a retry would publish the earlier ones twice.
+- Override `DispatchDomainEventsAsync` to change how events are published.
+
+### With DomainEventInterceptor
+
+Works on any `DbContext`:
 
 ```csharp
 services.AddSingleton<IDomainEventPublisher, MyPublisher>();
 services.AddSingleton<DomainEventInterceptor>();
+services.AddDbContext<AppDb>((sp, options) => options
+    .UseSqlite(connectionString)
+    .AddInterceptors(sp.GetRequiredService<DomainEventInterceptor>()));
+```
 
-services.AddDbContext<MyDbContext>((sp, options) =>
-    options.UseNpgsql(connectionString)
-           .AddInterceptors(sp.GetRequiredService<DomainEventInterceptor>()));
+- In `SavingChanges` it takes the events of every tracked `IDomainEventHolder` and clears them.
+- It publishes the `BeforeSave` events, then the `AfterSave` events, both before the write. With a registered `IDomainEventOutbox` the `AfterSave` events go to the outbox instead.
+- When a `BeforeSave` publish or the outbox throws, the `AfterSave` events are put back and the outbox rows detached. `BeforeSave` events are not put back.
+- When the publisher throws while publishing `AfterSave` events, or the database write fails, the events stay cleared.
 
-// In your entity
-public sealed record PriceChangedEvent(Guid ProductId, decimal NewPrice) : IDomainEvent;
+### Notes
 
-public class Product : EntityBase<Guid>
+The publisher and the outbox are resolved from a DI scope, so a scoped `IDomainEventPublisher` works. Event timing is set with `[DomainEventTiming]` from `CSharpEssentials.Entity`.
+
+## BaseDbContext
+
+`BaseDbContext<TContext>` is an optional base class. Its constructor takes `DbContextOptions<TContext>` and `IServiceScopeFactory` and creates a service scope that lives as long as the context (the protected `ServiceProvider`). It resolves `ILogger<TContext>` from that scope with `GetRequiredService`, so call `services.AddLogging()` or the constructor throws.
+
+| Override | Default | Effect |
+|---|---|---|
+| `InterceptorsFromServices` | `None` | Attaches the interceptors registered in DI: `DbContextInterceptors.Audit`, `DomainEvents`, `SlowQuery` or `All`. Unregistered ones and ones already on the options are skipped. `DomainEvents` is ignored when `DispatchDomainEventsOnSaveChanges` is `true`. |
+| `DispatchDomainEventsOnSaveChanges` | `false` | Dispatches domain events around `SaveChanges`; see [Domain events](#domain-events). |
+| `DeferDomainEventPublishingUntilCommit` | `false` | With dispatch on, publishes `AfterSave` events after the commit of an `EfCoreTransactionRunner` unit and drops them on rollback. Outbox storage is never deferred. |
+| `DispatchDomainEventsAsync(...)` | publisher | How events are published. |
+
+If you override `OnConfiguring`, call `base.OnConfiguring(optionsBuilder)`.
+
+## Entity mapping
+
+Mapping helpers for the `CSharpEssentials.Entity` base classes, for `IEntityTypeConfiguration<T>` or `OnModelCreating`:
+
+```csharp
+public sealed class OrderConfiguration : IEntityTypeConfiguration<Order>   // Order : SoftDeletableEntityBase<Guid>
 {
-    public decimal Price { get; private set; }
-
-    public void UpdatePrice(decimal newPrice)
+    public void Configure(EntityTypeBuilder<Order> builder)
     {
-        Price = newPrice;
-        Raise(new PriceChangedEvent(Id, newPrice));
+        builder.SoftDeletableEntityBaseGuidIdMap();                    // key, audit and soft delete columns
+        builder.OptimisticConcurrencyVersionMap();                     // shadow byte[] "RowVersion" row version
+        builder.Property(o => o.Details).HasJsonConversion("jsonb");   // JSON column
     }
 }
+```
 
-public sealed class MyPublisher : IDomainEventPublisher
+| Method | Maps |
+|---|---|
+| `EntityBaseGuidIdMap()` | `Id` key plus audit columns, for `EntityBase<Guid>` |
+| `SoftDeletableEntityBaseGuidIdMap()` | the same plus `IsDeleted`, `DeletedAt`, `DeletedBy`; `IsHardDeleted` is ignored |
+| `EntityBaseMap<TEntity, TId>()`, `SoftDeletableEntityBaseMap<TEntity, TId>()` | the same for any key type |
+| `EntityBaseMap<TEntity>()`, `SoftDeletableEntityBaseMap<TEntity>()` | audit (and soft delete) columns without a key |
+| `OptimisticConcurrencyVersionMap(propertyName = "RowVersion")` | a shadow `byte[]` row version |
+| `HasJsonConversion(columnType = "jsonb", options = null)` | stores the property as JSON with the CSharpEssentials JSON options |
+
+`CreatedAt`/`CreatedBy` are required, `UpdatedAt`/`UpdatedBy` optional, and the user columns are at most 40 characters unless you pass `userIdMaxLength`. In a `HasJsonConversion` column, an undefined enum value is saved as its number; on load it becomes the `[EnumFallback]` member, or the read throws when the enum has none.
+
+## Soft delete and query filters
+
+### Filters
+
+| Method | Targets | Filter |
+|---|---|---|
+| `modelBuilder.ApplySoftDeleteQueryFilter()` | every root entity type that implements `ISoftDeletableBase` | anonymous `!IsDeleted` |
+| `entity.AddQueryFilter<T>(expression)` | one entity type | your filter `AND` the existing anonymous filter |
+| `modelBuilder.ApplyNamedSoftDeleteQueryFilter()` (EF Core 10) | every root `ISoftDeletableBase` type | `!IsDeleted` named `QueryFilterNames.SoftDelete` |
+| `entity.HasSoftDeleteQueryFilter()` (EF Core 10) | one entity type | the same, for one type |
+
+Call the `Apply*` methods at the end of `OnModelCreating`. They put the filter on root types only; derived types inherit it, and owned types are skipped because EF Core does not allow filters on them.
+
+On EF Core 10, named filters let a query switch off soft delete and keep the others, such as a tenant filter:
+
+```csharp Program.cs
+// dotnet add package CSharpEssentials.EntityFrameworkCore
+// dotnet add package Microsoft.EntityFrameworkCore.Sqlite --version 10.0.1
+using CSharpEssentials.Entity;
+using CSharpEssentials.EntityFrameworkCore;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+
+using SqliteConnection connection = new("DataSource=:memory:");
+connection.Open();
+using AppDb db = new(new DbContextOptionsBuilder<AppDb>().UseSqlite(connection).Options) { TenantId = "a" };
+db.Database.EnsureCreated();
+
+db.Orders.AddRange(new Order("a", "A-1"), new Order("a", "A-2"), new Order("b", "B-1"));
+db.SaveChanges();
+
+// One UPDATE statement for every matching row; the change tracker and interceptors are bypassed.
+int deleted = await db.Orders.Where(o => o.Number == "A-1").SoftDeleteAsync(deletedBy: "bob");
+Console.WriteLine($"Soft-deleted rows: {deleted}");                                                   // 1
+
+Console.WriteLine($"Default: {db.Orders.Count()}");                                                   // 1 (tenant a, not deleted)
+Console.WriteLine($"Without soft delete: {db.Orders.IgnoreSoftDeleteQueryFilter().Count()}");         // 2 (tenant a)
+Console.WriteLine($"Without tenant: {db.Orders.IgnoreQueryFilters(TenantOnly).Count()}");             // 2 (not deleted)
+
+public partial class Program
 {
-    public Task PublishAsync(IDomainEvent domainEvent, CancellationToken cancellationToken = default) =>
-        Task.CompletedTask; // hand the event to your bus or handlers
+    private static readonly string[] TenantOnly = [QueryFilterNames.Tenant];
+}
+
+public sealed class Order : SoftDeletableEntityBase<int>
+{
+    public Order(string tenantId, string number) => (TenantId, Number) = (tenantId, number);
+
+    public string TenantId { get; private set; }
+    public string Number { get; private set; }
+}
+
+public sealed class AppDb(DbContextOptions<AppDb> options) : DbContext(options)
+{
+    public string TenantId { get; init; } = "";
+
+    public DbSet<Order> Orders => Set<Order>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder) =>
+        modelBuilder.Entity<Order>()
+            .HasSoftDeleteQueryFilter()
+            .HasQueryFilter(QueryFilterNames.Tenant, o => o.TenantId == TenantId);
 }
 ```
 
-`DomainEventInterceptor` takes the events of every tracked `IDomainEventHolder` in `SavingChanges`, clears them from the entities, publishes the `BeforeSave` events through `IDomainEventPublisher` and then handles the `AfterSave` events (see the comparison table under BaseDbContext). `IDomainEventOutbox.StoreAsync` receives the `AfterSave` events instead of the publisher when an outbox is registered. When publishing a `BeforeSave` event throws, or `StoreAsync` throws, the `AfterSave` events are put back on their entities, as with `DispatchDomainEventsOnSaveChanges`; `BeforeSave` events are not put back. When the publisher throws while publishing the `AfterSave` events, they stay cleared, since the ones published before the failure would be published again on a retry.
+- `IgnoreSoftDeleteQueryFilter()` is `IgnoreQueryFilters([QueryFilterNames.SoftDelete])` with a cached array.
+- `QueryFilterNames.SoftDelete` (`"SoftDelete"`) and `QueryFilterNames.Tenant` (`"Tenant"`) are plain constants. Use them for your own filters so callers can ignore them by name.
+- Pass filter keys in a `static readonly string[]` field or `new[] { ... }`. With a collection expression written inline at the call or a `List<string>`, EF Core 10.0.x compiles the query again on every execution.
+- EF Core does not allow an anonymous filter and named filters on the same entity type. The named helpers throw `InvalidOperationException` when the type already has an anonymous filter. On net8.0 and net9.0 only the anonymous helpers exist.
+- A soft-deletable type whose root type is not soft-deletable gets no filter from the `Apply*` methods. Make the root implement `ISoftDeletableBase`.
 
-### Pagination
+Moving from `ApplySoftDeleteQueryFilter()`: named keys only switch off named filters, so `IgnoreSoftDeleteQueryFilter()` ignores nothing while the model still has the anonymous filter. Change the model first (`ApplyNamedSoftDeleteQueryFilter()`, and register your other filters by name), then the queries.
 
-```csharp
-using CSharpEssentials.EntityFrameworkCore.Pagination;
+### Analyzer CSE3001
 
-// Offset-based
-var response = await dbContext.Users.PaginateAsync(
-    new PaginationRequest { PageNumber = 1, PageSize = 10 }, cancellationToken: ct);
+The package ships an analyzer for the parameterless `IgnoreQueryFilters()`, which turns off every filter, the tenant filter included. It runs only when the referenced EF Core has the named overload (EF Core 10 or later).
 
-// Offset-based with page number and size
-var page = await dbContext.Users.OrderBy(u => u.Id).PaginateAsync(pageNumber: 2, pageSize: 20, cancellationToken: ct);
+| ID | Severity | Message |
+|---|---|---|
+| CSE3001 | Info | `IgnoreQueryFilters()` ignores every query filter of the entity type. Pass the names of the filters to ignore. |
 
-// Synchronous, also works on in-memory IQueryable
-var memoryPage = users.AsQueryable().Paginate(pageNumber: 1, pageSize: 10);
+It is Info so that apps still on the anonymous filter do not break. Raise it once your filters are named:
 
-// Cursor-based: see Keyset Pagination below
-Result<KeysetPaginationResponse<Log>> feed = await dbContext.Logs.KeysetPaginateAsync(
-    new KeysetPaginationRequest { Limit = 20, After = nextCursor },
-    k => k.Descending(x => x.CreatedAt).Descending(x => x.Id), ct);
+```ini
+[*.cs]
+dotnet_diagnostic.CSE3001.severity = warning
 ```
 
-Offset pagination caps the page size at `PaginationDefaults.MaxPageSize` (100) by default. `IPaginationRequest.Normalize()` (a default interface method, so call it through the interface type) raises the page number and page size to 1 and lowers a larger page size to 100. `Normalize(int maxPageSize)` uses your own cap instead; pass `int.MaxValue` to turn the cap off. A cap below 1 throws `ArgumentOutOfRangeException`. `PaginateAsync` and `Paginate` take the same cap through an optional `maxPageSize` parameter, the same way `KeysetPaginateAsync` clamps `Limit` to `KeysetPaginationOptions.MaxLimit`.
+For entities that implement `ISoftDeletableBase`, the code fix "Ignore only the named 'SoftDelete' filter" rewrites the call to `IgnoreQueryFilters(new[] { QueryFilterNames.SoftDelete })` and adds the `using`. Apply it only after the model registers the named filter. Other entities get no fix, because only you know which filters the query should skip. To keep a call that must see every row, suppress it with `[SuppressMessage("CSharpEssentials.EntityFrameworkCore", "CSE3001", Justification = "...")]`.
+
+### Batch soft delete and hard delete
 
 ```csharp
-IPaginationRequest request = new PaginationRequest { PageNumber = 1, PageSize = 5000 };
-await dbContext.Users.OrderBy(u => u.Id).PaginateAsync(request, cancellationToken: ct);                    // 100 rows
-await dbContext.Users.OrderBy(u => u.Id).PaginateAsync(request, maxPageSize: 500, cancellationToken: ct);  // 500 rows
+int rows = await db.Orders.Where(o => o.CustomerId == id).SoftDeleteAsync(deletedBy: user, timeProvider, ct);
+int same = await db.Orders.Where(o => o.CustomerId == id).SoftDeleteAsync(deletedAt: DateTimeOffset.UtcNow, deletedBy: user, ct);
+
+db.HardDelete(order);                  // MarkAsHardDeleted() + Remove: the audit interceptor keeps it a real DELETE
+db.HardDelete(oldOrders);              // the same for a sequence
+db.Orders.HardDelete(order);           // on a DbSet
+db.Orders.Delete(oldOrders);           // also a hard delete, despite the name
+await db.SaveChangesAsync(ct);
 ```
 
-`PaginationRequest.Search` is trimmed by `Normalize` and, when it is not empty and you pass a `search` delegate (`Func<string, Expression<Func<T, bool>>>`), `PaginateAsync` and `Paginate` apply that filter before counting. `PaginationResponse<T>` carries `Items`, `PageNumber`, `PageSize`, `TotalCount`, `TotalPages`, `HasPreviousPage` and `HasNextPage`; with `includeTotalCount: false` no `COUNT` runs and `TotalCount` is `-1`.
+- `SoftDeleteAsync` works for any `ISoftDeletable` entity. It runs one `ExecuteUpdate` with `AND NOT IsDeleted`, so rows already deleted keep their original `DeletedAt` and `DeletedBy`. Like every `ExecuteUpdate`, it skips the change tracker, interceptors and domain events, and needs a relational provider. Use `MarkAsDeleted` and `SaveChanges` when audit or events must run.
+- `HardDelete` and `Delete` need an `ISoftDeletableEntityBase` entity.
 
-### Keyset pagination
-
-`KeysetPaginateAsync` pages through a query by a composite key, such as "newest first, then by id". It returns opaque cursors for the next and previous page, sends one query that reads `limit + 1` rows, and never runs a `COUNT`. Unlike offset paging, its cost does not grow with the page number, and rows inserted or deleted between requests do not shift the pages.
+## Offset pagination
 
 ```csharp
+PaginationResponse<Product> page = await db.Products
+    .OrderBy(p => p.Name)
+    .PaginateAsync(pageNumber: 2, pageSize: 20, cancellationToken: ct);
+
+PaginationResponse<Product> search = await db.Products
+    .OrderBy(p => p.Name)
+    .PaginateAsync(
+        new PaginationRequest { PageNumber = 1, PageSize = 10, Search = " pen " },
+        search: term => p => p.Name.Contains(term),
+        cancellationToken: ct);
+
+PaginationResponse<Product> inMemory = products.AsQueryable().Paginate(pageNumber: 1, pageSize: 10);
+```
+
+- `PaginationResponse<T>` has `Items`, `PageNumber`, `PageSize`, `TotalCount`, `TotalPages`, `HasPreviousPage` and `HasNextPage`.
+- It runs a `COUNT` and a data query. With `includeTotalCount: false` no `COUNT` runs and `TotalCount` is `-1`.
+- The request is normalized first: page number and size are raised to 1, the size is lowered to `maxPageSize` (default `PaginationDefaults.MaxPageSize`, 100), and `Search` is trimmed. Pass `maxPageSize: 500` for larger pages, or `int.MaxValue` to remove the cap. A cap below 1 throws `ArgumentOutOfRangeException`.
+- The `search` delegate runs only when `Search` is not empty, and before the count.
+- `IPaginationRequest.Normalize()` and `Normalize(int maxPageSize)` are default interface methods; call them through the interface type.
+- Add an `OrderBy` yourself; paging without an order gives unstable pages.
+
+## Keyset pagination
+
+`KeysetPaginateAsync` pages by a composite key, for example "by title, then by id". It sends one query that reads `limit + 1` rows, never runs a `COUNT`, and returns opaque cursors for the next and previous page. Its cost does not grow with the page number, and rows inserted between requests do not shift the pages.
+
+```csharp Program.cs
+// dotnet add package CSharpEssentials.EntityFrameworkCore
+// dotnet add package Microsoft.EntityFrameworkCore.Sqlite --version 10.0.1
 using CSharpEssentials.EntityFrameworkCore.Pagination;
+using CSharpEssentials.EntityFrameworkCore.Pagination.Keyset;
 using CSharpEssentials.EntityFrameworkCore.Pagination.Requests;
+using CSharpEssentials.EntityFrameworkCore.Pagination.Responses;
+using CSharpEssentials.ResultPattern;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 
-// GET /orders?limit=20&after=eyJ2IjoxLCJkIjoiYSIs...
-Result<KeysetPaginationResponse<Order>> page = await db.Orders
-    .Where(o => o.CustomerId == customerId)
-    .KeysetPaginateAsync(
-        new KeysetPaginationRequest { Limit = 20, After = after, Before = before },
-        k => k.Descending(o => o.CreatedAt).Descending(o => o.Id),
-        ct);
+using SqliteConnection connection = new("DataSource=:memory:");
+connection.Open();
+using AppDb db = new(new DbContextOptionsBuilder<AppDb>().UseSqlite(connection).Options);
+db.Database.EnsureCreated();
+db.Articles.AddRange(new[] { "Delta", "Alpha", "Echo", "Bravo", "Golf", "Charlie", "Foxtrot" }.Select(t => new Article { Title = t }));
+db.SaveChanges();
 
-// page.Value.Items, NextCursor, PreviousCursor, HasNext, HasPrevious
+// Build the ordering once; it is immutable. End with a unique key.
+KeysetOrdering<Article> byTitle = new KeysetOrdering<Article>().Ascending(a => a.Title).Ascending(a => a.Id);
+
+string? after = null;
+KeysetPaginationResponse<Article> page;
+do
+{
+    Result<KeysetPaginationResponse<Article>> result =
+        await db.Articles.KeysetPaginateAsync(new KeysetPaginationRequest { Limit = 3, After = after }, byTitle);
+    page = result.Value;
+    Console.WriteLine(string.Join(", ", page.Items.Select(a => a.Title)));
+    after = page.NextCursor;
+}
+while (after is not null);
+// Alpha, Bravo, Charlie / Delta, Echo, Foxtrot / Golf
+
+Result<KeysetPaginationResponse<Article>> back =
+    await db.Articles.KeysetPaginateAsync(new KeysetPaginationRequest { Limit = 3, Before = page.PreviousCursor }, byTitle);
+Console.WriteLine(string.Join(", ", back.Value.Items.Select(a => a.Title)));   // Delta, Echo, Foxtrot
+
+Result<KeysetPaginationResponse<Article>> bad =
+    await db.Articles.KeysetPaginateAsync(new KeysetPaginationRequest { After = "not-a-cursor" }, byTitle);
+Console.WriteLine($"{bad.FirstError.Type}: {bad.FirstError.Code}");             // Validation: KeysetPagination.InvalidCursor
+
+public sealed class Article
+{
+    public int Id { get; set; }
+    public string Title { get; set; } = "";
+}
+
+public sealed class AppDb(DbContextOptions<AppDb> options) : DbContext(options)
+{
+    public DbSet<Article> Articles => Set<Article>();
+}
 ```
 
-- The keys replace any `OrderBy` already on the query. Together they must be unique, so end with a unique tie-breaker such as the primary key. Directions can be mixed (`Descending(x => x.CreatedAt).Ascending(x => x.Id)`). A `KeysetOrdering<T>` is immutable; build it once and reuse it with the `KeysetOrdering<T>` overloads. The inline `Func` form builds a new ordering on every call.
-- `After` takes `NextCursor` and returns the following page; `Before` takes `PreviousCursor` and returns the page before it. Setting both returns a `KeysetPagination.AfterAndBefore` validation error. A request with neither returns the first page.
-- `Limit` is clamped to `1..KeysetPaginationOptions.MaxLimit` (default `100`, at most `int.MaxValue - 1`).
-- A cursor longer than `KeysetPaginationOptions.MaxCursorLength` (default `2048` characters) is rejected with `InvalidCursor` before it is decoded. Raise it if a protector produces longer cursors.
-- For a `Before` request the ordering is reversed in SQL, `limit + 1` rows are read, and the page is reversed in memory, so `Items` is always in the configured order.
+The inline form `KeysetPaginateAsync(request, k => k.Descending(x => x.CreatedAt).Descending(x => x.Id), ct)` builds a new ordering on each call. Every overload also takes a `KeysetPaginationOptions`.
+
+### Requests and responses
+
+- `KeysetPaginationRequest` has `Limit` (default 10), `After` and `Before`. Send `NextCursor` as `After` for the next page and `PreviousCursor` as `Before` for the previous one. Neither gives the first page.
+- `KeysetPaginationResponse<T>` has `Items`, `NextCursor`, `PreviousCursor`, `HasNext` and `HasPrevious`. `Items` is always in the configured order, also for a `Before` page.
 - `HasNext` and `HasPrevious` come from the extra row, not from a count. A page reached with `After` always reports a previous page, and a page reached with `Before` always reports a next page. An empty page has no cursors.
-- A malformed, tampered, outdated or mismatched cursor never throws. It returns `Error.Validation` with one of the `KeysetCursorErrors` codes (`InvalidCursor`, `UnsupportedCursorVersion`, `CursorDirectionMismatch`, `CursorKeyMismatch`), and the metadata key `parameter` names the bad request field (`after` or `before`). Map it to HTTP 400.
+- The keys replace any `OrderBy` already on the query. Directions can be mixed.
 
-#### Cursor format
+### Errors
 
-A cursor is base64url (no padding) of a small versioned JSON payload: `{"v":1,"d":"a","k":"<key fingerprint>","p":[<key values>]}`. `d` is the direction (`a` after, `b` before), `k` is a hash of the entity type and the key paths, types and directions, so a cursor issued for one ordering or entity is rejected by another, and `p` holds the typed key values. `DateTime` keeps its `Kind`, `DateTimeOffset` its offset, enums are stored as numbers, and non-finite `double`/`float` values as the strings `"NaN"`, `"Infinity"` and `"-Infinity"`. Supported key types: `int`, `long`, `short`, `byte`, `decimal`, `double`, `float`, `string`, `Guid`, `DateTime`, `DateTimeOffset`, `TimeSpan`, `DateOnly`, `TimeOnly` and enums (except `ulong`-based ones).
+A bad request never throws. It returns `Error.Validation` with one of these codes from `KeysetCursorErrors`, and the metadata key `parameter` names the field (`after` or `before`). Map it to HTTP 400.
 
-#### Cursor protection
+| Code | Cause |
+|---|---|
+| `KeysetPagination.InvalidCursor` | not a cursor, tampered, longer than `MaxCursorLength`, or rejected by the protector |
+| `KeysetPagination.UnsupportedCursorVersion` | a cursor format this version cannot read |
+| `KeysetPagination.CursorDirectionMismatch` | a `NextCursor` sent as `Before`, or the reverse |
+| `KeysetPagination.CursorKeyMismatch` | a cursor from another ordering or entity |
+| `KeysetPagination.AfterAndBefore` | both `After` and `Before` set |
 
-The default cursor is encoded, not encrypted or signed: a client can read the key values and craft a cursor. That is safe for the query (every value is a typed SQL parameter), but if the key values are sensitive or you want to reject client-built cursors, plug in an `ICursorProtector`. The package does not reference ASP.NET Core; a Data Protection wrapper takes a few lines:
+### Options
+
+| `KeysetPaginationOptions` | Default | |
+|---|---|---|
+| `MaxLimit` | 100 | `Limit` is clamped to `1..MaxLimit` (at most `int.MaxValue - 1`) |
+| `MaxCursorLength` | 2048 | longer cursors are rejected before decoding; raise it if a protector makes long cursors |
+| `Protector` | `NoOpCursorProtector` | signs or encrypts cursors |
+| `PredicateBuilder` | `KeysetPredicateBuilder.Instance` | writes the `WHERE` condition |
+
+### Cursor format and protection
+
+A cursor is base64url (no padding) of a small JSON payload: `{"v":1,"d":"a","k":"<key fingerprint>","p":[<key values>]}`. `d` is the direction, `k` a hash of the entity type and the key paths, types and directions, and `p` the typed key values. `DateTime` keeps its `Kind`, `DateTimeOffset` its offset, enums are stored as numbers, and non-finite `double`/`float` values as `"NaN"`, `"Infinity"` and `"-Infinity"`.
+
+The cursor is encoded, not encrypted: a client can read the key values and build a cursor. That is safe for the query, because every value is a typed SQL parameter. To hide the values or reject client-built cursors, implement `ICursorProtector`. The package does not reference ASP.NET Core, so a Data Protection wrapper is yours to write:
 
 ```csharp
 public sealed class DataProtectionCursorProtector(IDataProtectionProvider provider) : ICursorProtector
@@ -171,19 +483,19 @@ public sealed class DataProtectionCursorProtector(IDataProtectionProvider provid
     public bool TryUnprotect(string protectedCursor, out string cursor)
     {
         try { cursor = _protector.Unprotect(protectedCursor); return true; }
-        catch (Exception ex) when (ex is CryptographicException or FormatException) { cursor = string.Empty; return false; }
+        catch (Exception ex) when (ex is CryptographicException or FormatException) { cursor = ""; return false; }
     }
 }
 
-var options = new KeysetPaginationOptions { Protector = protector, MaxLimit = 50 };
+KeysetPaginationOptions options = new() { Protector = protector, MaxLimit = 50 };
 Result<KeysetPaginationResponse<Order>> page = await db.Orders.KeysetPaginateAsync(request, ordering, options, ct);
 ```
 
-`TryUnprotect` must not throw; return `false` and the request gets an `InvalidCursor` error.
+`TryUnprotect` must not throw. Return `false` and the request gets `InvalidCursor`.
 
-#### Predicate
+### Predicate
 
-The default `KeysetPredicateBuilder` writes the expanded form with a redundant leading-column condition, which lets the database use an index on the first key:
+The default `KeysetPredicateBuilder` writes the expanded form with a redundant condition on the first key, so the database can use an index on it:
 
 ```sql
 -- Descending(CreatedAt).Ascending(Name).Ascending(Id), After cursor
@@ -192,211 +504,654 @@ ORDER BY "CreatedAt" DESC, "Name", "Id"
 LIMIT @p3
 ```
 
-Cursor values always become SQL parameters, so the SQL text, and the cached query plan, are the same for every page. Strings are compared with `string.Compare`, `Guid` with `CompareTo`, and enums through their numeric value, which EF Core translates to plain `<`/`>` comparisons. The comparison therefore follows the database's own ordering (collation for strings, the stored form for `Guid`), the same ordering as the generated `ORDER BY`.
+Cursor values are always parameters, so the SQL text and the cached plan are the same for every page. Strings compare with `string.Compare`, `Guid` with `CompareTo` and enums by their numeric value, which EF Core translates to `<`/`>`. The comparison therefore follows the database's own ordering, the same as the `ORDER BY`. To write a different predicate (for example a row-value comparison on PostgreSQL), implement `IKeysetPredicateBuilder` and set `PredicateBuilder`. Each `KeysetColumn` carries the column expression, the cursor value expression, the CLR type and the direction (already reversed for `Before` pages).
 
-To emit a different predicate, implement `IKeysetPredicateBuilder` and set `KeysetPaginationOptions.PredicateBuilder`. Each `KeysetColumn` carries the column expression, the parameter expression for the cursor value, the CLR type and the effective direction (already reversed for `Before` pages).
+### Limitations
 
-#### PostgreSQL row values (untested sketch)
+- Supported key types: `int`, `long`, `short`, `byte`, `decimal`, `double`, `float`, `string`, `Guid`, `DateTime`, `DateTimeOffset`, `TimeSpan`, `DateOnly`, `TimeOnly` and enums (except `ulong`-based ones).
+- Nullable keys (`int?`, a `string?` with nullable annotations) throw `ArgumentException` when the ordering is built, because SQL `NULL` breaks `<`/`>`.
+- Keys must be property or field accesses (`x => x.CreatedAt`, `x => x.Audit.CreatedAt`), not computed expressions. A path through a nullable navigation (`x => x.Audit!.CreatedAt`) throws `ArgumentException`.
+- The provider must order and compare the key type. SQLite cannot for `decimal`, `DateTimeOffset` and `TimeSpan` and throws `NotSupportedException`; SQL Server and PostgreSQL can.
+- Enum keys must be stored as numbers. Enums stored as strings (`ConfigureEnumConventions`, `[StringEnum]`, `HasConversion<string>()`) cannot be keys.
+- Rows whose key values change between requests can move between pages.
+- There is no total count. Run `CountAsync` yourself if you need one.
 
-This is not shipped or tested by this package; verify it against your Npgsql version before use. Npgsql translates `EF.Functions.GreaterThan`/`LessThan` over value tuples to a row-value comparison, which PostgreSQL can serve from one composite index. A custom builder would have to emit an expression equivalent to this LINQ (shown for `Descending(x => x.CreatedAt).Descending(x => x.Id)` and an `After` cursor):
+### The old cursor overload
 
-```csharp
-x => EF.Functions.LessThan(ValueTuple.Create(x.CreatedAt, x.Id), ValueTuple.Create(cursorCreatedAt, cursorId))
-// WHERE ("CreatedAt", "Id") < (@p0, @p1)
-```
-
-A row-value comparison only fits orderings whose keys all share one direction. For mixed directions, return `KeysetPredicateBuilder.Instance.BuildPredicate(columns)` from your builder.
-
-#### Limitations
-
-- Nullable key columns (`int?`, `string?` with nullable annotations) are rejected with `ArgumentException` when the ordering is built, because SQL `NULL` breaks `<`/`>` comparisons. Use a non-nullable column, or a computed non-null column.
-- Keys must be property or field accesses on the entity (`x => x.CreatedAt`, `x => x.Audit.CreatedAt`), not computed expressions. Every member on the path must be non-nullable: `x => x.Audit!.CreatedAt` through a nullable `Audit?` navigation is rejected with `ArgumentException`.
-- The provider must translate ordering and comparison of each key type. SQLite, for example, cannot order or compare `decimal`, `DateTimeOffset` or `TimeSpan` columns, and EF Core throws `NotSupportedException` for them; SQL Server and PostgreSQL support them. Enum keys are compared through their numeric value, so they must be stored as numbers (the default). Enums stored as strings, through `ConfigureEnumConventions`, `[StringEnum]` or `HasConversion<string>()`, cannot be keys: the database would order and compare the names, not the numeric values the cursor holds.
-- The ordering is by the key values alone. Rows that change their key values between requests can move between pages.
-- There is no total count. Run a separate `CountAsync` if you need it.
-
-#### Moving from `PaginateAsync<T, TCursor>`
-
-The single-column cursor overload is `[Obsolete]` since 6.0 (warning CS0618) and will be removed in a later major version. It still works and sends the cursor as a SQL parameter, but it filters by one column only, so that column must be unique: with a non-unique column such as a timestamp, a page that ends inside a group of equal values skips the rest of that group. It returns the first page when `HasCursor` is `false`; `CursorPaginationRequest<TCursor>` sets `HasCursor` whenever `Cursor` is assigned a non-null value, so `0` or `Guid.Empty` is a real position. It calls `ICursorPaginationRequest<TCursor>.Normalize()`, which only raises `Limit` to 1, so there is no upper bound on `Limit` (`Normalize(int maxLimit)` also lowers it, if you call it yourself). To migrate:
+`PaginateAsync(ICursorPaginationRequest<TCursor>, cursorSelector, ...)` is `[Obsolete]` (CS0618) and will be removed in a later major version. It filters by one column, so a non-unique column such as a timestamp skips rows at page borders, and it has no upper bound on `Limit`. Move to `KeysetPaginateAsync` with a tie-breaker key:
 
 ```csharp
 // Before
-var response = await db.Logs.PaginateAsync(
+var old = await db.Logs.PaginateAsync(
     new CursorPaginationRequest<DateTime> { Limit = 20, Cursor = lastCreatedAt }, x => x.CreatedAt, isAscending: false);
 
-// After: the tie-breaker makes the key unique, and the cursor is opaque
+// After
 Result<KeysetPaginationResponse<Log>> page = await db.Logs.KeysetPaginateAsync(
     new KeysetPaginationRequest { Limit = 20, After = nextCursor },
     k => k.Descending(x => x.CreatedAt).Descending(x => x.Id), ct);
 ```
 
-Cursors from `PaginateAsync` (raw values) are not accepted by `KeysetPaginateAsync`; clients restart from the first page once.
+Old raw cursors are not accepted by `KeysetPaginateAsync`; clients start again from the first page once.
 
-### Batch soft delete
+## Result helpers and seed data
 
-```csharp
-// UPDATE ... SET IsDeleted = 1, DeletedAt = @now, DeletedBy = @user WHERE ... AND NOT IsDeleted
-int affected = await dbContext.Orders
-    .Where(o => o.CustomerId == customerId)
-    .SoftDeleteAsync(deletedBy: userId, timeProvider, ct);
-```
+```csharp Program.cs
+// dotnet add package CSharpEssentials.EntityFrameworkCore
+// dotnet add package Microsoft.EntityFrameworkCore.Sqlite --version 10.0.1
+using CSharpEssentials.EntityFrameworkCore;
+using CSharpEssentials.Errors;
+using CSharpEssentials.ResultPattern;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 
-Works for any entity implementing `ISoftDeletable` (e.g. `SoftDeletableEntityBase`). Rows already soft-deleted keep their original `DeletedAt`/`DeletedBy`. Like all `ExecuteUpdate` calls, it bypasses the change tracker and `SaveChanges` interceptors and needs a relational provider.
+using SqliteConnection connection = new("DataSource=:memory:");
+connection.Open();
+using AppDb db = new(new DbContextOptionsBuilder<AppDb>().UseSqlite(connection).Options);
+db.Database.EnsureCreated();
 
-### Named query filters (EF Core 10)
+CountrySeed[] seed = [new("TR", "Turkey"), new("DE", "Germany")];
 
-EF Core 10 can name query filters, so a query can switch off one filter and keep the others. On `net10.0` the package registers the soft-delete filter (`!IsDeleted`) under `QueryFilterNames.SoftDelete`:
+// Adds the rows only when the precondition is false, then saves.
+await db.MigrateDataAsync<Country, CountrySeed>(seed, (set, data) => set.Any(), s => new Country { Code = s.Code, Name = s.Name });
+Console.WriteLine($"Countries: {db.Countries.Count()}");                                    // 2
 
-```csharp
-protected override void OnModelCreating(ModelBuilder modelBuilder)
+// Key-based sync: updates changed rows, adds new ones, removes rows missing from the seed.
+CountrySeed[] next = [new("TR", "Türkiye"), new("FR", "France")];
+await db.MigrateDataAsync(next, new MigrateDataOptions<Country, CountrySeed, string>
 {
-    modelBuilder.Entity<Order>()
-        .HasSoftDeleteQueryFilter()                                                   // one entity
-        .HasQueryFilter(QueryFilterNames.Tenant, o => o.TenantId == _tenant.Id);
+    Query = set => set,
+    EntityKeyProperty = c => c.Code,
+    DataKeyProperty = s => s.Code,
+    IsUpdatedFunc = (c, s) => c.Name != s.Name,
+    UpdateFunc = (c, s) => { c.Name = s.Name; return c; },
+    Converter = s => new Country { Code = s.Code, Name = s.Name },
+});
+Console.WriteLine(string.Join(", ", db.Countries.OrderBy(c => c.Code).Select(c => c.Name)));  // France, Türkiye
 
-    // or, at the end of OnModelCreating, every root entity type that implements ISoftDeletableBase:
-    // modelBuilder.ApplyNamedSoftDeleteQueryFilter();
+Result<Country> tr = await db.Countries.Where(c => c.Code == "TR").FirstOrDefaultAsResultAsync();
+Result<Country> xx = await db.Countries.FindAsResultAsync(["XX"], Error.NotFound("Country.NotFound", "No such country"));
+Console.WriteLine($"{tr.Value.Name}; {xx.FirstError.Code}");                                // Türkiye; Country.NotFound
+
+db.ChangeTracker.Clear();
+db.Countries.Add(new Country { Code = "TR", Name = "Duplicate" });
+Result saved = await db.SaveChangesAsResultAsync();
+Console.WriteLine($"{saved.IsFailure}: {saved.FirstError.Type}");                           // True: Unknown
+
+public sealed record CountrySeed(string Code, string Name);
+
+public sealed class Country
+{
+    public string Code { get; set; } = "";
+    public string Name { get; set; } = "";
 }
 
-// Soft-deleted orders of the current tenant: the Tenant filter still applies.
-List<Order> orders = await db.Orders.IgnoreSoftDeleteQueryFilter().ToListAsync(ct);
-// same as db.Orders.IgnoreQueryFilters(SoftDeleteOnly), with
-// private static readonly string[] SoftDeleteOnly = [QueryFilterNames.SoftDelete];
-```
-
-- `QueryFilterNames.SoftDelete` (`"SoftDelete"`) and `QueryFilterNames.Tenant` (`"Tenant"`) are plain constants; use them for your own filters so callers can ignore them by name.
-- Pass filter keys in a `static readonly` array or `new[] { ... }`. EF Core 10.0.x compiles the query again on every execution when the keys come from a collection expression (`[...]`) or a `List<string>`. `IgnoreSoftDeleteQueryFilter()` already uses a cached array.
-- EF Core does not allow an anonymous filter and named filters on the same entity type. Use these helpers instead of `ApplySoftDeleteQueryFilter`/`AddQueryFilter`, not next to them; they throw `InvalidOperationException` when the entity type already has an anonymous filter. Those anonymous helpers keep working unchanged, and on `net8.0`/`net9.0` they are the only option.
-- `ApplyNamedSoftDeleteQueryFilter` puts the filter on root entity types only; derived types inherit it. A soft-deletable type whose root is not soft-deletable gets no filter, so make the root implement `ISoftDeletableBase`. Owned types are skipped, because EF Core does not allow query filters on them.
-
-#### Moving from `ApplySoftDeleteQueryFilter()`
-
-Named keys only switch off named filters. While the model still uses the anonymous `ApplySoftDeleteQueryFilter()`, `IgnoreQueryFilters(new[] { QueryFilterNames.SoftDelete })` and `IgnoreSoftDeleteQueryFilter()` ignore nothing and soft-deleted rows stay hidden. Switch the model to `ApplyNamedSoftDeleteQueryFilter()` (and register your other filters by name, for example with `HasQueryFilter(QueryFilterNames.Tenant, ...)`) before you change the queries.
-
-The package ships an analyzer for the parameterless `IgnoreQueryFilters()`, which turns off every filter, the tenant filter included. It runs only when the referenced EF Core has the named overload (EF Core 10 or later):
-
-| ID | Severity | Rule |
-|---|---|---|
-| CSE3001 | Info | `IgnoreQueryFilters()` ignores every query filter of the entity type. Pass the names of the filters to ignore. |
-
-CSE3001 is Info by default so that apps still on the anonymous filter are not broken. Once your filters are named, raise it in `.editorconfig`:
-
-```ini
-[*.cs]
-dotnet_diagnostic.CSE3001.severity = warning
-```
-
-When the entity implements `ISoftDeletableBase`, the code fix "Ignore only the named 'SoftDelete' filter (requires HasSoftDeleteQueryFilter/ApplyNamedSoftDeleteQueryFilter)" rewrites the call to `IgnoreQueryFilters(new[] { QueryFilterNames.SoftDelete })`, adding the `using` when needed (the `"SoftDelete"` literal when `QueryFilterNames` is not available). It uses `new[] { ... }` because collection expressions are not allowed in expression trees and make EF Core 10.0.x recompile the query; move the array to a `static readonly` field if the call is on a hot path. Apply it only after the model registers the named filter (see above). For other entities there is no fix, because only you know which filters the query should skip. If the query really must see every row, suppress the diagnostic at that call with `[SuppressMessage("CSharpEssentials.EntityFrameworkCore", "CSE3001", Justification = "...")]`, or set `dotnet_diagnostic.CSE3001.severity = none` in `.editorconfig`.
-
-### BaseDbContext
-
-```csharp
-public sealed class AppDbContext(DbContextOptions<AppDbContext> options, IServiceScopeFactory scopeFactory)
-    : BaseDbContext<AppDbContext>(options, scopeFactory)
+public sealed class AppDb(DbContextOptions<AppDb> options) : DbContext(options)
 {
-    // Attach interceptors registered in DI (AddAuditInterceptor, AddSlowQueryInterceptor, ...).
-    protected override DbContextInterceptors InterceptorsFromServices =>
-        DbContextInterceptors.Audit | DbContextInterceptors.SlowQuery;
+    public DbSet<Country> Countries => Set<Country>();
 
-    // Dispatch domain events around SaveChanges/SaveChangesAsync.
+    protected override void OnModelCreating(ModelBuilder modelBuilder) => modelBuilder.Entity<Country>().HasKey(c => c.Code);
+}
+```
+
+| Method | Returns |
+|---|---|
+| `FirstOrDefaultAsResultAsync(notFoundError?, ct)` | the first row, or `notFoundError` (default `Error.NotFound()`) |
+| `SingleOrDefaultAsResultAsync(notFoundError?, ct)` | the single row, or the error; more than one row still throws |
+| `FindAsResultAsync(keyValues, notFoundError?, ct)` | `DbSet.FindAsync`, or the error |
+| `SaveChangesAsResultAsync(ct)` | `Result`; every exception becomes an `ErrorType.Unknown` error |
+| `SaveChangesAsResultAsync(acceptAllChangesOnSuccess, ct)` | `Result<int>` with the row count |
+| `AsNoTracking(bool isDisabled)` | `AsNoTracking()` unless `isDisabled` is `true` |
+
+`SaveChangesAsResultAsync` lets an `OperationCanceledException` from your own token through. Use `DbErrorTranslation` when you want specific errors for constraint violations.
+
+`MigrateDataAsync` with `MigrateDataOptions` also has `PreConditionFunc` (skip everything when it returns `true`) and `HardDeleteMode`. With `HardDeleteMode = false` a soft-deletable row missing from the seed goes through the normal delete (a soft delete with the audit interceptor); with `true` it is marked with `MarkAsHardDeleted()` first. Both overloads call `SaveChangesAsync`.
+
+## Transaction runner
+
+`EfCoreTransactionRunner<TDbContext>` implements `ITransactionRunner` and `ITransactionCallbacks` from `CSharpEssentials.Core` (namespace `CSharpEssentials.Transactions`). The Mediator `TransactionBehavior` uses it, and so can your own code. `ISqlSession` lets raw ADO.NET or Dapper code run on the same connection and transaction.
+
+```csharp Program.cs
+// dotnet add package CSharpEssentials.EntityFrameworkCore
+// dotnet add package Microsoft.EntityFrameworkCore.Sqlite --version 10.0.1
+using System.Data.Common;
+using CSharpEssentials.EntityFrameworkCore;
+using CSharpEssentials.EntityFrameworkCore.Sql;
+using CSharpEssentials.EntityFrameworkCore.Transactions;
+using CSharpEssentials.Errors;
+using CSharpEssentials.ResultPattern;
+using CSharpEssentials.Transactions;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+
+using SqliteConnection connection = new("DataSource=:memory:");
+connection.Open();
+
+ServiceCollection services = new();
+services.AddDbContext<AppDb>(options => options.UseSqlite(connection));
+services.AddEfCoreTransactionRunner<AppDb>();   // scoped ITransactionRunner and ITransactionCallbacks
+services.AddDbContextSqlSession<AppDb>();       // scoped ISqlSession: the context's connection and transaction
+
+await using ServiceProvider provider = services.BuildServiceProvider();
+await using AsyncServiceScope scope = provider.CreateAsyncScope();
+AppDb db = scope.ServiceProvider.GetRequiredService<AppDb>();
+ITransactionRunner runner = scope.ServiceProvider.GetRequiredService<ITransactionRunner>();
+ITransactionCallbacks callbacks = scope.ServiceProvider.GetRequiredService<ITransactionCallbacks>();
+ISqlSession session = scope.ServiceProvider.GetRequiredService<ISqlSession>();
+db.Database.EnsureCreated();
+
+Result placed = await runner.ExecuteAsync(async ct =>
+{
+    db.Orders.Add(new Order { Number = "A-1" });
+    await db.SaveChangesAsync(ct);
+
+    await using DbCommand command = session.Connection.CreateCommand();
+    command.Transaction = session.Transaction;   // pass it to every command
+    command.CommandText = "UPDATE Orders SET Number = Number || '-checked'";
+    await command.ExecuteNonQueryAsync(ct);
+
+    await callbacks.OnCommittedAsync(_ => { Console.WriteLine("after commit: A-1"); return ValueTask.CompletedTask; }, ct);
+    return Result.Success();
+}, outcome => outcome.IsSuccess);
+// after commit: A-1
+
+Result rejected = await runner.ExecuteAsync(async ct =>
+{
+    db.Orders.Add(new Order { Number = "B-1" });
+    await db.SaveChangesAsync(ct);
+    await callbacks.OnCommittedAsync(_ => { Console.WriteLine("never printed"); return ValueTask.CompletedTask; }, ct);
+    return Result.Failure(Error.Validation("Order.Rejected", "Rejected"));
+}, outcome => outcome.IsSuccess);   // false: roll back
+
+db.ChangeTracker.Clear();
+Console.WriteLine(string.Join(", ", db.Orders.Select(o => o.Number)));   // A-1-checked
+
+public sealed class Order
+{
+    public int Id { get; set; }
+    public string Number { get; set; } = "";
+}
+
+public sealed class AppDb(DbContextOptions<AppDb> options) : DbContext(options)
+{
+    public DbSet<Order> Orders => Set<Order>();
+}
+```
+
+`ExecuteAsync(work, shouldCommit, ct)`: `work` returns a `ValueTask<T>`, `shouldCommit` decides whether to commit, and a `work` that throws rolls back.
+
+- The outermost call runs inside `Database.CreateExecutionStrategy()` and opens a transaction, so retrying strategies such as `EnableRetryOnFailure` work. A retry runs the whole unit again, nested calls included, on a cleared change tracker. With a retrying strategy the context must have no pending changes when the call starts; the runner throws `InvalidOperationException` otherwise.
+- A nested call on the same context instance joins the outer transaction. When the provider supports savepoints, the nested work runs behind one and a failure rolls back to it, so the outer call still decides. Entities the nested work saved stay tracked after that rollback; reload or detach them if the outer work continues. Without savepoints (SQL Server with MARS), a failed nested call keeps its writes.
+- Only the same `DbContext` instance is joined. Another context or connection has its own transaction.
+- It needs a relational provider. The InMemory provider throws on `BeginTransactionAsync`. Retrying strategies refuse to run inside an ambient `TransactionScope`, so do not combine it with `TransactionScopeBehavior`.
+- If a commit fails with a transient error after the database applied it, the retry runs the work again. Make the work idempotent when you retry.
+
+### After-commit callbacks
+
+`OnCommittedAsync(callback, ct)` queues a side effect, such as evicting a cache entry, that runs only after the data is committed.
+
+- Callbacks run in order after the outermost commit, after the execution strategy has returned, so a retried attempt never runs them twice.
+- A callback gets `CancellationToken.None`. The data is already committed, so a request cancelled right after the commit still runs the side effect. Add your own timeout inside if needed.
+- A unit that does not commit, throws or is retried drops its callbacks. A nested unit that rolls back to its savepoint drops only its own.
+- With no transaction open, the callback runs at once. Inside a transaction the runner did not start (`BeginTransactionAsync` called by hand, or a `TransactionScope`), it throws `InvalidOperationException`.
+- Callbacks are kept per `DbContext` instance, so any runner over that context sees them.
+- When callbacks throw, the rest still run and the runner throws an `AggregateException`. The transaction is committed at that point.
+
+### SQL sessions
+
+| Registration | Service | Use for |
+|---|---|---|
+| `AddDbContextSqlSession<TContext>()` | scoped `ISqlSession` and `ISqlConnectionFactory` (`DbContextSqlSession<TContext>`) | SQL that must commit with the `DbContext` work |
+| `AddDbDataSourceReadOnlyConnectionFactory(dataSource?)` | singleton `ISqlReadOnlyConnectionFactory` over the registered `DbDataSource` | reads outside any transaction |
+
+- `ISqlSession.Transaction` is `null` when no transaction is open. Pass it to every command; most providers reject a command without it while one is open.
+- `ISqlSession.Connection` and `ISqlConnectionFactory.Create()` return the context's own connection. Do not dispose or close it.
+- `AddDbContextSqlSession` replaces any `ISqlConnectionFactory` registered before it. Code that wraps `factory.Create()` in `using` must move to `ISqlSession`.
+- A connection from `DbDataSourceSqlConnectionFactory` is new and closed. The caller opens and disposes it.
+
+## Outbox
+
+`EfCoreDomainEventOutbox` stores `AfterSave` domain events as `OutboxMessage` rows in the context that raised them, in the same `SaveChanges` as the entities. `IOutboxProcessor` later reads the rows and passes each event to your `IOutboxMessageHandler`.
+
+```csharp Program.cs
+// dotnet add package CSharpEssentials.EntityFrameworkCore
+// dotnet add package Microsoft.EntityFrameworkCore.Sqlite --version 10.0.1
+using System.Text.Json.Serialization;
+using CSharpEssentials.Entity;
+using CSharpEssentials.Entity.Interfaces;
+using CSharpEssentials.EntityFrameworkCore;
+using CSharpEssentials.EntityFrameworkCore.Interceptors;
+using CSharpEssentials.EntityFrameworkCore.Outbox;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+
+using SqliteConnection connection = new("DataSource=:memory:");
+connection.Open();
+
+ServiceCollection services = new();
+services.AddLogging();
+services.AddAuditInterceptor(() => "system");
+services.AddDbContext<AppDb>(options => options.UseSqlite(connection));
+services.AddEfCoreOutbox(types => types.Add("orders.placed", AppJson.Default.OrderPlaced));
+services.AddScoped<IOutboxMessageHandler, PrintHandler>();
+services.AddOutboxProcessor<AppDb>(options => options.BatchSize = 100);
+
+await using ServiceProvider provider = services.BuildServiceProvider();
+await using AsyncServiceScope scope = provider.CreateAsyncScope();
+AppDb db = scope.ServiceProvider.GetRequiredService<AppDb>();
+db.Database.EnsureCreated();
+
+db.Orders.Add(Order.Place());
+await db.SaveChangesAsync();   // the order row and its outbox row, in one transaction
+Console.WriteLine($"Pending: {db.Set<OutboxMessage>().Count(m => m.ProcessedAt == null)}");   // Pending: 1
+
+int claimed = await provider.GetRequiredService<IOutboxProcessor>().ProcessBatchAsync();
+// handled orders.placed: OrderPlaced { EventId = ..., OccurredAt = ..., OrderId = ... }
+Console.WriteLine($"Claimed: {claimed}, pending: {db.Set<OutboxMessage>().Count(m => m.ProcessedAt == null)}");   // Claimed: 1, pending: 0
+
+int purged = await db.PurgeProcessedOutboxMessagesAsync(DateTime.UtcNow.AddMinutes(1));
+Console.WriteLine($"Purged: {purged}");   // Purged: 1
+
+public sealed record OrderPlaced(Guid OrderId) : DomainEvent;
+
+[JsonSerializable(typeof(OrderPlaced))]
+internal sealed partial class AppJson : JsonSerializerContext;
+
+public sealed class Order : EntityBase<Guid>
+{
+    public static Order Place()
+    {
+        Order order = new() { Id = Guid.NewGuid() };
+        order.Raise(new OrderPlaced(order.Id));
+        return order;
+    }
+}
+
+public sealed class AppDb(DbContextOptions<AppDb> options, IServiceScopeFactory scopes) : BaseDbContext<AppDb>(options, scopes)
+{
+    public DbSet<Order> Orders => Set<Order>();
+
+    protected override DbContextInterceptors InterceptorsFromServices => DbContextInterceptors.Audit;
+
     protected override bool DispatchDomainEventsOnSaveChanges => true;
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Order>().EntityBaseGuidIdMap();
+        modelBuilder.AddOutboxMessages();
+    }
+}
+
+public sealed class PrintHandler : IOutboxMessageHandler
+{
+    public Task HandleAsync(OutboxMessage message, IDomainEvent domainEvent, CancellationToken cancellationToken)
+    {
+        Console.WriteLine($"handled {message.Type}: {domainEvent}");
+        return Task.CompletedTask;
+    }
 }
 ```
 
-Both hooks are off by default. Interceptors that are not registered in DI, or are already on the options, are skipped. When dispatch is on, `BeforeSave` events go to `IDomainEventPublisher` before the save, and `AfterSave` events go to `IDomainEventOutbox` before the write, in the same `SaveChanges`, when an outbox is registered, otherwise to `IDomainEventPublisher` after the save succeeds. Override `DispatchDomainEventsAsync` to change how events are published. If you override `OnConfiguring`, call `base.OnConfiguring(optionsBuilder)`.
+### Storing
 
-The two domain event paths differ in when `AfterSave` events are handled:
+- `AddEfCoreOutbox(types => ...)` registers the scoped `IDomainEventOutbox`, the `OutboxEventTypeRegistry` and `JsonOutboxMessageSerializer` (unless an `IOutboxMessageSerializer` is already registered). It works with `DispatchDomainEventsOnSaveChanges` and with `DomainEventInterceptor`.
+- `AddOutboxMessages(options => ...)` maps the table (`OutboxMessages` by default; `TableName`, `Schema`), the key and an index on (`ProcessedAt`, `DeadLetteredAt`, `NextAttemptAt`). Add a migration after calling it.
+- A row keeps the event's `EventId` as `Id` and its `OccurredAt` when the event implements `IIdentifiedDomainEvent` (the `DomainEvent` record does). Other events get a new version 7 id and the current time of the registered `TimeProvider`.
+- `Type` is the name you registered, not the CLR name, so you can rename or move event classes. Saving an event type that is not registered throws `InvalidOperationException`, writes nothing and puts the events back on their entities.
+- `Add<TEvent>(name, JsonTypeInfo<TEvent>)` uses source-generated metadata and is safe for trimming and Native AOT. `Add<TEvent>(name, JsonSerializerOptions?)` uses reflection (`RequiresUnreferencedCode`).
+- A custom `IDomainEventOutbox` gets the saving context in `StoreAsync(DbContext context, IReadOnlyList<IDomainEvent> events, ct)`. It may add rows to that context but must not call `SaveChanges`.
 
-| | `DispatchDomainEventsOnSaveChanges` | `DomainEventInterceptor` |
+### Relaying
+
+`AddOutboxProcessor<TContext>(options => ...)` registers the singleton `IOutboxProcessor`. Call `ProcessBatchAsync()` from a loop or a job, or use `AddOutboxProcessorHostedService()` from [CSharpEssentials.EntityFrameworkCore.Hosting](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.EntityFrameworkCore.Hosting/Readme.MD).
+
+| `OutboxProcessorOptions` | Default | |
 |---|---|---|
-| `AfterSave` events | published after the save completes | in `SavingChanges`, before the database write |
-| Outbox write | before the save, in the same `SaveChanges` call | before the save, in the same `SaveChanges` call |
-| `SaveChanges` throws | `AfterSave` events are put back on their entities, so a retry dispatches them, and the rows the outbox added are detached. They stay cleared when `IDomainEventPublisher` throws while publishing them | `AfterSave` events are put back, and the rows the outbox added detached, when a `BeforeSave` publish throws or when `StoreAsync` throws. They are not put back when `IDomainEventPublisher` throws while dispatching them, because some may already be published and a retry would publish them twice, or when the database write fails |
+| `BatchSize` | 50 | rows claimed per batch |
+| `MaxAttempts` | 10 | a failure on this attempt dead-letters the row |
+| `LeaseDuration` | 5 min | how long a claim lasts |
+| `RetryBaseDelay`, `RetryMaxDelay`, `UseJitter` | 5 s, 10 min, `true` | the backoff of `OutboxRetryBackoff.Compute` |
+| `RetryDelay` | `null` | your own `Func<int, TimeSpan>` instead of the backoff |
+| `MaxErrorLength` | 2000 | length of the stored `Error` text |
+| `PollingInterval` | 5 s | used by the hosted service |
+| `Claimer` | `ConditionalUpdateOutboxMessageClaimer.Instance` | how rows are claimed |
 
-Use one of them, not both. When `DispatchDomainEventsOnSaveChanges` is `true`, `DbContextInterceptors.DomainEvents` in `InterceptorsFromServices` is ignored and the `DomainEventInterceptor` is not attached. The context's service scope (`ServiceProvider`) is disposed with the context.
+- Delivery is at least once. A crash or a lost completion delivers a message again, so dedupe downstream on `OutboxMessage.Id`.
+- A claim sets `ClaimToken`, adds one to `Attempts` and moves `NextAttemptAt` to the end of the lease. Rows of a processor that stopped mid-batch are claimed again after the lease. Completion, retry and dead-letter updates check the claim token, so an expired processor cannot overwrite a newer claim.
+- A handler that throws, or a type name that is not registered, stores `Error` (exception type and message) and schedules a retry. The delay is `RetryBaseDelay` doubled per attempt, capped at `RetryMaxDelay`, with jitter in the upper half when `UseJitter` is on.
+- On attempt `MaxAttempts` a failure sets `DeadLetteredAt`, and the row is never claimed again. To replay it, clear `DeadLetteredAt` and reset `Attempts`.
+- The lease is checked before each message. Messages left when it has ended are released without counting the attempt. Keep `LeaseDuration` longer than a batch takes.
+- Handlers are resolved in a new scope per message. `ProcessBatchAsync` returns the number of claimed rows. A database error or cancellation is thrown from it; a handler error never is.
+- The processor never deletes rows. `context.PurgeProcessedOutboxMessagesAsync(processedBefore, ct)` deletes rows processed before a UTC time in one statement and returns the count. Pending and dead-lettered rows are kept.
 
-### Maybe columns
+### Claimers
 
-`Maybe<T>` is a struct, and EF Core cannot make a non-nullable struct property optional, so a plain `Maybe<T>` property always maps to a `NOT NULL` column. Declare the property as `Maybe<T>?` to store absence as `NULL`:
+The default claimer works on any relational provider: it reads the ids of the oldest due rows, then claims them with one conditional `UPDATE`, so two processors never claim the same row. With many processors on a busy table, switch to a statement that skips locked rows:
 
 ```csharp
-using CSharpEssentials.Maybe;               // Maybe<T>, Flatten
-using CSharpEssentials.EntityFrameworkCore; // HasNullableMaybeConversion, ConfigureNullableMaybeConventions
+services.AddOutboxProcessor<AppDb>(options => options.Claimer = new SqlOutboxMessageClaimer(OutboxClaimDialect.PostgreSql));
+```
+
+`OutboxClaimSql.Build(context, dialect)` writes the statement from the mapped names. For the default mapping:
+
+```sql
+-- OutboxClaimDialect.PostgreSql
+UPDATE "OutboxMessages" SET "ClaimToken" = {0}, "NextAttemptAt" = {1}, "Attempts" = "Attempts" + 1
+WHERE "Id" IN (SELECT "Id" FROM "OutboxMessages"
+               WHERE "ProcessedAt" IS NULL AND "DeadLetteredAt" IS NULL AND "NextAttemptAt" <= {2}
+               ORDER BY "OccurredAt", "Id" LIMIT {3} FOR UPDATE SKIP LOCKED)
+RETURNING *
+
+-- OutboxClaimDialect.SqlServer
+WITH claimed AS (SELECT TOP ({3}) * FROM [OutboxMessages] WITH (UPDLOCK, READPAST, ROWLOCK)
+                 WHERE [ProcessedAt] IS NULL AND [DeadLetteredAt] IS NULL AND [NextAttemptAt] <= {2}
+                 ORDER BY [OccurredAt], [Id])
+UPDATE claimed SET [ClaimToken] = {0}, [NextAttemptAt] = {1}, [Attempts] = [Attempts] + 1 OUTPUT inserted.*
+```
+
+`OutboxClaimDialect.Sqlite` is the PostgreSQL form without `FOR UPDATE SKIP LOCKED`. For another database pass your own statement to `new SqlOutboxMessageClaimer(sql)`, with the placeholders `{0}` claim token, `{1}` lease end, `{2}` now and `{3}` batch size; it must return every column of the claimed rows. You can also implement `IOutboxMessageClaimer.ClaimAsync(DbContext context, OutboxClaimRequest request, CancellationToken cancellationToken)`; `OutboxClaimRequest` carries `ClaimToken`, `BatchSize`, `Now` and `LeaseUntil`. The SQLite statement and the default claimer are tested against SQLite; the PostgreSQL and SQL Server statements are checked as text only.
+
+## Idempotency records
+
+`EfCoreIdempotencyRecordStore<TContext>` is an `IIdempotencyRecordStore` (from `CSharpEssentials.Idempotency`) that keeps its records in your `DbContext` and writes them in the context's current transaction. A record commits and rolls back with the business rows of the same unit of work, so a request whose transaction rolls back leaves no record and its retry runs again.
+
+```csharp
+public sealed class AppDb(DbContextOptions<AppDb> options) : DbContext(options)
+{
+    protected override void OnModelCreating(ModelBuilder modelBuilder) =>
+        modelBuilder.AddIdempotencyRecords(Database.ProviderName);   // then add a migration
+}
+
+services.AddDbContext<AppDb>(options => options.UseNpgsql(connectionString));
+services.AddEfCoreTransactionRunner<AppDb>();
+services.AddMediatorTransactionRunnerBehavior();
+services.AddMediatorIdempotencyBehavior(options => options.Placement = IdempotencyPlacement.InsideTransaction);
+services.AddEfCoreIdempotencyRecordStore<AppDb>();             // replaces the in-memory store, in any order
+services.AddEfCoreIdempotencyRecordStore<AppDb>("payments");   // or a keyed store for profiles with StoreKey = "payments"
+```
+
+### Table
+
+`AddIdempotencyRecords(providerName, configure?)` maps `IdempotencyRecord` to `IdempotencyRecords` (`TableName`, `Schema`, `KeyCollation` options) with the primary key `KeyHash` and an index on `ExpiresAt`. `KeyHash` is a `binary(32)` SHA-256 of the length-prefixed storage key (namespace, scope and key). The readable `Namespace`, `Scope` and `Key` columns sit next to it. A global key has the scope `global`; `ExpiresAt` is UTC.
+
+### Behavior
+
+- Uniqueness never depends on collation: two keys share a row only when their hashes match, so `KEY-A` and `key-a`, or `order-1` and `order-1 `, stay separate. A row whose readable columns belong to another key makes the reservation throw `InvalidOperationException` instead of replaying a foreign response.
+- `AddIdempotencyRecords(Database.ProviderName)` gives the readable columns a binary collation on PostgreSQL (`C`), SQL Server (`Latin1_General_100_BIN2`), MySQL (`utf8mb4_0900_bin`) and SQLite (`BINARY`), so your own queries on them are case-sensitive. `KeyCollation` overrides it, for example `utf8mb4_nopad_bin` on MariaDB. On PostgreSQL keep those columns `text` or `varchar`, not `char(n)`. SQL Server ignores trailing spaces in comparisons under every collation, so there only `KeyHash` keeps `order-1` and `order-1 ` apart.
+- On PostgreSQL and SQLite a reservation is one `INSERT ... ON CONFLICT DO NOTHING`. On other providers it is an `INSERT` behind a savepoint, rolled back to the savepoint on a duplicate key so the transaction stays usable.
+- A concurrent request for the same key waits on the primary key until the first transaction ends, then replays the stored response, or takes the key when the first one rolled back. Complete and release change the row only while it carries the reservation's token. An expired row counts as absent.
+- The store needs `READ COMMITTED` (the default on PostgreSQL, SQL Server and MySQL). Under `REPEATABLE READ` or `SERIALIZABLE` a concurrent reservation fails with a serialization error.
+- Records are written with SQL, not the change tracker, so `SaveChanges`, interceptors and query filters do not see them.
+- Expired rows stay until `PurgeExpiredAsync()` deletes them in one statement. Run it from a job, for example a `BackgroundService` that resolves `EfCoreIdempotencyRecordStore<AppDb>` in a scope every hour.
+
+### Observe mode
+
+In `Observe` mode the executor and the `Idempotency-Key` middleware reserve and release through `store.Detached`, which uses a new `TContext` in its own scope, so a reservation never waits on or fails the business transaction. The result itself is still written in the business transaction. A failed write rolls back to a savepoint and the business data commits without the record; on SQL Server a transaction the server has doomed (`XACT_ABORT ON`, error 3960) is lost with the business data. The context must not depend on state that only the request scope has. The [Idempotency README](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.Idempotency/Readme.MD) covers the modes.
+
+## Database error translation
+
+`DbErrorTranslation` turns persistence exceptions into `Error` values, which the AspNetCore package renders as ProblemDetails. The built-in `SqlStateErrorTranslator` reads `DbException.SqlState` from the exception or an inner exception, so it needs no provider reference:
+
+| SQLSTATE | Meaning | Error | Code |
+|---|---|---|---|
+| `23505` | unique violation | `Conflict` (409) | `Database.UniqueViolation` |
+| `23503` | foreign key violation | `Conflict` (409) | `Database.ForeignKeyViolation` |
+| `23514` | check violation | `Validation` (400) | `Database.CheckViolation` |
+| `23502` | not null violation | `Validation` (400) | `Database.NotNullViolation` |
+| `40001` | serialization failure | `Conflict` (409), `retryable: true` | `Database.SerializationFailure` |
+| `40P01` | deadlock | `Conflict` (409), `retryable: true` | `Database.Deadlock` |
+
+The metadata has `sqlState` and, when the exception is a `DbUpdateException` with entries, `entities` (their entity type names). The database message is not copied, because it can contain row values.
+
+PostgreSQL (Npgsql) sets `SqlState`. SQL Server and SQLite do not, so they need an `IDbErrorTranslator` of your own. This program translates SQLite's unique constraint error:
+
+```csharp Program.cs
+// dotnet add package CSharpEssentials.EntityFrameworkCore
+// dotnet add package Microsoft.EntityFrameworkCore.Sqlite --version 10.0.1
+using CSharpEssentials.EntityFrameworkCore.DbErrors;
+using CSharpEssentials.Errors;
+using CSharpEssentials.ResultPattern;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+
+using SqliteConnection connection = new("DataSource=:memory:");
+connection.Open();
+
+ServiceCollection services = new();
+services.AddDbContext<AppDb>(options => options.UseSqlite(connection));
+services.AddDbErrorTranslation();                              // the SQLSTATE translator
+services.AddDbErrorTranslator<SqliteUniqueTranslator>();       // runs first
+
+await using ServiceProvider provider = services.BuildServiceProvider();
+await using AsyncServiceScope scope = provider.CreateAsyncScope();
+AppDb db = scope.ServiceProvider.GetRequiredService<AppDb>();
+DbErrorTranslation translation = scope.ServiceProvider.GetRequiredService<DbErrorTranslation>();
+db.Database.EnsureCreated();
+
+db.Users.Add(new User { Email = "a@example.com" });
+await translation.SaveChangesAsync(db);
+db.Users.Add(new User { Email = "a@example.com" });
+Result<int> saved = await translation.SaveChangesAsync(db);
+
+Console.WriteLine($"{saved.FirstError.Type}: {saved.FirstError.Code}");   // Conflict: Database.UniqueViolation
+
+public sealed class SqliteUniqueTranslator : IDbErrorTranslator
+{
+    private const int SqliteConstraintUnique = 2067;
+
+    public bool TryTranslate(Exception exception, out Error error)
+    {
+        for (Exception? current = exception; current is not null; current = current.InnerException)
+        {
+            if (current is SqliteException { SqliteExtendedErrorCode: SqliteConstraintUnique })
+            {
+                error = Error.Conflict("Database.UniqueViolation", "A record with the same unique value already exists.");
+                return true;
+            }
+        }
+
+        error = default;
+        return false;
+    }
+}
+
+public sealed class User
+{
+    public int Id { get; set; }
+    public string Email { get; set; } = "";
+}
+
+public sealed class AppDb(DbContextOptions<AppDb> options) : DbContext(options)
+{
+    public DbSet<User> Users => Set<User>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder) =>
+        modelBuilder.Entity<User>().HasIndex(u => u.Email).IsUnique();
+}
+```
+
+- `translation.SaveChangesAsync(context, ct)` returns `Result<int>`: the row count, or the translated error. Exceptions no translator recognizes are rethrown, so unexpected failures still reach your exception handler. After a failure the change tracker keeps the unsaved changes.
+- `translation.TryTranslate(exception, out Error error)` translates an exception you caught yourself.
+- `AddDbErrorTranslator<T>()` translators run in registration order before the SQLSTATE default, and the first match wins. `DbErrorTranslation` is a singleton, so translators must be stateless.
+- A translator can wrap `SqlStateErrorTranslator` to add details, for example the constraint name of `PostgresException`: call `new SqlStateErrorTranslator().TryTranslate(exception, out error)`, then `error.Metadata!.AddMetadata("constraint", postgres.ConstraintName)`.
+- The default ProblemDetails fields of the AspNetCore package do not include metadata. With `ProblemErrorFields.AllErrors` the client also sees `sqlState`, `entities` and what your translators add.
+
+## Slow query logging
+
+`SlowQueryInterceptor` logs every command (reader, scalar or non-query) that runs for at least the threshold, as a warning with its text and parameters, and passes it to an `ISlowQueryHandler` when one is registered.
+
+```csharp Program.cs
+// dotnet add package CSharpEssentials.EntityFrameworkCore
+// dotnet add package Microsoft.EntityFrameworkCore.Sqlite --version 10.0.1
+using CSharpEssentials.EntityFrameworkCore.Interceptors;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+
+using SqliteConnection connection = new("DataSource=:memory:");
+connection.Open();
+
+ServiceCollection services = new();
+services.AddLogging();
+services.AddSlowQueryInterceptor(TimeSpan.Zero);   // log everything, to show the output; the default is 1 second
+services.AddSingleton<ISlowQueryHandler, PrintHandler>();
+services.AddDbContext<AppDb>((sp, options) => options
+    .UseSqlite(connection)
+    .AddInterceptors(sp.GetRequiredService<SlowQueryInterceptor>()));
+
+await using ServiceProvider provider = services.BuildServiceProvider();
+await using AsyncServiceScope scope = provider.CreateAsyncScope();
+AppDb db = scope.ServiceProvider.GetRequiredService<AppDb>();
+db.Database.EnsureCreated();
+
+string name = "Pen";
+_ = await db.Items.Where(i => i.Name == name).ToListAsync();
+// ReaderExecutedAsync ... ms, parameters: @name=?
+
+public sealed class PrintHandler : ISlowQueryHandler
+{
+    public void OnSlowQuery(SlowQueryContext context)
+    {
+        if (context.CommandText.Contains("FROM \"Items\"", StringComparison.Ordinal))   // skip the schema queries
+            Console.WriteLine($"{context.MethodName} {context.ElapsedTime.TotalMilliseconds:F1} ms, parameters: {context.Parameters}");
+    }
+}
+
+public sealed class Item
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = "";
+}
+
+public sealed class AppDb(DbContextOptions<AppDb> options) : DbContext(options)
+{
+    public DbSet<Item> Items => Set<Item>();
+}
+```
+
+- `AddSlowQueryInterceptor(TimeSpan threshold)` or `AddSlowQueryInterceptor(options => options.Threshold = ...)` registers `SlowQueryOptions` and the singleton interceptor. Attach it with `AddInterceptors`, `DbContextInterceptors.SlowQuery` or `DbContextRegistrationOptions.EnableSlowQueryInterceptor`.
+- Parameter values appear only when the context has `EnableSensitiveDataLogging()`. Otherwise each parameter reads `@name=?`, in the log and in `SlowQueryContext.Parameters`.
+- `SlowQueryContext` has `CommandText`, `Parameters`, `ElapsedTime`, `Database`, `HasTransaction` and `MethodName`.
+- If the handler throws, the exception is logged as a warning and the command still succeeds.
+
+## Maybe columns
+
+`Maybe<T>` is a struct, and EF Core cannot make a non-nullable struct property optional, so a plain `Maybe<T>` property maps to a `NOT NULL` column. Declare the property as `Maybe<T>?` to store absence as `NULL`:
+
+```csharp Program.cs
+// dotnet add package CSharpEssentials.EntityFrameworkCore
+// dotnet add package Microsoft.EntityFrameworkCore.Sqlite --version 10.0.1
+using CSharpEssentials.EntityFrameworkCore;
+using CSharpEssentials.Maybe;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+
+using SqliteConnection connection = new("DataSource=:memory:");
+connection.Open();
+using AppDb db = new(new DbContextOptionsBuilder<AppDb>().UseSqlite(connection).Options);
+db.Database.EnsureCreated();
+
+db.Customers.AddRange(
+    new Customer { Name = "Ada", Nickname = Maybe<string>.From("ada"), LoyaltyPoints = Maybe<int>.From(5) },
+    new Customer { Name = "Bob" });   // both columns NULL
+db.SaveChanges();
+db.ChangeTracker.Clear();
+
+List<string> withoutNickname = db.Customers.Where(c => c.Nickname == null).Select(c => c.Name).ToList();
+List<string> fivePoints = db.Customers.Where(c => c.LoyaltyPoints == Maybe<int>.From(5)).Select(c => c.Name).ToList();
+Console.WriteLine($"No nickname: {string.Join(",", withoutNickname)}; 5 points: {string.Join(",", fivePoints)}");   // No nickname: Bob; 5 points: Ada
+
+Customer bob = db.Customers.Single(c => c.Name == "Bob");
+Maybe<int> points = bob.LoyaltyPoints.Flatten();   // null becomes None
+Console.WriteLine($"Bob has points: {points.HasValue}");   // Bob has points: False
 
 public sealed class Customer
 {
     public int Id { get; set; }
-    public Maybe<int>? LoyaltyPoints { get; set; }   // INTEGER NULL
-    public Maybe<string>? Nickname { get; set; }     // TEXT NULL
+    public string Name { get; set; } = "";
+    public Maybe<string>? Nickname { get; set; }   // TEXT NULL
+    public Maybe<int>? LoyaltyPoints { get; set; } // INTEGER NULL
 }
 
-// Every public read-write Maybe<T>? property of every entity type
-protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder) =>
-    configurationBuilder.ConfigureNullableMaybeConventions();
+public sealed class AppDb(DbContextOptions<AppDb> options) : DbContext(options)
+{
+    public DbSet<Customer> Customers => Set<Customer>();
 
-// Or per property
-modelBuilder.Entity<Customer>().Property(c => c.LoyaltyPoints).HasNullableMaybeConversion();
-modelBuilder.Entity<Customer>().Property(c => c.Nickname).HasNullableMaybeConversion();
-
-Maybe<int> points = customer.LoyaltyPoints.Flatten(); // null becomes None
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder) =>
+        configurationBuilder.ConfigureNullableMaybeConventions();
+}
 ```
 
-- `null` and `None` are both written as `NULL`; `NULL` is read back as `null`, not `None`. Call `Flatten()` to get a `Maybe<T>`.
-- The convention covers entity types, owned types, derived types (TPH) and complex types (`ComplexProperty`). It skips ignored and `[NotMapped]` properties and properties with your own `HasConversion` (yours wins). It reads the CLR properties once while the model is built; nothing runs per query.
-- `Maybe<T?>?` (for example `Maybe<int?>?`) is not supported: EF Core fails the model build. Ignore the property or configure your own converter.
-- `HasNullableMaybeConversion` needs a concrete `T`: from unconstrained generic code (or for `Maybe<int?>?`) the compiler reports CS0452 against the `class` overload. Use the convention there, or `HasConversion(new NullableMaybeConverter<T>())` / `new NullableMaybeReferenceConverter<T>()` (namespace `CSharpEssentials.EntityFrameworkCore.Converters`).
-- Mutable reference values (`Maybe<byte[]>?`): change tracking compares `Maybe<T>` values, so changing the array in place is not saved. Assign a new value instead.
-- NativeAOT: the convention closes the converter types with `MakeGenericType` while the model is built (`[RequiresDynamicCode]`). Under NativeAOT use a compiled model (`dotnet ef dbcontext optimize`), or the per-property API. This applies to `Maybe<T>?` columns only: properties configured by `ConfigureEnumConventions` cannot be compiled (see Enum storage).
-- Query rules:
-  - absence: `c.Nickname == null` or `!c.Nickname.HasValue` (the `Nullable<T>.HasValue`);
-  - presence: `c.Nickname != null`;
-  - a value: `c.LoyaltyPoints == Maybe<int>.From(5)` (or a `Maybe<int>` variable).
-  - Never compare with `None`: `c.LoyaltyPoints == Maybe<int>.None` is sent as a non-null parameter, so it matches no `NULL` row.
-  - Members of `Maybe<T>` itself (`.Value.HasValue`, `.Value.Value`) do not translate to SQL; the query throws `InvalidOperationException`.
+- `ConfigureNullableMaybeConventions()` covers every public read-write `Maybe<T>?` property of entity, owned, derived (TPH) and complex types. It skips ignored and `[NotMapped]` properties and properties with your own `HasConversion`. It reads the CLR properties once while the model is built.
+- Per property: `modelBuilder.Entity<Customer>().Property(c => c.Nickname).HasNullableMaybeConversion();`. It needs a concrete `T`; from unconstrained generic code the compiler reports CS0452. Use the convention there, or `HasConversion(new NullableMaybeConverter<T>())` / `new NullableMaybeReferenceConverter<T>()` (namespace `.Converters`).
+- `null` and `None` are both written as `NULL`. `NULL` is read back as `null`, not `None`; call `Flatten()` to get a `Maybe<T>`.
+- Query absence with `c.Nickname == null` (or `!c.Nickname.HasValue`, the `Nullable<T>.HasValue`), presence with `!= null`, and a value with `== Maybe<int>.From(5)`. Never compare with `Maybe<T>.None`: it is sent as a non-null parameter and matches no `NULL` row. Members of `Maybe<T>` itself (`.Value.HasValue`, `.Value.Value`) do not translate; the query throws `InvalidOperationException`.
+- `Maybe<T?>?` (for example `Maybe<int?>?`) is not supported: EF Core fails the model build.
+- A mutable value such as `Maybe<byte[]>?` changed in place is not saved. Assign a new value.
+- NativeAOT: the convention closes generic types with `MakeGenericType` (`[RequiresDynamicCode]`). Use a compiled model (`dotnet ef dbcontext optimize`) or the per-property API.
+- Changing a `Maybe<T>` property to `Maybe<T>?` turns the column from `NOT NULL` into `NULL`. Old `default(T)` values written for `None` stay; update them to `NULL` in the migration if they meant absence.
+- `MaybeConversion<T>()` for a plain `Maybe<T>` is kept for compatibility but cannot store `None`: for a value type it writes `default(T)` and reads back `Some(default(T))`, for a reference type the insert fails. Prefer `Maybe<T>?`.
 - Background: EF Core issues [#24685](https://github.com/dotnet/efcore/issues/24685), [#34943](https://github.com/dotnet/efcore/issues/34943) and [#13850](https://github.com/dotnet/efcore/issues/13850).
-- Migration: changing a `Maybe<T>` property to `Maybe<T>?` changes the column from `NOT NULL` to `NULL` (an `AlterColumn`). Existing `default(T)` values written for `None` stay as they are; update them to `NULL` in the migration if they meant absence.
 
-`MaybeConversion<T>()` (for `Maybe<T>` without `?`) is kept for compatibility but cannot store `None`: for a value type `T` it writes `default(T)` and reads back `Some(default(T))`; for a reference type `T` it writes `NULL` into a `NOT NULL` column, so the insert fails. Prefer `Maybe<T>?` with the API above.
+## Enum storage
 
-If you would rather keep the entity free of nullable `Maybe`, map a `T?` backing field and expose `Maybe<T>` from the domain side:
+`ConfigureEnumConventions` stores `[StringEnum]` enums (from `CSharpEssentials.Enums`) by their wire name, the same spelling as JSON and binding, and adds a check constraint per column:
 
-```csharp
-public sealed class Customer
+```csharp Program.cs
+// dotnet add package CSharpEssentials.EntityFrameworkCore
+// dotnet add package CSharpEssentials.Enums
+// dotnet add package Microsoft.EntityFrameworkCore.Sqlite --version 10.0.1
+using CSharpEssentials.Enums;
+using CSharpEssentials.EntityFrameworkCore;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+
+using SqliteConnection connection = new("DataSource=:memory:");
+connection.Open();
+using AppDb db = new(new DbContextOptionsBuilder<AppDb>().UseSqlite(connection).Options);
+db.Database.EnsureCreated();
+
+db.Orders.Add(new Order { Status = OrderStatus.PendingApproval });
+db.SaveChanges();
+
+string stored = db.Database.SqlQueryRaw<string>("SELECT Status AS Value FROM Orders").Single();
+Console.WriteLine(stored);   // pending_approval
+
+try
 {
-    private string? _nickname;                                   // TEXT NULL, mapped by EF
-    public Maybe<string> Nickname
-    {
-        get => Maybe<string>.From(_nickname);
-        set => _nickname = value.GetValueOrDefault();
-    }
+    db.Database.ExecuteSqlRaw("UPDATE Orders SET Status = 'lost'");
+}
+catch (SqliteException ex)
+{
+    Console.WriteLine(ex.Message);   // SQLite Error 19: 'CHECK constraint failed: ck_Orders_Status_enum'.
 }
 
-modelBuilder.Entity<Customer>(b =>
+// Lists stored values a conversion or the constraint would reject, with their counts.
+string audit = EnumDataAudit.Sql<OrderStatus>("Orders", "Status", provider: db.Database.ProviderName);
+Console.WriteLine(audit);
+
+[StringEnum]
+public enum OrderStatus
 {
-    b.Ignore(c => c.Nickname);
-    b.Property<string?>("_nickname").HasColumnName("Nickname");
-});
-// Query through the field: db.Customers.Where(c => EF.Property<string?>(c, "_nickname") == null)
-```
+    Pending,
+    PendingApproval,
+    Shipped,
+}
 
-### Enum storage
-
-`ConfigureEnumConventions` stores `[StringEnum]` enums by their wire name (the same spelling as JSON and binding) and adds a check constraint per column:
-
-```csharp
-using CSharpEssentials.Enums;               // EnumConventions, EnumStorage, [StringEnum]
-using CSharpEssentials.EntityFrameworkCore; // ConfigureEnumConventions, HasEnumStorage, HasEnumCheckConstraint
-
-public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
+public sealed class Order
 {
+    public int Id { get; set; }
+    public OrderStatus Status { get; set; }
+}
+
+public sealed class AppDb(DbContextOptions<AppDb> options) : DbContext(options)
+{
+    public DbSet<Order> Orders => Set<Order>();
+
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder) =>
         configurationBuilder.ConfigureEnumConventions(EnumConventions.Default);
-
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
-    {
-        modelBuilder.Entity<Order>().Property(o => o.Priority).HasEnumStorage(EnumStorage.Integer);
-        modelBuilder.Entity<Order>().Property(o => o.Kind).HasEnumCheckConstraint(false);
-    }
 }
 ```
 
@@ -409,42 +1164,43 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 | `List<TEnum>` | `text[]`/`integer[]` on PostgreSQL, JSON text elsewhere | `<@ ARRAY[...]` on PostgreSQL |
 | `ToJson()` owned types | JSON column | none; `EnumJsonValueReaderWriter<TEnum>` writes wire names |
 
-- Precedence: `HasEnumStorage` per property, then `[StringEnum(Storage)]`, then `EnumConventions.Storage` (`FlagsStorage` for flags).
-- Reads are tolerant (wire name, member name, aliases, any case); writes are canonical. An unknown stored value maps to the `[EnumFallback]` member, otherwise the query throws and the message names the column.
-- Enums without generated metadata (no `[StringEnum]`) keep EF's default integer column. `ConfigureEnumConventionsWithReflection` opts them in through reflection (not trim or AOT safe).
-- Properties with your own `HasConversion` are skipped.
-- Compiled models (`dotnet ef dbcontext optimize`) are not supported for properties configured by these conventions: the converters capture the model's `EnumConventions` and metadata as instances, and `dbcontext optimize` fails for them.
-- Adding a member changes only the constraint, so the migration is `DropCheckConstraint` + `AddCheckConstraint`.
-- Opt out of constraints per property with `HasEnumCheckConstraint(false)`, or globally with `EnumConventions.CheckConstraints = false`.
-- Renaming a member also changes the constraint; see [Renaming a member safely](/libraries/enums#renaming-a-member-safely).
-
-#### Upgrading an existing database
-
-Existing enum columns hold integers (EF's default) or an older text format. Keep them as they are, so the first 5.0 migration is empty:
+Per property:
 
 ```csharp
-using CSharpEssentials.Enums;               // EnumConventions, EnumStorage
-using CSharpEssentials.EntityFrameworkCore; // EnumStoredAs, HasLegacyEnumStorage
-
-configurationBuilder.ConfigureEnumConventions(EnumConventions.Default, existingStorage: EnumStoredAs.Integer);
-
-// opt in one column at a time
-modelBuilder.Entity<Order>().Property(o => o.Status).HasEnumStorage(EnumStorage.String);
-
-// or keep a column's old text format (MemberName, CamelCase, LegacySnakeCase, FlagsText)
-modelBuilder.Entity<Order>().Property(o => o.Kind).HasLegacyEnumStorage(EnumStoredAs.MemberName);
+modelBuilder.Entity<Order>().Property(o => o.Priority).HasEnumStorage(EnumStorage.Integer);
+modelBuilder.Entity<Order>().Property(o => o.Kind).HasEnumCheckConstraint(false);
+modelBuilder.Entity<Order>().Property(o => o.Legacy).HasLegacyEnumStorage(EnumStoredAs.MemberName);
 ```
 
-`existingStorage` and `HasLegacyEnumStorage` keep writing the old format, read every spelling and add no check constraint. The 4.x overloads (`ConfigureEnumConventions(params Assembly[])`, `EnumConventionOptions`) are obsolete forwarders; `UseLegacySnakeCase = true` maps to `existingStorage: EnumStoredAs.LegacySnakeCase`.
+The same three methods exist for complex type properties.
 
-#### Converting the data
+- Precedence: `HasEnumStorage` on the property, then `[StringEnum(Storage = ...)]`, then `EnumConventions.Storage` (`FlagsStorage` for flags).
+- Reads are tolerant (wire name, member name, aliases, any case); writes are canonical. An unknown stored value maps to the `[EnumFallback]` member, otherwise the query throws and the message names the column.
+- Enums without `[StringEnum]` keep EF's integer column. `ConfigureEnumConventionsWithReflection` opts them in through reflection (not trim or AOT safe).
+- Properties with your own `HasConversion` are skipped.
+- Compiled models (`dotnet ef dbcontext optimize`) are not supported for properties these conventions configure.
+- Adding a member changes only the constraint, so the migration is `DropCheckConstraint` and `AddCheckConstraint`. Turn constraints off per property with `HasEnumCheckConstraint(false)` or for all with `EnumConventions.CheckConstraints = false`.
+- Renaming a member changes the stored value and the constraint; see [Renaming a member safely](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.Enums/Readme.MD#renaming-a-member-safely).
+- The converters are public in `.Converters` for use with `HasConversion`: `EnumWireNameConverter<TEnum>`, `EnumIntegerConverter<TEnum, TNumber>`, `EnumToFormattedStringConverter<TEnum>` and `LegacySnakeCaseEnumConverter<TEnum>`.
 
-When you drop `HasLegacyEnumStorage` (or `existingStorage`) for a column, `dotnet ef migrations add` generates an `AlterColumn` that changes the type without converting the data. Replace it with `ConvertEnumColumn`, and keep the constraint operations around it:
+### An existing database
+
+Existing enum columns hold integers (EF's default) or an older text format. Keep them as they are, so the first migration after you add the conventions is empty:
 
 ```csharp
-using CSharpEssentials.Enums;               // EnumStorage
-using CSharpEssentials.EntityFrameworkCore; // ConvertEnumColumn, EnumStoredAs
+configurationBuilder.ConfigureEnumConventions(EnumConventions.Default, existingStorage: EnumStoredAs.Integer);
 
+modelBuilder.Entity<Order>().Property(o => o.Status).HasEnumStorage(EnumStorage.String);          // opt in one column
+modelBuilder.Entity<Order>().Property(o => o.Kind).HasLegacyEnumStorage(EnumStoredAs.MemberName); // keep an old text format
+```
+
+`existingStorage` and `HasLegacyEnumStorage` keep writing the old format, read every spelling and add no check constraint. `EnumStoredAs` has `Integer`, `MemberName`, `CamelCase`, `LegacySnakeCase`, `Text` (any known spelling, a conversion source only) and `FlagsText`. The 4.x overloads (`ConfigureEnumConventions(params Assembly[])`, `EnumConventionOptions`) are obsolete; `UseLegacySnakeCase = true` maps to `existingStorage: EnumStoredAs.LegacySnakeCase`.
+
+### Converting the data
+
+When you remove `HasLegacyEnumStorage` (or `existingStorage`) from a column, `dotnet ef migrations add` generates an `AlterColumn` that changes the type without converting the data. Replace it with `ConvertEnumColumn` and keep the constraint operations around it:
+
+```csharp
 protected override void Up(MigrationBuilder migrationBuilder)
 {
     migrationBuilder.DropCheckConstraint(name: "ck_orders_Status_enum", table: "orders");   // when one exists
@@ -459,416 +1215,83 @@ protected override void Down(MigrationBuilder migrationBuilder)
 }
 ```
 
-| From | To | Notes |
+| From | To | Unknown values |
 |---|---|---|
-| `Integer` | `EnumStorage.String` or a text format (`MemberName`, `CamelCase`, `LegacySnakeCase`) | undefined numbers are kept as their text and fail the new constraint |
-| `Text` (any known spelling), `MemberName`, `CamelCase`, `LegacySnakeCase` | `EnumStorage.String` or another text format | unknown text is kept and fails the new constraint |
-| any text | `EnumStorage.Integer` | integer text is kept; other unknown text aborts the migration with `cannot convert orders.Status to OrderStatus, unknown value: ...` |
+| `Integer` | `EnumStorage.String` or a text format | kept as their number text; they fail the new constraint |
+| `Text`, `MemberName`, `CamelCase`, `LegacySnakeCase` | `EnumStorage.String` or another text format | kept; they fail the new constraint |
+| any text | `EnumStorage.Integer` | integer text is kept; other text aborts the migration with `cannot convert orders.Status to OrderStatus, unknown value: ...` |
 | `FlagsText` (`"Read, Write"`) | `EnumStorage.Integer` | tokens are OR'ed; on PostgreSQL through a temporary column |
-| flags `Integer` | `EnumStoredAs.FlagsText` | single-flag member names; values with undefined bits stay numbers |
+| flags `Integer` | `EnumStoredAs.FlagsText` | values with undefined bits stay numbers |
 
-- No conversion writes `NULL`. Text conversions skip canonical values, so running them twice changes nothing.
-- SQL is generated for PostgreSQL and SQLite (`MigrationBuilder.ActiveProvider`); other providers throw. On SQLite EF rebuilds the table.
-- `type:` sets a non-default target store type (for example `varchar(32)`); `schema:` the table schema.
-- `ConvertEnumJsonPath<TEnum>("orders", "payload", ["status"])` rewrites one path of a PostgreSQL `jsonb` column (`to: EnumStorage.Integer` for `Down`); unknown values are left untouched.
-- `EnumDataAudit.Sql<TEnum>("orders", "Status", storedAs: ..., provider: ...)` returns a read-only query that lists the values a conversion or constraint would reject, with their counts. Run it in production before you deploy the migration (see below).
-- CSE0014 (build error) reports a generated `AlterColumn` that you forgot to delete next to `ConvertEnumColumn` for the same column.
+- `to` is an `EnumStorage` (`String` or `Integer`) or an `EnumStoredAs` text format. `schema:` sets the table schema and `type:` a non-default target store type such as `varchar(32)`.
+- No conversion writes `NULL`. Text conversions skip canonical values, so running one twice changes nothing.
+- SQL is generated for PostgreSQL and SQLite (from `MigrationBuilder.ActiveProvider`); other providers throw. On SQLite EF rebuilds the table.
+- `ConvertEnumJsonPath<TEnum>("orders", "payload", ["status"])` rewrites one path of a PostgreSQL `jsonb` column (`to: EnumStorage.Integer` for `Down`). Unknown values are left alone.
+- Diagnostic CSE0014 (a build error, reported by the `CSharpEssentials.Enums` generator) flags a generated `AlterColumn` left next to `ConvertEnumColumn` for the same column.
 
-#### Auditing the data
+### Auditing the data
 
-`EnumDataAudit.Sql` only builds the SQL (`SELECT "Status" AS "Value", count(*) AS "Count" ... GROUP BY ... ORDER BY ...`); it changes nothing. Print it and run it with psql or your SQL client, or run it through EF Core:
+`EnumDataAudit.Sql<TEnum>(table, column, schema?, storedAs = EnumStoredAs.Text, provider?)` only builds a read-only query (`SELECT "Status" AS "Value", count(*) AS "Count" ... GROUP BY ...`) that lists the stored values a conversion or the constraint would reject. Run it in production before you deploy the migration, with your SQL client or through EF Core:
 
 ```csharp
-using CSharpEssentials.EntityFrameworkCore; // EnumDataAudit, EnumStoredAs
-
 string sql = EnumDataAudit.Sql<OrderStatus>("orders", "Status", storedAs: EnumStoredAs.Integer, provider: db.Database.ProviderName);
+List<EnumAuditRow> rejected = await db.Database.SqlQueryRaw<EnumAuditRow>(sql).ToListAsync(ct);   // empty: every row converts
 
-List<EnumAuditRow> rejected = await db.Database.SqlQueryRaw<EnumAuditRow>(sql).ToListAsync(ct);
-foreach (EnumAuditRow row in rejected)
-    logger.LogWarning("orders.Status holds {Value} in {Count} rows", row.Value, row.Count);
-
-// Value has the column's type: int for EnumStoredAs.Integer, string for text columns
 public sealed class EnumAuditRow
 {
-    public int Value { get; init; }
+    public int Value { get; init; }    // the column's type: int for Integer, string for text columns
     public long Count { get; init; }
 }
 ```
 
-An empty result means every row converts and passes the new constraint. Pass `schema:` for a table outside the default schema.
-
-### CQRS write/read
-
-```csharp
-using CSharpEssentials.EntityFrameworkCore.Extensions;
-
-services.AddCqrsDbContexts<WriteDbContext, ReadDbContext>(
-    configureWrite: (sp, options) => options.UseNpgsql(connectionString),
-    configureRead: (sp, options) => options.UseNpgsql(connectionString).UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking));
-```
-
-`AddCqrsDbContexts` registers both contexts as pooled contexts (`AddDbContextPool`): the write context with `UseAsWriteContext()` (`QueryTrackingBehavior.TrackAll`) and the read context with `UseAsReadContext()` (`NoTracking`). Without `configureRead` the read context reuses `configureWrite`. The same pieces are available on their own: `AddWriteDbContext<T>`, `AddReadDbContext<T>`, `AddPooledDbContext<T>` and `RegisterDbContextFactory<T>` (an `IDbContextFactory<T>`), and `UseAsWriteContext`, `UseAsReadContext` and `UseAsReadContextWithIdentityResolution` on `DbContextOptionsBuilder`. Each registration method also has an overload that takes `Action<DbContextRegistrationOptions>` before the provider callback:
-
-```csharp
-services.AddWriteDbContext<WriteDbContext>(
-    options =>
-    {
-        options.EnableAuditInterceptor = true;
-        options.EnableSlowQueryInterceptor = true;
-        options.EnableDetailedErrors = true;
-    },
-    (sp, builder) => builder.UseNpgsql(connectionString));
-```
-
-`DbContextRegistrationOptions` applies `EnableDetailedErrors`, `EnableSensitiveDataLogging`, `QueryTrackingBehavior`, and `EnableAuditInterceptor`, `EnableDomainEventInterceptor` and `EnableSlowQueryInterceptor`, which add the interceptor only when it is registered in DI. The properties `MigrationsAssembly`, `RetryOptions` and `QuerySplittingBehavior` exist on the class but are not applied by this version; set them in the provider callback instead (`UseNpgsql(connectionString, npgsql => npgsql.MigrationsAssembly("MyApp.Migrations").EnableRetryOnFailure().UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery))`).
-
-### Entity mapping
-
-`EntityBaseExtensions` configures the audit columns of the `CSharpEssentials.Entity` base classes in `IEntityTypeConfiguration<T>` or `OnModelCreating`:
-
-```csharp
-public sealed class OrderConfiguration : IEntityTypeConfiguration<Order>   // Order : SoftDeletableEntityBase<Guid>
-{
-    public void Configure(EntityTypeBuilder<Order> builder)
-    {
-        builder.SoftDeletableEntityBaseGuidIdMap();   // key Id, audit columns, IsDeleted/DeletedAt/DeletedBy; IsHardDeleted is ignored
-        builder.OptimisticConcurrencyVersionMap();    // shadow byte[] "RowVersion" marked as a row version
-    }
-}
-
-public sealed class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>   // Invoice : EntityBase<long>
-{
-    public void Configure(EntityTypeBuilder<Invoice> builder) =>
-        builder.EntityBaseMap<Invoice, long>(userIdMaxLength: 64);   // any key type
-}
-```
-
-`EntityBaseGuidIdMap()` does the same for an `EntityBase<Guid>` entity without the soft delete columns. The audit columns are `CreatedAt`/`CreatedBy` (required) and `UpdatedAt`/`UpdatedBy` (optional), with the user columns limited to 40 characters unless you pass `userIdMaxLength`. `EntityBaseMap<TEntity>()` and `SoftDeletableEntityBaseMap<TEntity>()` map the audit columns without a key. `ApplySoftDeleteQueryFilter()` adds `!IsDeleted` as an anonymous filter to every root entity type that implements `ISoftDeletableBase`, and `AddQueryFilter<T>(expression)` combines your filter with the existing anonymous one with `AND`. To ignore filters by name on net10.0, use the [named query filters](#named-query-filters-ef-core-10) instead. `HasJsonConversion(columnType: "jsonb")` stores a property as JSON with the CSharpEssentials JSON options. An undefined enum value inside it is saved as its number; on load it becomes the `[EnumFallback]` member, or the read throws when the enum has none.
-
-### Result helpers, hard delete and seeding
-
-```csharp
-Result<Order> order = await db.Orders.Where(o => o.Id == id).FirstOrDefaultAsResultAsync(Error.NotFound("Order.NotFound", "Order not found"), ct);
-Result<Order> single = await db.Orders.SingleOrDefaultAsResultAsync(cancellationToken: ct);   // Error.NotFound() when no row
-Result<Order> found = await db.Orders.FindAsResultAsync([id], cancellationToken: ct);
-Result saved = await db.SaveChangesAsResultAsync(ct);                                        // every exception becomes an Unknown error
-
-db.HardDelete(order.Value);                       // MarkAsHardDeleted + Remove: the audit interceptor keeps the delete
-db.HardDelete(await db.Orders.Where(o => o.IsDeleted).ToListAsync(ct));
-await db.SaveChangesAsync(ct);
-```
-
-`DbSet<T>.Delete(entities)` is a hard delete as well, despite its name: it calls `MarkAsHardDeleted()` on every item and removes them. A `null` row gives the `notFoundError` you pass, or `Error.NotFound()`. `SaveChangesAsResultAsync` lets an `OperationCanceledException` from your token propagate; use `DbErrorTranslation` (below) when you want database errors translated into specific `Error` values. `AsNoTracking(bool isDisabled)` on `IQueryable<T>` applies `AsNoTracking()` unless `isDisabled` is `true`.
-
-`MigrateDataAsync` adds seed rows when a precondition says they are missing, or syncs a table with a key-based diff (add, update, and remove rows that are not in the seed data):
-
-```csharp
-await db.MigrateDataAsync<Country, CountrySeed>(
-    seed,
-    (set, data) => set.Any(),                   // true: the table is already seeded, do nothing
-    s => new Country { Code = s.Code },
-    ct);
-
-await db.MigrateDataAsync(seed, new MigrateDataOptions<Country, CountrySeed, string>
-{
-    Query = set => set,
-    EntityKeyProperty = c => c.Code,
-    DataKeyProperty = s => s.Code,
-    IsUpdatedFunc = (c, s) => c.Name != s.Name,
-    UpdateFunc = (c, s) => { c.Name = s.Name; return c; },
-    Converter = s => new Country { Code = s.Code, Name = s.Name },
-    HardDeleteMode = false,                      // false: a soft-deletable row missing from the seed goes through the normal delete (soft delete with the audit interceptor); true: it is hard deleted
-}, ct);
-```
-
-### SQL connection factories
-
-`ISqlSession` gives Dapper or raw ADO.NET code the context's connection and its open transaction, so the SQL commits or rolls back with the `DbContext` work, including a unit run by `EfCoreTransactionRunner`. `DbDataSourceSqlConnectionFactory` creates a new connection from a `DbDataSource` for reads outside any transaction.
-
-```csharp
-// namespace: CSharpEssentials.EntityFrameworkCore.Sql
-services.AddDbContextSqlSession<AppDbContext>();      // scoped ISqlSession and ISqlConnectionFactory
-services.AddDbDataSourceReadOnlyConnectionFactory();  // singleton ISqlReadOnlyConnectionFactory over the registered DbDataSource
-
-await transactionRunner.ExecuteAsync(async ct =>
-{
-    await session.Connection.ExecuteAsync(
-        "UPDATE stock SET quantity = quantity - @Quantity WHERE sku = @Sku",
-        command, transaction: session.Transaction);
-    db.Orders.Add(order);
-    await db.SaveChangesAsync(ct);
-    return Result.Success();
-}, outcome => outcome.IsSuccess, cancellationToken);
-```
-
-- Pass `session.Transaction` to every command. It is `null` when no transaction is open; most providers reject a command without it while one is open.
-- `ISqlSession.Connection` and `DbContextSqlSession<T>.Create()` return the context's own connection. Do not dispose or close it.
-- `AddDbContextSqlSession` replaces any `ISqlConnectionFactory` registered before it, so code that takes `ISqlConnectionFactory` then gets the shared connection. Code that wraps `factory.Create()` in `using` must move to `ISqlSession`, or keep its own factory and not call `AddDbContextSqlSession`.
-- A connection from `DbDataSourceSqlConnectionFactory` is new and closed. The caller owns it and should dispose it.
-
-### Transaction runner
-
-`EfCoreTransactionRunner<TDbContext>` implements `ITransactionRunner` (from `CSharpEssentials.Core`) for the Mediator `TransactionBehavior` or any code of your own.
-
-```csharp
-services.AddEfCoreTransactionRunner<AppDbContext>();
-
-// namespaces: CSharpEssentials.Transactions (ITransactionRunner), CSharpEssentials.EntityFrameworkCore.Transactions (AddEfCoreTransactionRunner)
-// orderService.PlaceAsync returns ValueTask<Result>
-Result result = await transactionRunner.ExecuteAsync(
-    ct => orderService.PlaceAsync(command, ct),
-    outcome => outcome.IsSuccess,
-    cancellationToken);
-```
-
-The work delegate returns a `ValueTask<T>` and `shouldCommit` decides whether the transaction commits; a work that throws rolls back.
-
-- The outermost call runs inside `Database.CreateExecutionStrategy()` and opens a transaction with `BeginTransactionAsync`, so it works with retrying strategies such as `EnableRetryOnFailure`. A retry re-runs the whole unit of work, nested calls included, on a cleared change tracker. With a retrying strategy the context must have no pending changes when the call starts (the runner throws otherwise), because the clear would drop them.
-- A nested call on the same context instance (`Database.CurrentTransaction` is set) joins the outer transaction: no new strategy, begin or commit. When the provider supports savepoints, the nested work runs behind a savepoint and is rolled back to it when it fails, so its partial writes are undone and the outer call still decides the commit. Entities that nested work saved stay tracked after a rollback to the savepoint, and entities still `Added` after a failed nested `SaveChanges` are written again by the next outer `SaveChanges`; reload or detach them if the outer work carries on. Without savepoint support (for example SQL Server with MARS enabled), a failed nested call keeps its writes and the outer call decides about them.
-- Only the same `DbContext` instance is joined. Another context type or connection opens its own transaction and is not atomic with this one.
-- It needs a relational provider: the InMemory provider throws on `BeginTransactionAsync` unless `TransactionIgnoredWarning` is ignored. Retrying strategies also refuse to run inside an ambient `TransactionScope`, so don't combine it with `TransactionScopeBehavior`.
-- If the commit itself fails with a transient error after the database applied it, the retry runs the work again. Make the work idempotent when you use a retrying strategy.
-
-#### After-commit callbacks
-
-`AddEfCoreTransactionRunner` also registers the runner as `ITransactionCallbacks` (from `CSharpEssentials.Core`). Use it for side effects that must not happen unless the data is committed: waking an outbox relay, evicting a cache entry, sending a message.
-
-```csharp
-await transactionRunner.ExecuteAsync(async ct =>
-{
-    db.Orders.Add(order);
-    await db.SaveChangesAsync(ct);
-    await callbacks.OnCommittedAsync(async token => await cache.RemoveAsync($"orders:{order.CustomerId}", token), ct);
-    return Result.Success();
-}, outcome => outcome.IsSuccess, cancellationToken);
-```
-
-- Callbacks run in registration order after the outermost commit, once the execution strategy has returned, so a retried attempt never runs them twice.
-- A queued callback gets `CancellationToken.None`, not the token passed to `ExecuteAsync`. The data is committed by then, so a request cancelled or timed out right after the commit still runs the side effect. Put your own timeout inside the callback if it needs one.
-- A unit that does not commit, throws or is retried drops the callbacks it queued. A nested unit that rolls back to its savepoint drops only its own.
-- With no transaction open, `OnCommittedAsync` runs the callback at once. With a transaction the runner did not start (`Database.BeginTransactionAsync` called by hand, or an ambient `TransactionScope`), it throws `InvalidOperationException`, because it cannot see that commit.
-- The callbacks are kept per `DbContext` instance, so any runner over the same context sees them.
-- When callbacks throw, the rest still run and the runner throws an `AggregateException` of the failures. The transaction is already committed at that point.
-
-`BaseDbContext` can publish its after-save domain events this way. Override `DeferDomainEventPublishingUntilCommit` to return `true` (with `DispatchDomainEventsOnSaveChanges` enabled): inside a runner unit the events go to `IDomainEventPublisher` after the commit and are dropped on rollback. Outside a runner unit they are published right after the save, as before. Events stored in an `IDomainEventOutbox` are never deferred, since the outbox row has to be written in the transaction. `DomainEventInterceptor` does not defer.
-
-### Migrate on startup
-
-`MigrateDatabaseAsync<TContext>()` (namespace `CSharpEssentials.EntityFrameworkCore.Migrations`) applies the pending migrations from a new service scope. Call it before the host starts serving. It is opt-in: nothing migrates unless you call it.
-
-```csharp
-WebApplication app = builder.Build();
-await app.Services.MigrateDatabaseAsync<AppDbContext>(app.Lifetime.ApplicationStopping);
-app.Run();
-```
-
-When several instances start together, register an `IDatabaseMigrationLock` over your infrastructure (a PostgreSQL advisory lock, `sp_getapplock`, a Redis lock). The migration runs while that lock is held, and the handle it returns releases the lock on dispose. The package ships no implementation, so it takes no driver dependency.
-
-```csharp
-public sealed class PostgresMigrationLock : IDatabaseMigrationLock
-{
-    public async ValueTask<IAsyncDisposable> AcquireAsync(DbContext context, CancellationToken cancellationToken)
-    {
-        await context.Database.OpenConnectionAsync(cancellationToken);
-        await context.Database.ExecuteSqlRawAsync("SELECT pg_advisory_lock(72707)", cancellationToken);
-        return new Release(context);
-    }
-
-    private sealed class Release(DbContext context) : IAsyncDisposable
-    {
-        public async ValueTask DisposeAsync()
-        {
-            await context.Database.ExecuteSqlRawAsync("SELECT pg_advisory_unlock(72707)");
-            await context.Database.CloseConnectionAsync();
-        }
-    }
-}
-
-builder.Services.AddSingleton<IDatabaseMigrationLock, PostgresMigrationLock>();
-```
-
-If `AcquireAsync` returns `null`, `MigrateDatabaseAsync` throws `InvalidOperationException` before it migrates.
-
-The package has no `IStartupTask` or `AddMigrateOnStartup<TContext>()` registration. A hosted service would need `Microsoft.Extensions.Hosting.Abstractions`, a dependency this package does not take, and the one awaited call above runs before the host serves, which a hosted service does not guarantee.
-
-EF Core 9 and later also take a database lock inside `MigrateAsync` on most providers. The hook is for EF Core 8 and for work you want serialized together with the migration.
-
-For a readiness probe that fails while migrations are pending, see [CSharpEssentials.EntityFrameworkCore.HealthChecks](/libraries/entityframeworkcore-healthchecks).
-
-### Outbox
-
-`EfCoreDomainEventOutbox` stores after-save domain events as `OutboxMessage` rows in the context that raised them. The rows are written by the same `SaveChanges` as the entities, so the events exist exactly when the data does. It works with `DispatchDomainEventsOnSaveChanges` and with `DomainEventInterceptor`.
-
-```csharp
-public sealed record OrderPlaced(Guid OrderId) : DomainEvent;
-
-[JsonSerializable(typeof(OrderPlaced))]
-internal sealed partial class AppJsonContext : JsonSerializerContext;
-
-// OnModelCreating
-modelBuilder.AddOutboxMessages(options => options.Schema = "messaging");
-
-// Startup
-services.AddEfCoreOutbox(types => types
-    .Add("orders.placed", AppJsonContext.Default.OrderPlaced));
-```
-
-- Each row keeps the event's `EventId` as its `Id` and its `OccurredAt` when the event implements `IIdentifiedDomainEvent` (the `DomainEvent` base record does). Other events get a new version 7 id and the current time of the registered `TimeProvider`.
-- `Type` is the name you registered, not the CLR name, so you can rename or move event classes. Only registered types are written or read back. Saving an event of another type throws `InvalidOperationException`, writes nothing and puts the events back on their entities.
-- `JsonOutboxMessageSerializer` serializes with the registered `JsonTypeInfo`. Register every type with source-generated metadata (`AppJsonContext.Default.X`) for trimming and Native AOT. `Add<TEvent>(name, options?)` uses reflection and is marked `RequiresUnreferencedCode`.
-- To use another format, register your own `IOutboxMessageSerializer` before `AddEfCoreOutbox`.
-- `AddOutboxMessages` maps the table (`OutboxMessages` by default, with `TableName` and `Schema` options), the primary key and an index on (`ProcessedAt`, `DeadLetteredAt`, `NextAttemptAt`). Add a migration after calling it.
-- A custom `IDomainEventOutbox` receives the saving context in `StoreAsync(context, events, ct)`. It may add rows to it but must not call `SaveChanges`.
-
-#### Relaying the outbox
-
-`IOutboxProcessor.ProcessBatchAsync` claims a batch of due rows, deserializes each one and passes it to your `IOutboxMessageHandler`. Call it from a loop or a job, or add `CSharpEssentials.EntityFrameworkCore.Hosting` and call `AddOutboxProcessorHostedService()`.
-
-```csharp
-public sealed class BrokerOutboxHandler(IBus bus) : IOutboxMessageHandler
-{
-    public Task HandleAsync(OutboxMessage message, IDomainEvent domainEvent, CancellationToken cancellationToken) =>
-        bus.PublishAsync(domainEvent, messageId: message.Id, cancellationToken);
-}
-
-services.AddScoped<IOutboxMessageHandler, BrokerOutboxHandler>();
-services.AddOutboxProcessor<AppDbContext>(options =>
-{
-    options.BatchSize = 100;
-    options.MaxAttempts = 8;
-});
-```
-
-- Delivery is at least once. A crash or a lost completion delivers the same message again, so dedupe downstream on `OutboxMessage.Id`.
-- A claim sets `ClaimToken`, adds one to `Attempts` and moves `NextAttemptAt` to the end of the lease (`LeaseDuration`, 5 minutes). If a processor stops mid-batch, its rows are claimed again once the lease ends. Completion, retry and dead-letter updates check the claim token, so a processor whose lease ended cannot overwrite a newer claim.
-- A handler that throws, or a type name that is not registered, records `Error` (exception type and message, at most `MaxErrorLength` characters) and schedules a retry. The delay is `RetryDelay` or `OutboxRetryBackoff.Compute`: `RetryBaseDelay` (5 s) doubled per attempt, capped at `RetryMaxDelay` (10 min), with jitter in the upper half when `UseJitter` is on (the default).
-- On attempt `MaxAttempts` (10) a failure sets `DeadLetteredAt` instead, and the row is never claimed again. A row whose lease ended after its last attempt is dead-lettered without calling the handler. Dead-lettered rows keep `Error`; query them to inspect or replay (clear `DeadLetteredAt`, reset `Attempts`).
-- The lease is checked before each message. When it has ended mid-batch (a slow handler, a long batch), the messages not yet handled are released: they become due at once, their claim does not count as an attempt, and the next claim delivers them. Keep `LeaseDuration` longer than a batch takes so this stays rare.
-- Handlers are resolved in a scope per message. A database error or cancellation is thrown from `ProcessBatchAsync`; a handler error never is.
-
-The default claimer, `ConditionalUpdateOutboxMessageClaimer`, works on any relational provider. It reads the ids of the oldest due rows, then claims them with one conditional `UPDATE` that repeats the due condition, so two processors never claim the same row. With many processors on a busy table they compete for the same candidates. Then switch to a provider statement that skips locked rows:
-
-```csharp
-services.AddOutboxProcessor<AppDbContext>(options =>
-    options.Claimer = new SqlOutboxMessageClaimer(OutboxClaimDialect.PostgreSql));
-```
-
-`OutboxClaimSql.Build(context, dialect)` writes the statement from the mapped table and column names. These are the statements for the default mapping:
-
-```sql
--- OutboxClaimDialect.PostgreSql
-UPDATE "OutboxMessages" SET "ClaimToken" = {0}, "NextAttemptAt" = {1}, "Attempts" = "Attempts" + 1
-WHERE "Id" IN (SELECT "Id" FROM "OutboxMessages"
-               WHERE "ProcessedAt" IS NULL AND "DeadLetteredAt" IS NULL AND "NextAttemptAt" <= {2}
-               ORDER BY "OccurredAt", "Id" LIMIT {3} FOR UPDATE SKIP LOCKED)
-RETURNING *
-
--- OutboxClaimDialect.SqlServer (identifiers in [brackets] on SQL Server)
-WITH claimed AS (SELECT TOP ({3}) * FROM [OutboxMessages] WITH (UPDLOCK, READPAST, ROWLOCK)
-                 WHERE [ProcessedAt] IS NULL AND [DeadLetteredAt] IS NULL AND [NextAttemptAt] <= {2}
-                 ORDER BY [OccurredAt], [Id])
-UPDATE claimed SET [ClaimToken] = {0}, [NextAttemptAt] = {1}, [Attempts] = [Attempts] + 1 OUTPUT inserted.*
-```
-
-`OutboxClaimDialect.Sqlite` is the PostgreSQL form without `FOR UPDATE SKIP LOCKED`. For another database, pass your own statement to `new SqlOutboxMessageClaimer(sql)`. It gets the `FromSqlRaw` placeholders `{0}` claim token, `{1}` lease end, `{2}` now and `{3}` batch size, and must return every column of the claimed rows. The SQLite statement and the default claimer run against SQLite in the test suite. The PostgreSQL and SQL Server statements are checked as text only, and no provider package is referenced.
-
-The processor never deletes rows. Processed rows stay in the table until you remove them with `PurgeProcessedOutboxMessagesAsync`, which deletes in one statement the rows processed before a UTC cutoff and returns the count. Pending and dead-lettered rows are kept. Run it from a job:
-
-```csharp
-await using AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
-AppDbContext context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-await context.PurgeProcessedOutboxMessagesAsync(DateTime.UtcNow.AddDays(-7), stoppingToken);
-```
-
-### Idempotency records
-
-`EfCoreIdempotencyRecordStore<TContext>` (namespace `CSharpEssentials.EntityFrameworkCore.Idempotency`) is an `IIdempotencyRecordStore` from `CSharpEssentials.Idempotency` that keeps its records in your own `DbContext` and writes them inside the context's current transaction. The record commits and rolls back with the business rows of the same unit of work: a request whose transaction rolls back leaves no record, and its retry runs again.
-
-```csharp
-public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
-{
-    protected override void OnModelCreating(ModelBuilder modelBuilder) =>
-        modelBuilder.AddIdempotencyRecords(Database.ProviderName);
-}
-
-services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
-services.AddEfCoreTransactionRunner<AppDbContext>();
-services.AddMediatorTransactionRunnerBehavior();
-services.AddMediatorIdempotencyBehavior(options => options.Placement = IdempotencyPlacement.InsideTransaction);
-services.AddEfCoreIdempotencyRecordStore<AppDbContext>();   // replaces the in-memory store, in any order
-```
-
-Add a migration after `AddIdempotencyRecords`: it maps `IdempotencyRecord` to `IdempotencyRecords` (`TableName`, `Schema`) with the primary key `KeyHash` and an index on `ExpiresAt`. `KeyHash` is a fixed-length `binary(32)`: the SHA-256 of the UTF-8 bytes of the length-prefixed storage key (namespace, scope and key). The readable `Namespace`, `Scope` and `Key` columns sit next to it. A global key is stored with the scope `global`; `ExpiresAt` is UTC.
-
-- Uniqueness does not depend on any collation: two keys share a row only when their hashes are equal, so `KEY-A` and `key-a`, `Tenant("ABC")` and `Tenant("abc")`, or `order-1` and `order-1 ` stay separate records even under a case-insensitive or PAD SPACE collation. The store looks rows up by `KeyHash` and compares the readable columns ordinally before it uses a row; a row whose text belongs to another key makes the reservation throw `InvalidOperationException` instead of replaying a foreign response. `AddIdempotencyRecords(Database.ProviderName)` still gives the readable columns the binary collation of a known provider, so your own queries compare them case-sensitively: `C` on PostgreSQL, `Latin1_General_100_BIN2` on SQL Server, `utf8mb4_0900_bin` on MySQL (Pomelo and Oracle) and `BINARY` on SQLite. Any other provider keeps the database default. Set `KeyCollation` to override it, for example `utf8mb4_nopad_bin` on MariaDB, which has no `utf8mb4_0900_bin`. These collations only make your own queries case-sensitive. SQL Server ignores trailing spaces in `=` and unique comparisons under every collation, `_BIN2` included, so on SQL Server the `KeyHash` primary key is the only thing that keeps `order-1` and `order-1 ` apart. On PostgreSQL keep the readable columns `text` or `varchar`; `char(n)` pads.
-- On PostgreSQL and SQLite a reservation is one `INSERT ... ON CONFLICT DO NOTHING`; on other providers it is a plain `INSERT` behind a savepoint, rolled back to the savepoint on a duplicate key so the transaction stays usable. A concurrent request for the same key waits on the primary key until the first transaction ends, then replays its stored response, or reserves the key when the first one rolled back. Complete and release change the row only while it carries the reservation's token. An expired row counts as absent and is taken over.
-- The store needs `READ COMMITTED` (the default of PostgreSQL, SQL Server and MySQL). Under `REPEATABLE READ` or `SERIALIZABLE` a concurrent reservation fails with a serialization error.
-- Records are written with SQL, never through the change tracker, so `SaveChanges`, interceptors and query filters do not see them.
-- `AddEfCoreIdempotencyRecordStore<AppDbContext>("payments")` registers the store as the keyed store of every profile whose `StoreKey` is `"payments"` and keeps the default store for the rest: `o.AddProfile("payments", p => p.StoreKey = "payments")`.
-- In `Observe` the executor and the `Idempotency-Key` middleware reserve and release through `Detached`, which resolves a new `TContext` in a scope of its own for every call and suppresses any ambient `TransactionScope`. A reservation then never waits for a concurrent request and a failing reservation cannot fail the business transaction. A result to store releases the detached reservation and is written through the store itself, in the business transaction, so it commits and rolls back with the business data as in `Enforce`: a commit that fails leaves no record, and its retry runs again after the switch to `Enforce`. From that write until the commit a reservation of the same key waits; unlike in `Enforce`, that wait can be a cycle across the request's two connections that the database cannot detect, ended only by the command timeout. A database error on that write is rolled back to a savepoint (of the context's transaction, or on PostgreSQL of an ambient `TransactionScope` the connection is enlisted in), so the business data commits without the record. On PostgreSQL, under an isolation level stricter than `READ COMMITTED` (`TransactionScope` defaults to `Serializable`) the write always fails this way and `Observe` records nothing; other providers may succeed. On SQL Server a transaction the server has doomed (`XACT_ABORT ON`, or an update conflict under `SNAPSHOT` isolation, error 3960) cannot be saved by the savepoint: the business data is lost with it and the original error is thrown. The context must not depend on state that only the request scope has.
-
-Expired records stay in the table until `PurgeExpiredAsync` deletes them in one statement; an expired record already counts as absent, so purging only keeps the table small:
-
-```csharp
-public sealed class IdempotencyPurgeService(IServiceScopeFactory scopeFactory) : BackgroundService
-{
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        using PeriodicTimer timer = new(TimeSpan.FromHours(1));
-        while (await timer.WaitForNextTickAsync(stoppingToken))
-        {
-            await using AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
-            var store = scope.ServiceProvider.GetRequiredService<EfCoreIdempotencyRecordStore<AppDbContext>>();
-            await store.PurgeExpiredAsync(stoppingToken);
-        }
-    }
-}
-
-services.AddHostedService<IdempotencyPurgeService>();
-```
-
-### Slow query logging
-
-```csharp
-services.AddSlowQueryInterceptor(TimeSpan.FromMilliseconds(500));            // or: options => options.Threshold = ...; the default is 1 second
-services.AddSingleton<ISlowQueryHandler, MetricsSlowQueryHandler>();        // optional
-
-services.AddDbContext<MyDbContext>((sp, options) =>
-    options.UseNpgsql(connectionString)
-           .AddInterceptors(sp.GetRequiredService<SlowQueryInterceptor>()));
-
-public sealed class MetricsSlowQueryHandler : ISlowQueryHandler
-{
-    public void OnSlowQuery(SlowQueryContext context) =>
-        Console.WriteLine($"{context.ElapsedTime}: {context.CommandText}"); // also Parameters, Database, HasTransaction, MethodName
-}
-```
-
-Every command (reader, scalar or non-query) that runs for at least the threshold is logged as a warning with its command text and parameters, and passed to the `ISlowQueryHandler` when one is registered. Parameter values are included only when the context has `EnableSensitiveDataLogging()` turned on; otherwise each parameter is written as `@name=?`. If the handler throws, the exception is logged as a warning and the command still succeeds.
-
-### Ordered GUID keys
+## Ordered GUID keys
 
 EF Core and the provider choose how `Guid` keys are generated, and this package leaves that alone unless you opt in:
 
-```csharp
-protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+```csharp Program.cs
+// dotnet add package CSharpEssentials.EntityFrameworkCore
+// dotnet add package Microsoft.EntityFrameworkCore.Sqlite --version 10.0.1
+using CSharpEssentials.EntityFrameworkCore;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+
+using SqliteConnection connection = new("DataSource=:memory:");
+connection.Open();
+using AppDb db = new(new DbContextOptionsBuilder<AppDb>().UseSqlite(connection).Options);
+db.Database.EnsureCreated();
+
+foreach (string name in new[] { "first", "second", "third" })
 {
-    configurationBuilder.UseOrderedGuidKeys();                                  // layout picked from the provider
-    // configurationBuilder.UseOrderedGuidKeys(OrderedGuidLayout.SqlServer);    // or the same layout on every provider
+    db.Events.Add(new Event { Name = name });
+    db.SaveChanges();
 }
 
-// one property, without the convention; compiled models support both factories
-modelBuilder.Entity<Order>().Property(x => x.Id).HasValueGeneratorFactory<Version7GuidValueGeneratorFactory>();
+foreach (Event e in db.Events.OrderBy(e => e.Id))
+    Console.WriteLine($"{e.Id} {e.Name}");   // version 7 ids; ordering by Id gives first, second, third
+
+public sealed class Event
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = "";
+}
+
+public sealed class AppDb(DbContextOptions<AppDb> options) : DbContext(options)
+{
+    public DbSet<Event> Events => Set<Event>();
+
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder) =>
+        configurationBuilder.UseOrderedGuidKeys();   // layout picked from the provider; or UseOrderedGuidKeys(OrderedGuidLayout.SqlServer)
+}
 ```
 
-The convention covers every non-nullable `Guid` primary key that EF Core generates on add. It skips foreign keys and keys with a value generator, a default value, default value SQL or computed SQL of their own, and anything configured explicitly wins over it. It also skips keys with a value conversion, such as `HasConversion<string>()` or `HasConversion<byte[]>()`, because the stored form then no longer sorts like the provider's GUID column. It sets the factory type, not a generator instance, so compiled models work.
+For one property without the convention: `modelBuilder.Entity<Order>().Property(x => x.Id).HasValueGeneratorFactory<Version7GuidValueGeneratorFactory>();` (or `SqlServerGuidValueGeneratorFactory`). Compiled models support both factories.
+
+The convention covers every non-nullable `Guid` primary key that EF Core generates on add. It skips foreign keys, keys with their own value generator, default value, default value SQL or computed SQL, and keys with a value conversion (such as `HasConversion<string>()`), whose stored form no longer sorts like the provider's GUID column. Anything configured explicitly wins.
 
 | Layout | Values | Sorts by creation time in |
 |---|---|---|
 | `Version7` | `Guider.NewMonotonicGuid()`: RFC 9562 version 7, strictly increasing within the process | big-endian bytes, the string form and `Guid.CompareTo` |
 | `SqlServer` | `Guider.NewSqlServerGuid()`: RFC 9562 version 8, milliseconds in the last 6 bytes, strictly increasing within the process | SQL Server `uniqueidentifier` order (`SqlGuid`) only |
-
-What each provider stores and what `UseOrderedGuidKeys()` picks:
 
 | Provider | Column and comparison | Default generator without this package | Picked layout |
 |---|---|---|---|
@@ -878,81 +1301,100 @@ What each provider stores and what `UseOrderedGuidKeys()` picks:
 | Pomelo MySQL | `GuidFormat` `Char36` (the default), `Char32` or `Binary16` keep RFC order; `TimeSwapBinary16` and `LittleEndianBinary16` reorder the bytes | ticks first, laid out per `GuidFormat`; sorts in every format except `TimeSwapBinary16` | none, unless you pass a layout |
 | Any other provider (MySql.EntityFrameworkCore, in-memory, Cosmos, Oracle, MongoDB) | not checked by this package | the provider's | none, unless you pass a layout |
 
-Notes:
-
 - On SQL Server the default generator is already sequential inside one app instance. It seeds a counter from the clock when the generator is created, so several instances, or one restarted instance, write into separate ranges of the index. `SqlServer` values follow the clock in every instance, so concurrent instances all append near the end of the index. In a single test run against SQL Server 2022 in a container (20,000 single-row inserts into a clustered key, `char(200)` rows), one process left 0.5% fragmentation with either generator. Four processes started 1 second apart left 96.9% fragmentation with the default generator and 11.2% with `SqlServer`, with pages 96% and 92% full. Version 4 and `NewMonotonicGuid()` left 99% fragmentation and pages 67% full with one and with four processes, and `NewGuid()` the same with one process.
 - Npgsql 9 and later already generate version 7 values. Opting in there only makes values from one process strictly increasing inside a millisecond.
-- On Pomelo, pass `Version7` only for `Char36`, `Char32` or `Binary16`, and only if you want this package's generator. Version 7 values do not sort under `TimeSwapBinary16` or `LittleEndianBinary16`. This package cannot see the `GuidFormat` of the connection.
+- On Pomelo, pass `Version7` only for `Char36`, `Char32` or `Binary16`. This package cannot see the `GuidFormat` of the connection.
 - A `Version7` value sorts randomly in SQL Server, and a `SqlServer` value sorts randomly everywhere else. Pass a layout only when the default pick is wrong for your columns.
 - The order holds within one process. Values from different processes interleave by their millisecond.
 
-Security: both layouts show the time a row was created, to the millisecond, to anyone who sees the key, and carry 56 random bits instead of the 122 of `Guid.NewGuid()`. Do not use them for keys that must stay secret or hard to guess, such as tokens, invitation links or password reset ids.
+Security: both layouts show the creation time of a row, to the millisecond, to anyone who sees the key, and carry 56 random bits instead of the 122 of `Guid.NewGuid()`. Do not use them for keys that must stay secret or hard to guess, such as tokens, invitation links or password reset ids.
 
-### Database error translation
+## Registration helpers
 
-`DbErrorTranslation` (namespace `CSharpEssentials.EntityFrameworkCore.DbErrors`) turns persistence exceptions into `Error` values, which the AspNetCore package renders as ProblemDetails. The built-in `SqlStateErrorTranslator` reads `DbException.SqlState` from the exception or any inner exception, so it needs no provider reference:
-
-| SQLSTATE | Meaning | Error | Code |
-|----------|---------|-------|------|
-| `23505` | unique violation | `Conflict` (409) | `Database.UniqueViolation` |
-| `23503` | foreign key violation | `Conflict` (409) | `Database.ForeignKeyViolation` |
-| `23514` | check violation | `Validation` (400) | `Database.CheckViolation` |
-| `23502` | not null violation | `Validation` (400) | `Database.NotNullViolation` |
-| `40001` | serialization failure | `Conflict` (409), `retryable: true` | `Database.SerializationFailure` |
-| `40P01` | deadlock | `Conflict` (409), `retryable: true` | `Database.Deadlock` |
-
-The metadata carries `sqlState`, and `entities` (the entity type names of `DbUpdateException.Entries`) when there are any. The database message is not copied, because it can contain row values.
+Namespace `CSharpEssentials.EntityFrameworkCore.Extensions`:
 
 ```csharp
-services.AddDbErrorTranslation();
+services.AddCqrsDbContexts<WriteDb, ReadDb>(
+    configureWrite: (sp, options) => options.UseNpgsql(connectionString),
+    configureRead: (sp, options) => options.UseNpgsql(readReplicaConnectionString));
 
-public sealed class RegisterUserHandler(AppDbContext db, DbErrorTranslation translation)
-{
-    public async Task<Result> Handle(RegisterUser command, CancellationToken ct)
+services.AddWriteDbContext<WriteDb>(
+    options =>
     {
-        db.Users.Add(new User(command.Email));
-        Result<int> saved = await translation.SaveChangesAsync(db, ct); // Conflict on a duplicate email
-        return saved.IsSuccess ? Result.Success() : saved.Errors;
-    }
-}
+        options.EnableAuditInterceptor = true;       // attached when registered in DI
+        options.EnableSlowQueryInterceptor = true;
+        options.EnableDetailedErrors = true;
+    },
+    (sp, builder) => builder.UseNpgsql(connectionString));
 ```
 
-`translation.SaveChangesAsync` returns the translated error and rethrows exceptions no translator recognizes, so unexpected failures still reach your exception handler (`SaveChangesAsResultAsync`, by contrast, turns every exception into an `Unknown` error). After a failure the change tracker keeps the unsaved changes. To translate an exception you caught yourself, call `translation.TryTranslate(exception, out Error error)`.
+| Method | Registers |
+|---|---|
+| `AddCqrsDbContexts<TWrite, TRead>(configureWrite, configureRead?)` | both as pooled contexts: the write context with `TrackAll`, the read context with `NoTracking`. Without `configureRead` the read context reuses `configureWrite`. |
+| `AddWriteDbContext<T>`, `AddReadDbContext<T>` | one pooled context with `UseAsWriteContext()` or `UseAsReadContext()` |
+| `AddPooledDbContext<T>` | a pooled context (`AddDbContextPool`) |
+| `RegisterDbContextFactory<T>` | an `IDbContextFactory<T>` |
+| `UseAsWriteContext()`, `UseAsReadContext()`, `UseAsReadContextWithIdentityResolution()` | on `DbContextOptionsBuilder`: `TrackAll`, `NoTracking`, `NoTrackingWithIdentityResolution` |
 
-Providers that report no SQLSTATE (SQL Server, SQLite) or extra details (the constraint name of `PostgresException`) plug in an `IDbErrorTranslator`. Custom translators run in registration order before the SQLSTATE default, and the first match wins. `DbErrorTranslation` is a singleton, so translators must be stateless:
+Each registration method has an overload that takes `Action<DbContextRegistrationOptions>` before the provider callback. It applies `EnableDetailedErrors`, `EnableSensitiveDataLogging`, `QueryTrackingBehavior` and the three `Enable*Interceptor` flags. The properties `MigrationsAssembly`, `RetryOptions` and `QuerySplittingBehavior` exist on the class but are not applied by this version; set them in the provider callback instead, for example `UseNpgsql(cs, npgsql => npgsql.MigrationsAssembly("MyApp.Migrations").EnableRetryOnFailure())`.
 
-```csharp
-using Npgsql; // PostgresException
+## Migrate on startup
 
-services.AddDbErrorTranslator<PostgresConstraintTranslator>();
+`MigrateDatabaseAsync<TContext>()` (namespace `.Migrations`) applies pending migrations from a new service scope. It is opt-in; call it before the host starts serving:
 
-public sealed class PostgresConstraintTranslator : IDbErrorTranslator
+```csharp Program.cs
+// dotnet add package CSharpEssentials.EntityFrameworkCore
+// dotnet add package Microsoft.EntityFrameworkCore.Sqlite --version 10.0.1
+using CSharpEssentials.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore;
+
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+builder.Services.AddDbContext<AppDb>(options => options.UseSqlite("Data Source=app.db"));
+builder.Services.AddSingleton<IDatabaseMigrationLock, FileMigrationLock>();   // optional
+
+WebApplication app = builder.Build();
+await app.Services.MigrateDatabaseAsync<AppDb>(app.Lifetime.ApplicationStopping);
+app.Run();
+
+public sealed class AppDb(DbContextOptions<AppDb> options) : DbContext(options);
+
+// Serializes migrations across processes on one machine. Use a database lock across machines.
+public sealed class FileMigrationLock : IDatabaseMigrationLock
 {
-    private readonly SqlStateErrorTranslator _sqlState = new();
-
-    public bool TryTranslate(Exception exception, out Error error)
+    public async ValueTask<IAsyncDisposable> AcquireAsync(DbContext context, CancellationToken cancellationToken)
     {
-        if (!_sqlState.TryTranslate(exception, out error))
-            return false;
-
-        for (Exception? current = exception; current is not null; current = current.InnerException)
+        while (true)
         {
-            if (current is PostgresException postgres)
-                error.Metadata!.AddMetadata("constraint", postgres.ConstraintName);
+            try
+            {
+                return new FileStream("migrate.lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None, 1, FileOptions.DeleteOnClose);
+            }
+            catch (IOException)
+            {
+                await Task.Delay(500, cancellationToken);
+            }
         }
-
-        return true;
     }
 }
 ```
 
-The default ProblemDetails fields (`Codes | ValidationErrors`) do not include error metadata. With `ProblemErrorFields.AllErrors`, the client also sees `sqlState`, `entities` and anything your translators add, such as constraint names.
+- When several instances start together, register an `IDatabaseMigrationLock` over your infrastructure (a PostgreSQL advisory lock, `sp_getapplock`, a Redis lock). The migration runs while the lock is held, and disposing the returned handle releases it. The package ships no implementation, so it takes no driver dependency.
+- If `AcquireAsync` returns `null`, `MigrateDatabaseAsync` throws `InvalidOperationException` before migrating.
+- EF Core 9 and later take a database lock inside `MigrateAsync` on most providers. The hook matters for EF Core 8 and for work you want serialized with the migration.
+- There is no hosted-service registration for this: a hosted service would add a dependency on `Microsoft.Extensions.Hosting.Abstractions`, and the awaited call above runs before the host serves, which a hosted service does not guarantee.
+- For a readiness probe that fails while migrations are pending, use [CSharpEssentials.EntityFrameworkCore.HealthChecks](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.EntityFrameworkCore.HealthChecks/Readme.MD).
 
-## Upgrading to 8.0
+## Diagnostics
 
-- Slow query logging hides parameter values unless sensitive data logging is on (`EnableSensitiveDataLogging()` or `DbContextRegistrationOptions.EnableSensitiveDataLogging = true`); without it, parameters read `@name=?` in the log and in `SlowQueryContext.Parameters`. Turn it on if you relied on the values.
-- When `AuditInterceptor` turns a delete into a soft delete, it now keeps the tracked entries EF cascade-deleted with it (see [Audit interceptor](#audit-interceptor)). 7.x physically deleted tracked required dependents and nulled owned columns (or failed the save on a `NOT NULL` column). If you relied on that, delete the children in a separate save, or mark the root with `MarkAsHardDeleted()`.
-- `ICursorPaginationRequest<TCursor>` has a new `HasCursor` property, and the obsolete cursor `PaginateAsync` uses it to decide whether to start at the first page. 7.x treated a cursor equal to `default(TCursor)` (`0`, `Guid.Empty`) as "no cursor", so a page ending on such a row started over at page one. `CursorPaginationRequest<TCursor>` sets `HasCursor` when `Cursor` is assigned a non-null value, including `0`. If you set `Cursor = 0` or `Cursor = Guid.Empty` to mean "first page", leave `Cursor` unset instead. A custom `ICursorPaginationRequest<TCursor>` must implement `HasCursor`; return `false` for a request that has no cursor. The serialized request also gains a read-only `hasCursor` field.
-- `AddAuditInterceptor` registers `TimeProvider.System` and `AuditInterceptor` only when they are not registered yet. 7.x added both every time, so a `TimeProvider` registered before the call was replaced by `TimeProvider.System` and repeated calls added more `AuditInterceptor` registrations. If you registered your `TimeProvider` after `AddAuditInterceptor` to work around this, either order now works; if you relied on `TimeProvider.System` replacing an earlier registration, remove that registration.
-- `EnumStoredAs.LegacySnakeCase`, `UseLegacySnakeCase` and `LegacySnakeCaseEnumConverter` write the 8.0 Core `ToSnakeCase` output, which keeps letters without case and combining marks. A member named `用户Name` was stored as `name`, which could not be read back, and is now stored as `用户_name`. Members named only with Latin letters and digits store the same text. Rewrite stored rows of non-Latin members with the new value.
-- The package no longer depends on `EFCore.NamingConventions`. It never used it, but 7.x brought it in, so `UseSnakeCaseNamingConvention()` and the other naming convention methods compiled without a direct reference. If you call them, add `EFCore.NamingConventions` to your project with the major that matches your EF Core version. `Microsoft.EntityFrameworkCore.Relational` is now a direct dependency instead of a transitive one, so nothing changes there.
+| ID | Severity | Reported by | Meaning |
+|---|---|---|---|
+| CSE3001 | Info | this package | parameterless `IgnoreQueryFilters()` on EF Core 10; see [Analyzer CSE3001](#analyzer-cse3001) |
+| CSE0014 | Error | `CSharpEssentials.Enums` | a generated `AlterColumn` left next to `ConvertEnumColumn` for the same column |
+
+## Links
+
+- Agent skill: [csharpessentials-efcore](https://github.com/senrecep/CSharpEssentials/blob/main/.well-known/agent-skills/csharpessentials-efcore/SKILL.md)
+- Example projects: [examples/Examples.EntityFrameworkCore](https://github.com/senrecep/CSharpEssentials/tree/main/examples/Examples.EntityFrameworkCore) and [examples/Examples.EntityFrameworkCore.Operations](https://github.com/senrecep/CSharpEssentials/tree/main/examples/Examples.EntityFrameworkCore.Operations)
+- Entity base classes: [CSharpEssentials.Entity](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.Entity/Readme.MD)
+- Enum metadata: [CSharpEssentials.Enums](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.Enums/Readme.MD)
+- Transaction and idempotency behaviors: [CSharpEssentials.Mediator](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.Mediator/Readme.MD), [CSharpEssentials.Idempotency](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.Idempotency/Readme.MD)

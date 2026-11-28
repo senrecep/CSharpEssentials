@@ -47,8 +47,15 @@ jobs:
       - name: Test
         run: dotnet test --no-build --configuration Release --collect:"XPlat Code Coverage" --results-directory ./coverage
 
-      # Examples stay out of CSharpEssentials.slnx; CI builds the ones that need guarding explicitly.
-      - name: Build Enums end-to-end example
+      # Examples stay out of CSharpEssentials.slnx. This builds all of them, runs the console ones and tests the test projects.
+      - name: Build, run and test the examples
+        run: scripts/check-examples.sh Release
+
+      # Every ```csharp Program.cs block in the READMEs, skills and docs must compile, and console ones must exit 0.
+      - name: Check the runnable doc examples
+        run: python3 scripts/check-doc-examples.py
+
+      - name: Build Enums end-to-end example with warnings as errors
         run: dotnet build examples/Examples.Enums.EndToEnd/Examples.Enums.EndToEnd.csproj --configuration Release -warnaserror
 
       # The Redis store recipe of the Idempotency Readme, run through the contract test kit against a Redis container.

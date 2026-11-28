@@ -1,226 +1,151 @@
+using CSharpEssentials.EntityFrameworkCore;
+using CSharpEssentials.EntityFrameworkCore.DbErrors;
 using CSharpEssentials.EntityFrameworkCore.Interceptors;
 using CSharpEssentials.EntityFrameworkCore.Pagination;
+using CSharpEssentials.EntityFrameworkCore.Pagination.Keyset;
 using CSharpEssentials.EntityFrameworkCore.Pagination.Requests;
 using CSharpEssentials.EntityFrameworkCore.Pagination.Responses;
+using CSharpEssentials.EntityFrameworkCore.Transactions;
+using CSharpEssentials.Errors;
+using CSharpEssentials.Maybe;
+using CSharpEssentials.ResultPattern;
+using CSharpEssentials.Transactions;
 using Examples.EntityFrameworkCore.Data;
-using Examples.EntityFrameworkCore.Data.Events;
 using Examples.EntityFrameworkCore.Services;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
-Console.WriteLine("========================================");
-Console.WriteLine("CSharpEssentials.EntityFrameworkCore Demo");
-Console.WriteLine("========================================\n");
+await using SqliteConnection connection = new("DataSource=:memory:");
+await connection.OpenAsync();
 
-var services = new ServiceCollection();
-
-services.AddLogging(builder => builder
-    .AddConsole()
-    .SetMinimumLevel(LogLevel.Information));
-
+ServiceCollection services = new();
+services.AddLogging();
 services.AddAuditInterceptor(() => "demo-user");
-
-services.AddSlowQueryInterceptor(TimeSpan.FromMilliseconds(500));
-
 services.AddSingleton<IDomainEventPublisher, ConsoleDomainEventPublisher>();
 services.AddSingleton<DomainEventInterceptor>();
+services.AddSlowQueryInterceptor(TimeSpan.FromMilliseconds(500));
+services.AddDbContext<ShopDbContext>(options => options.UseSqlite(connection));
+services.AddEfCoreTransactionRunner<ShopDbContext>();
+services.AddDbErrorTranslation();
+services.AddDbErrorTranslator<SqliteUniqueTranslator>();
 
-services.AddDbContext<ShopDbContext>((sp, options) =>
-    options.UseSqlite("Data Source=shop.db")
-           .EnableSensitiveDataLogging()
-           .AddInterceptors(
-               sp.GetRequiredService<AuditInterceptor>(),
-               sp.GetRequiredService<DomainEventInterceptor>(),
-               sp.GetRequiredService<SlowQueryInterceptor>()));
+await using ServiceProvider provider = services.BuildServiceProvider();
 
-services.AddScoped<IProductCatalogService, ProductCatalogService>();
+await using (AsyncServiceScope scope = provider.CreateAsyncScope())
+    await scope.ServiceProvider.GetRequiredService<ShopDbContext>().Database.EnsureCreatedAsync();
 
-var provider = services.BuildServiceProvider();
-
-using (var scope = provider.CreateScope())
+await RunAsync("1. Audit fields and domain events", async (db, sp) =>
 {
-    var db = scope.ServiceProvider.GetRequiredService<ShopDbContext>();
+    db.Products.AddRange(
+        Product.Create("Mouse", 25m, ProductCategory.Electronics),
+        Product.Create("Lamp", 40m, ProductCategory.HomeAndGarden),
+        Product.Create("Novel", 12m, ProductCategory.Books));
+    await db.SaveChangesAsync();
 
-    Console.WriteLine("Ensuring database is created...");
-    db.Database.EnsureDeleted();
-    db.Database.EnsureCreated();
-    Console.WriteLine("Database ready.\n");
+    Product mouse = await db.Products.SingleAsync(p => p.Name == "Mouse");
+    mouse.ChangePrice(20m);
+    await db.SaveChangesAsync();
+    Console.WriteLine($"   Mouse: created by {mouse.CreatedBy}, updated by {mouse.UpdatedBy}");
+});
 
-    if (!db.Products.IgnoreQueryFilters().Any())
+await RunAsync("2. Soft delete and the named filter", async (db, sp) =>
+{
+    Product lamp = await db.Products.SingleAsync(p => p.Name == "Lamp");
+    db.Products.Remove(lamp);
+    await db.SaveChangesAsync();
+
+    int visible = await db.Products.CountAsync();
+    int stored = await db.Products.IgnoreSoftDeleteQueryFilter().CountAsync();
+    Console.WriteLine($"   Visible {visible}, stored {stored}; Lamp deleted by {lamp.DeletedBy}");
+
+    lamp.Restore();
+    await db.SaveChangesAsync();
+    Console.WriteLine($"   After Restore: visible {await db.Products.CountAsync()}");
+
+    int batch = await db.Products.Where(p => p.Category == ProductCategory.Books).SoftDeleteAsync(deletedBy: "batch-job");
+    Console.WriteLine($"   SoftDeleteAsync updated {batch} row in one statement");
+});
+
+await RunAsync("3. Offset and keyset pagination", async (db, sp) =>
+{
+    for (int i = 1; i <= 7; i++)
+        db.Products.Add(Product.Create($"Cable {i}", i, ProductCategory.Electronics));
+    await db.SaveChangesAsync();
+
+    PaginationResponse<Product> page = await db.Products.OrderBy(p => p.Name).PaginateAsync(pageNumber: 2, pageSize: 3);
+    Console.WriteLine($"   Offset page {page.PageNumber}/{page.TotalPages}: {string.Join(", ", page.Items.Select(p => p.Name))}");
+
+    KeysetOrdering<Product> byName = new KeysetOrdering<Product>().Ascending(p => p.Name).Ascending(p => p.Id);
+    Result<KeysetPaginationResponse<Product>> first = await db.Products.KeysetPaginateAsync(new KeysetPaginationRequest { Limit = 3 }, byName);
+    Result<KeysetPaginationResponse<Product>> second = await db.Products.KeysetPaginateAsync(
+        new KeysetPaginationRequest { Limit = 3, After = first.Value.NextCursor }, byName);
+    Console.WriteLine($"   Keyset page 2: {string.Join(", ", second.Value.Items.Select(p => p.Name))}");
+
+    Result<KeysetPaginationResponse<Product>> bad = await db.Products.KeysetPaginateAsync(
+        new KeysetPaginationRequest { After = "tampered" }, byName);
+    Console.WriteLine($"   Bad cursor: {bad.FirstError.Code}");
+});
+
+await RunAsync("4. Result helpers and hard delete", async (db, sp) =>
+{
+    Result<Product> found = await db.Products.Where(p => p.Name == "Mouse").FirstOrDefaultAsResultAsync();
+    Result<Product> missing = await db.Products.Where(p => p.Name == "Tablet")
+        .FirstOrDefaultAsResultAsync(Error.NotFound("Product.NotFound", "No such product"));
+    Console.WriteLine($"   Found {found.Value.Name}; missing: {missing.FirstError.Code}");
+
+    Product cable = await db.Products.FirstAsync(p => p.Name == "Cable 7");
+    db.HardDelete(cable);
+    await db.SaveChangesAsync();
+    Console.WriteLine($"   Cable 7 rows left: {await db.Products.IgnoreSoftDeleteQueryFilter().CountAsync(p => p.Name == "Cable 7")}");
+});
+
+await RunAsync("5. Enum and Maybe columns", async (db, sp) =>
+{
+    db.Customers.AddRange(Customer.Create("ada@example.com", Maybe<string>.From("ada")), Customer.Create("bob@example.com"));
+    await db.SaveChangesAsync();
+
+    string category = await db.Database
+        .SqlQueryRaw<string>("SELECT Category AS Value FROM products WHERE Name = 'Lamp'").SingleAsync();
+    List<string> noNickname = await db.Customers.Where(c => c.Nickname == null).Select(c => c.Email).ToListAsync();
+    Console.WriteLine($"   Lamp category stored as '{category}'; customers without a nickname: {string.Join(", ", noNickname)}");
+});
+
+await RunAsync("6. Transaction runner and after-commit callbacks", async (db, sp) =>
+{
+    ITransactionRunner runner = sp.GetRequiredService<ITransactionRunner>();
+    ITransactionCallbacks callbacks = sp.GetRequiredService<ITransactionCallbacks>();
+
+    await runner.ExecuteAsync(async ct =>
     {
-        Console.WriteLine("Seeding initial data...");
-        db.Products.AddRange(
-            new() { Name = "Wireless Mouse", Price = 29.99m, Category = ProductCategory.Electronics },
-            new() { Name = "Running Shoes", Price = 89.50m, Category = ProductCategory.Clothing },
-            new() { Name = "Coffee Beans", Price = 14.99m, Category = ProductCategory.Food }
-        );
-        db.SaveChanges();
-        Console.WriteLine("Seed complete.\n");
-    }
-}
+        db.Products.Add(Product.Create("Desk", 150m, ProductCategory.HomeAndGarden));
+        await db.SaveChangesAsync(ct);
+        await callbacks.OnCommittedAsync(_ => { Console.WriteLine("   after commit: Desk saved"); return ValueTask.CompletedTask; }, ct);
+        return Result.Success();
+    }, outcome => outcome.IsSuccess);
 
-using (var scope = provider.CreateScope())
-{
-    var service = scope.ServiceProvider.GetRequiredService<IProductCatalogService>();
-    var db = scope.ServiceProvider.GetRequiredService<ShopDbContext>();
-
-    Console.WriteLine("--- DEMO: Soft Delete ---");
-    var mouse = db.Products.First(p => p.Name == "Wireless Mouse");
-    Console.WriteLine($"Deleting product: {mouse.Name} (Id: {mouse.Id})");
-
-    service.DeleteProduct(mouse.Id);
-
-    var allProducts = db.Products.IgnoreQueryFilters().ToList();
-    var visibleProducts = db.Products.ToList();
-
-    Console.WriteLine($"Visible products: {visibleProducts.Count}");
-    Console.WriteLine($"Total products (with deleted): {allProducts.Count}");
-    Console.WriteLine($"Deleted product IsDeleted: {allProducts.First(p => p.Name == "Wireless Mouse").IsDeleted}");
-    Console.WriteLine();
-}
-
-using (var scope = provider.CreateScope())
-{
-    var service = scope.ServiceProvider.GetRequiredService<IProductCatalogService>();
-
-    Console.WriteLine("--- DEMO: Offset Pagination ---");
-
-    var db = scope.ServiceProvider.GetRequiredService<ShopDbContext>();
-    for (int i = 1; i <= 25; i++)
+    await runner.ExecuteAsync(async ct =>
     {
-        db.Products.Add(new()
-        {
-            Name = $"Product {i:D3}",
-            Price = i * 10m,
-            Category = (ProductCategory)(i % 5)
-        });
-    }
-    db.SaveChanges();
+        db.Products.Add(Product.Create("Chair", 80m, ProductCategory.HomeAndGarden));
+        await db.SaveChangesAsync(ct);
+        return Result.Failure(Error.Validation("Chair.OutOfStock", "Out of stock"));
+    }, outcome => outcome.IsSuccess);
 
-    var page1 = service.GetProducts(pageNumber: 1, pageSize: 5);
-    Console.WriteLine($"Page 1: {page1.Items.Count} items, Total: {page1.TotalCount}, Pages: {page1.TotalPages}");
-    foreach (var p in page1.Items)
-        Console.WriteLine($"  - {p.Name} (${p.Price})");
+    db.ChangeTracker.Clear();
+    Console.WriteLine($"   Desk stored: {await db.Products.AnyAsync(p => p.Name == "Desk")}, Chair stored: {await db.Products.AnyAsync(p => p.Name == "Chair")}");
+});
 
-    var page2 = service.GetProducts(pageNumber: 2, pageSize: 5);
-    Console.WriteLine($"\nPage 2: {page2.Items.Count} items");
-    foreach (var p in page2.Items)
-        Console.WriteLine($"  - {p.Name} (${p.Price})");
-
-    Console.WriteLine();
-}
-
-using (var scope = provider.CreateScope())
+await RunAsync("7. Database error translation", async (db, sp) =>
 {
-    var db = scope.ServiceProvider.GetRequiredService<ShopDbContext>();
+    DbErrorTranslation translation = sp.GetRequiredService<DbErrorTranslation>();
+    db.Customers.Add(Customer.Create("ada@example.com"));
+    Result<int> saved = await translation.SaveChangesAsync(db);
+    Console.WriteLine($"   Duplicate email: {saved.FirstError.Type} {saved.FirstError.Code}");
+});
 
-    Console.WriteLine("--- DEMO: Cursor Pagination ---");
-
-    var page = await db.Products.KeysetPaginateAsync(
-        new KeysetPaginationRequest { Limit = 3 },
-        keys => keys.Ascending(p => p.Name).Ascending(p => p.Id));
-
-    if (page.IsFailure)
-    {
-        Console.WriteLine($"Cursor Page failed: {page.FirstError.Description}");
-    }
-    else
-    {
-        KeysetPaginationResponse<Product> first = page.Value;
-        Console.WriteLine($"Cursor Page: {first.Items.Count} items, HasNext={first.HasNext}");
-        foreach (var p in first.Items)
-            Console.WriteLine($"  - {p.Name} (${p.Price})");
-
-        if (first.HasNext)
-        {
-            var nextPage = await db.Products.KeysetPaginateAsync(
-                new KeysetPaginationRequest { Limit = 3, After = first.NextCursor },
-                keys => keys.Ascending(p => p.Name).Ascending(p => p.Id));
-
-            Console.WriteLine(nextPage.Match(
-                next => $"\nNext Cursor Page: {next.Items.Count} items, HasNext={next.HasNext}\n"
-                    + string.Join("\n", next.Items.Select(p => $"  - {p.Name} (${p.Price})")),
-                errors => $"\nNext Cursor Page failed: {errors[0].Description}"));
-        }
-    }
-
-    Console.WriteLine();
-}
-
-using (var scope = provider.CreateScope())
+async Task RunAsync(string title, Func<ShopDbContext, IServiceProvider, Task> step)
 {
-    var db = scope.ServiceProvider.GetRequiredService<ShopDbContext>();
-
-    Console.WriteLine("--- DEMO: Audit Fields ---");
-
-    var product = db.Products.First(p => p.Name == "Coffee Beans");
-    Console.WriteLine($"Product created at: {product.CreatedAt:O}");
-    Console.WriteLine($"Product created by: {product.CreatedBy}");
-    Console.WriteLine($"Product last modified: {product.UpdatedAt?.ToString("O") ?? "(never)"}");
-
-    product.Price = 16.99m;
-    db.SaveChanges();
-
-    db.Entry(product).Reload();
-    Console.WriteLine($"After update, last modified: {product.UpdatedAt:O}");
-    Console.WriteLine($"After update, last modified by: {product.UpdatedBy}");
-    Console.WriteLine();
+    Console.WriteLine(title);
+    await using AsyncServiceScope scope = provider.CreateAsyncScope();
+    await step(scope.ServiceProvider.GetRequiredService<ShopDbContext>(), scope.ServiceProvider);
 }
-
-using (var scope = provider.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<ShopDbContext>();
-
-    Console.WriteLine("--- DEMO: Domain Events ---");
-
-    var newProduct = new Product
-    {
-        Name = "Bluetooth Speaker",
-        Price = 49.99m,
-        Category = ProductCategory.Electronics
-    };
-    newProduct.Raise(new ProductCreatedEvent(newProduct.Name));
-    db.Products.Add(newProduct);
-
-    Console.WriteLine("Saving new product (triggers BeforeSave event)...");
-    db.SaveChanges();
-
-    decimal oldPrice = newProduct.Price;
-    newProduct.Price = 39.99m;
-    newProduct.Raise(new ProductPriceChangedEvent(newProduct.Id, oldPrice, newProduct.Price));
-
-    Console.WriteLine("Updating price (triggers AfterSave event)...");
-    db.SaveChanges();
-
-    var speaker = db.Products.First(p => p.Name == "Bluetooth Speaker");
-    var shoes = db.Products.First(p => p.Name == "Running Shoes");
-
-    speaker.Price = 34.99m;
-    speaker.Raise(new ProductPriceChangedEvent(speaker.Id, 39.99m, 34.99m));
-
-    shoes.Price = 79.99m;
-    shoes.Raise(new ProductPriceChangedEvent(shoes.Id, 89.50m, 79.99m));
-
-    Console.WriteLine("Bulk update (events from multiple entities, processed in order)...");
-    db.SaveChanges();
-
-    Console.WriteLine();
-}
-
-using (var scope = provider.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<ShopDbContext>();
-
-    Console.WriteLine("--- DEMO: EnumWireNameConverter ---");
-
-    var electronicProduct = db.Products.First(p => p.Category == ProductCategory.Electronics);
-    Console.WriteLine($"Product: {electronicProduct.Name}");
-    Console.WriteLine($"Category (enum stored as string in DB): {electronicProduct.Category}");
-    Console.WriteLine($"Category name: {electronicProduct.Category.ToString()}");
-    Console.WriteLine();
-}
-
-Console.WriteLine("========================================");
-Console.WriteLine("Demo complete.");
-Console.WriteLine("========================================");

@@ -2,184 +2,141 @@ using CSharpEssentials.Errors;
 using CSharpEssentials.ResultPattern;
 using CSharpEssentials.Rules;
 
-Console.WriteLine("========================================");
-Console.WriteLine("CSharpEssentials.Rules Example");
-Console.WriteLine("========================================\n");
+Applicant adult = new("Ada", Age: 30, HasLicense: true, Country: "TR");
+Applicant minor = new("Bo", Age: 16, HasLicense: false, Country: "XX");
 
-Console.WriteLine("--- Simple Rules (Func.ToRule) ---");
+// 1. Three ways to write a rule: a class, a Func, a predicate
+IRule<Applicant> ageRule = new MinimumAgeRule(18);
+Func<Applicant, Result> licenseRule = a => a.HasLicense ? Result.Success() : ApplicantErrors.NoLicense;
+IRule<Applicant> countryRule = RuleEngine.FromPredicate<Applicant>(
+    a => a.Country is "TR" or "DE",
+    a => Error.Forbidden("Applicant.Country", $"Country '{a.Country}' is not supported."));
 
-IRule<int> isPositive = ((Func<int, Result>)(x => x > 0 ? Result.Success() : Error.Validation("Value.Positive", "Value must be positive"))).ToRule();
-IRule<int> isLessThan100 = ((Func<int, Result>)(x => x < 100 ? Result.Success() : Error.Validation("Value.Range", "Value must be less than 100"))).ToRule();
+Console.WriteLine("--- Single rules ---");
+Print("class", RuleEngine.Evaluate(ageRule, minor));
+Print("func", RuleEngine.Evaluate(licenseRule, minor));
+Print("lambda", RuleEngine.Evaluate((Applicant a) => a.Name.Length > 1 ? Result.Success() : Error.Validation("Name.Short", "Name is too short."), adult));
+Print("predicate", RuleEngine.Evaluate(countryRule, minor));
 
-Result CheckValue(int value) => isPositive.Evaluate(value);
+// 2. And: all must pass. Result rules stop at the first failure
+Console.WriteLine("--- And ---");
+IRuleBase<Applicant> all = new IRuleBase<Applicant>[] { ageRule, licenseRule.ToRule(), countryRule }.And();
+Print("And adult", RuleEngine.Evaluate(all, adult));
+Print("And minor", RuleEngine.Evaluate(all, minor));
 
-CheckValue(50).Switch(
-    onSuccess: () => Console.WriteLine("50 is valid"),
-    onFailure: errors => Console.WriteLine($"50 failed: {errors[0].Description}")
-);
+// 3. Or: one must pass. When all fail, every error comes back
+Console.WriteLine("--- Or ---");
+IRuleBase<Applicant> any = new IRuleBase<Applicant>[] { ageRule, licenseRule.ToRule() }.Or();
+Print("Or minor", RuleEngine.Evaluate(any, minor));
 
-CheckValue(-5).Switch(
-    onSuccess: () => Console.WriteLine("-5 is valid"),
-    onFailure: errors => Console.WriteLine($"-5 failed: {errors[0].Description}")
-);
-Console.WriteLine();
+// 4. Linear and Next: run in order, stop at the first failure
+Console.WriteLine("--- Linear / Next ---");
+IRuleBase<Applicant> chain = new IRule<Applicant>[] { ageRule, countryRule }.Linear();
+Print("Linear minor", RuleEngine.Evaluate(chain, minor));
+IRule<Applicant> next = ageRule.Next(licenseRule).Next(countryRule);
+Print("Next adult", RuleEngine.Evaluate(next, adult));
+Print("Linear empty", RuleEngine.Evaluate(Array.Empty<IRule<Applicant>>().Linear(), adult));
 
-Console.WriteLine("--- Rule Engine (And / All) ---");
+// 5. Static shortcuts take the array and the context together
+Console.WriteLine("--- Static shortcuts ---");
+Func<Applicant, Result>[] checks = [licenseRule, a => a.Age >= 18 ? Result.Success() : ApplicantErrors.Underage];
+Print("RuleEngine.And", RuleEngine.And(checks, minor));
+Print("RuleEngine.Or", RuleEngine.Or(checks, adult));
+Print("RuleEngine.Linear", RuleEngine.Linear(checks, minor));
 
-RuleEngine.Evaluate(new[] { isPositive, isLessThan100 }.And(), 50).Switch(
-    onSuccess: () => Console.WriteLine("50 passes all rules"),
-    onFailure: errors => Console.WriteLine($"50 failed: {errors[0].Description}")
-);
+// 6. If: pick a branch from a rule or a bool
+Console.WriteLine("--- If ---");
+Print("If(rule)", RuleEngine.If(
+    ageRule,
+    success: new GrantRule(),
+    failure: RuleEngine.FromPredicate<Applicant>(_ => false, a => Error.Forbidden("Access.Denied", $"{a.Name} is too young.")),
+    minor));
+Print("If(bool)", RuleEngine.If(adult.HasLicense, new GrantRule(), ageRule, adult));
+Print("If(funcs)", RuleEngine.If(
+    (Applicant a) => a.Age >= 18 ? Result.Success() : Error.False,
+    success: a => Result.Success(),
+    failure: a => ApplicantErrors.Underage,
+    minor));
 
-RuleEngine.Evaluate(new[] { isPositive, isLessThan100 }.And(), 150).Switch(
-    onSuccess: () => Console.WriteLine("150 passes all rules"),
-    onFailure: errors => Console.WriteLine($"150 failed: {errors.Length} error(s)")
-);
-Console.WriteLine();
+// 7. Rules that return a value
+Console.WriteLine("--- Result<T> rules ---");
+Func<int, Result<string>>[] graders =
+[
+    score => score >= 90 ? "A" : Error.Validation("Grade.NotA", "Below 90."),
+    score => score >= 80 ? "B" : Error.Validation("Grade.NotB", "Below 80."),
+];
+PrintValue("Or (first success)", RuleEngine.Or(graders, 85));
+PrintValue("And (all checked)", RuleEngine.And(graders, 70));
+Func<int, Result<string>>[] passing = [s => "first", s => "second"];
+PrintValue("And (first value)", RuleEngine.And(passing, 0));
 
-Console.WriteLine("--- Or Rules ---");
+// 8. Async rules with EvaluateAsync
+Console.WriteLine("--- Async ---");
+HashSet<string> takenNames = ["admin", "root"];
+IAsyncRule<string> uniqueName = RuleEngine.FromPredicateAsync<string>(
+    async name => { await Task.Yield(); return !takenNames.Contains(name); },
+    name => Error.Conflict("Name.Taken", $"'{name}' is already taken."));
+IAsyncRule<string> notEmpty = ((Func<string, CancellationToken, ValueTask<Result>>)((name, ct) =>
+    ValueTask.FromResult(name.Length > 0 ? Result.Success() : Error.Validation("Name.Empty", "Name is required.")))).ToRule();
+IRuleBase<string> nameRules = new IRuleBase<string>[] { notEmpty, uniqueName, new UniqueNameRule(takenNames) }.And();
+Print("EvaluateAsync 'ada'", await RuleEngine.EvaluateAsync(nameRules, "ada"));
+Print("EvaluateAsync 'admin'", await RuleEngine.EvaluateAsync(nameRules, "admin"));
 
-IRule<int> isEven = ((Func<int, Result>)(x => x % 2 == 0 ? Result.Success() : Error.Validation("Value.Even", "Value must be even"))).ToRule();
-IRule<int> isDivisibleBy5 = ((Func<int, Result>)(x => x % 5 == 0 ? Result.Success() : Error.Validation("Value.Div5", "Value must be divisible by 5"))).ToRule();
+// 9. A throwing rule becomes an Unexpected error
+Console.WriteLine("--- Exceptions ---");
+Result thrown = RuleEngine.Evaluate((Applicant a) => throw new InvalidOperationException("boom"), adult);
+Console.WriteLine($"{thrown.FirstError.Code} [{thrown.FirstError.Type}]");
 
-RuleEngine.Evaluate(new[] { isEven, isDivisibleBy5 }.Or(), 4).Switch(
-    onSuccess: () => Console.WriteLine("4 passes (even)"),
-    onFailure: errors => Console.WriteLine($"4 failed")
-);
+// 10. A custom linear rule: Evaluate runs first, Next runs only on success
+Console.WriteLine("--- Custom ILinearRule ---");
+Print("custom linear", RuleEngine.Evaluate(new HasNameThen(ageRule), minor));
 
-RuleEngine.Evaluate(new[] { isEven, isDivisibleBy5 }.Or(), 15).Switch(
-    onSuccess: () => Console.WriteLine("15 passes (divisible by 5)"),
-    onFailure: errors => Console.WriteLine($"15 failed")
-);
+static void Print(string label, Result result) =>
+    Console.WriteLine(result.IsSuccess
+        ? $"{label}: success"
+        : $"{label}: {string.Join("; ", result.Errors.Select(e => e.Code))}");
 
-RuleEngine.Evaluate(new[] { isEven, isDivisibleBy5 }.Or(), 7).Switch(
-    onSuccess: () => Console.WriteLine("7 passes"),
-    onFailure: errors => Console.WriteLine($"7 failed (neither even nor divisible by 5)")
-);
-Console.WriteLine();
+static void PrintValue<T>(string label, Result<T> result) =>
+    Console.WriteLine(result.IsSuccess
+        ? $"{label}: success ({result.Value})"
+        : $"{label}: {string.Join("; ", result.Errors.Select(e => e.Code))}");
 
-Console.WriteLine("--- Conditional Rules (If) ---");
+internal sealed record Applicant(string Name, int Age, bool HasLicense, string Country);
 
-IRule<int> adultRule = ((Func<int, Result>)(x => x >= 18 ? Result.Success() : Error.Validation("Age.Adult", "Must be adult"))).ToRule();
-IRule<int> seniorRule = ((Func<int, Result>)(x => x >= 65 ? Result.Success() : Error.Validation("Age.Senior", "Must be senior"))).ToRule();
-IRule<int> minorRule = ((Func<int, Result>)(x => x < 18 ? Result.Success() : Error.Validation("Age.Minor", "Must be minor"))).ToRule();
-
-Result conditionalResult = RuleEngine.If(adultRule, seniorRule, minorRule, 70);
-conditionalResult.Switch(
-    onSuccess: () => Console.WriteLine("70: adult -> senior rule passed"),
-    onFailure: errors => Console.WriteLine($"70 failed: {errors[0].Description}")
-);
-
-Result conditionalFail = RuleEngine.If(adultRule, seniorRule, minorRule, 10);
-conditionalFail.Switch(
-    onSuccess: () => Console.WriteLine("10: adult -> minor rule passed"),
-    onFailure: errors => Console.WriteLine($"10 failed: {errors[0].Description}")
-);
-Console.WriteLine();
-
-Console.WriteLine("--- Linear Rules ---");
-
-IRule<int> step1 = ((Func<int, Result>)(x => x > 0 ? Result.Success() : Error.Validation("Step1", "Must be positive"))).ToRule();
-IRule<int> step2 = ((Func<int, Result>)(x => x < 1000 ? Result.Success() : Error.Validation("Step2", "Must be less than 1000"))).ToRule();
-IRule<int> step3 = ((Func<int, Result>)(x => x % 2 == 0 ? Result.Success() : Error.Validation("Step3", "Must be even"))).ToRule();
-
-RuleEngine.Linear(new[] { step1, step2, step3 }, 50).Switch(
-    onSuccess: () => Console.WriteLine("Linear: all steps passed"),
-    onFailure: errors => Console.WriteLine($"Linear failed: {errors[0].Description}")
-);
-
-RuleEngine.Linear(new[] { step1, step2, step3 }, 1500).Switch(
-    onSuccess: () => Console.WriteLine("Linear: all steps passed"),
-    onFailure: errors => Console.WriteLine($"Linear failed: {errors[0].Description}")
-);
-Console.WriteLine();
-
-Console.WriteLine("--- Rules with Result Value ---");
-
-IRule<int, string> gradeRule = ((Func<int, Result<string>>)(score =>
+internal static class ApplicantErrors
 {
-    if (score >= 90) return "A";
-    if (score >= 80) return "B";
-    if (score >= 70) return "C";
-    if (score >= 60) return "D";
-    return Error.Validation("Grade", "Failed");
-})).ToRule();
+    public static readonly Error Underage = Error.Validation("Applicant.Underage", "Applicant must be at least 18.");
+    public static readonly Error NoLicense = Error.Validation("Applicant.NoLicense", "A driver's license is required.");
+}
 
-gradeRule.Evaluate(85).Switch(
-    onSuccess: grade => Console.WriteLine($"Grade: {grade}"),
-    onError: errors => Console.WriteLine($"Grade error: {errors[0].Description}")
-);
-
-gradeRule.Evaluate(45).Switch(
-    onSuccess: grade => Console.WriteLine($"Grade: {grade}"),
-    onError: errors => Console.WriteLine($"Grade error: {errors[0].Description}")
-);
-Console.WriteLine();
-
-Console.WriteLine("--- Async Rules ---");
-
-IAsyncRule<string> asyncNotEmpty = ((Func<string, CancellationToken, ValueTask<Result>>)(async (s, ct) =>
+internal sealed class MinimumAgeRule(int minimum) : IRule<Applicant>
 {
-    await Task.Delay(10, ct);
-    return !string.IsNullOrWhiteSpace(s) ? Result.Success() : Error.Validation("Name.Empty", "Name cannot be empty");
-})).ToRule<string>();
+    public Result Evaluate(Applicant context, CancellationToken cancellationToken = default) =>
+        context.Age >= minimum ? Result.Success() : ApplicantErrors.Underage;
+}
 
-asyncNotEmpty.EvaluateAsync("Alice").Result.Switch(
-    onSuccess: () => Console.WriteLine("Async rule: valid name"),
-    onFailure: errors => Console.WriteLine($"Async rule failed: {errors[0].Description}")
-);
-Console.WriteLine();
+internal sealed class GrantRule : IRule<Applicant>
+{
+    public Result Evaluate(Applicant context, CancellationToken cancellationToken = default)
+    {
+        Console.WriteLine($"  access granted to {context.Name}");
+        return Result.Success();
+    }
+}
 
-Console.WriteLine("--- Rules with String Validation ---");
+internal sealed class UniqueNameRule(HashSet<string> taken) : IAsyncRule<string>
+{
+    public async ValueTask<Result> EvaluateAsync(string context, CancellationToken cancellationToken = default)
+    {
+        await Task.Delay(1, cancellationToken);
+        return taken.Contains(context) ? Error.Conflict("Name.Reserved", "Name is reserved.") : Result.Success();
+    }
+}
 
-IRule<string> notEmpty = ((Func<string, Result>)(s => !string.IsNullOrWhiteSpace(s) ? Result.Success() : Error.Validation("Name.Empty", "Name cannot be empty"))).ToRule();
-IRule<string> maxLength = ((Func<string, Result>)(s => s.Length <= 50 ? Result.Success() : Error.Validation("Name.Length", "Name must not exceed 50 characters"))).ToRule();
+internal sealed class HasNameThen(IRuleBase<Applicant> next) : ILinearRule<Applicant>
+{
+    public IRuleBase<Applicant>? Next { get; } = next;
 
-RuleEngine.Evaluate(new[] { notEmpty, maxLength }.And(), "Alice").Switch(
-    onSuccess: () => Console.WriteLine("'Alice' is a valid name"),
-    onFailure: errors => Console.WriteLine($"'Alice' failed")
-);
-
-RuleEngine.Evaluate(new[] { notEmpty, maxLength }.And(), "").Switch(
-    onSuccess: () => Console.WriteLine("'' is a valid name"),
-    onFailure: errors => Console.WriteLine($"'' failed: {errors[0].Description}")
-);
-Console.WriteLine();
-
-Console.WriteLine("--- Next Combinator ---");
-
-IRule<int> mustBePositive = ((Func<int, Result>)(x =>
-    x > 0 ? Result.Success() : Error.Validation("Positive", "Must be positive"))).ToRule();
-
-IRule<int> mustBeEven = ((Func<int, Result>)(x =>
-    x % 2 == 0 ? Result.Success() : Error.Validation("Even", "Must be even"))).ToRule();
-
-IRule<int> mustBeLessThan100 = ((Func<int, Result>)(x =>
-    x < 100 ? Result.Success() : Error.Validation("Range", "Must be less than 100"))).ToRule();
-
-IRuleBase<int> chain = mustBePositive.Next(mustBeEven).Next(mustBeLessThan100);
-
-RuleEngine.Evaluate(chain, 4).Switch(
-    onSuccess: () => Console.WriteLine("4: passes all chained rules"),
-    onFailure: errors => Console.WriteLine($"4 failed: {errors[0].Description}")
-);
-
-RuleEngine.Evaluate(chain, -2).Switch(
-    onSuccess: () => Console.WriteLine("-2 passed"),
-    onFailure: errors => Console.WriteLine($"-2 failed at first rule: {errors[0].Code}")
-);
-
-RuleEngine.Evaluate(chain, 3).Switch(
-    onSuccess: () => Console.WriteLine("3 passed"),
-    onFailure: errors => Console.WriteLine($"3 (odd) failed: {errors[0].Code}")
-);
-
-RuleEngine.Evaluate(chain, 200).Switch(
-    onSuccess: () => Console.WriteLine("200 passed"),
-    onFailure: errors => Console.WriteLine($"200 (>=100) failed: {errors[0].Code}")
-);
-Console.WriteLine();
-
-Console.WriteLine("========================================");
-Console.WriteLine("Demo complete.");
-Console.WriteLine("========================================");
+    public Result Evaluate(Applicant context, CancellationToken cancellationToken = default) =>
+        string.IsNullOrWhiteSpace(context.Name) ? Error.Validation("Name.Empty", "Name is required.") : Result.Success();
+}

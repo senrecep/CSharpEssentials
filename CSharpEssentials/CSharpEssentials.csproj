@@ -16,11 +16,7 @@
     <PackageIcon>icon.png</PackageIcon>
     <PackageTags>
       Result,Error,Maybe,Rule,Any,Json,Entity,DomainEvent,Utility,FunctionalProgramming,Monad,DiscriminatedUnions,TypeSafety,ErrorHandling,DDD,EntityFramework,TimeManagement,Extensions,LINQ</PackageTags>
-    <Description>A comprehensive C# library enhancing functional programming capabilities with
-      type-safe monads (Maybe, Result), discriminated unions (Any), and robust error handling.
-      Features include: domain-driven design support, enhanced Entity Framework integration,
-      testable time management, JSON utilities, and LINQ extensions. Built for modern C# development
-      with focus on maintainability, testability, and functional programming principles.</Description>
+    <Description>Meta package that installs the general-purpose CSharpEssentials libraries in one step: Results, Errors, Maybe, Any, These, Rules, Entity, Enums, Json, Http, Time, Clone and Core. Reference the individual packages instead when you only need a few.</Description>
     <PackageProjectUrl>https://github.com/senrecep/CSharpEssentials</PackageProjectUrl>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/senrecep/CSharpEssentials</RepositoryUrl>

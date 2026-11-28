@@ -1,10 +1,10 @@
 # CSharpEssentials.AspNetCore.OpenApi
 
-`Microsoft.AspNetCore.OpenApi` integration for the CSharpEssentials enum conventions.
+Transformers for `Microsoft.AspNetCore.OpenApi` that describe the CSharpEssentials.AspNetCore conventions in the OpenAPI document: `[StringEnum]` enums by their wire names, idempotent endpoints, optional route parameters and a bearer security scheme. Use it when your app builds its document with `AddOpenApi` and uses CSharpEssentials.AspNetCore.
 
-A host references either this package or `CSharpEssentials.AspNetCore.Swashbuckle`, never both. Both use `Microsoft.OpenApi` 2.x.
+A host uses this package or [CSharpEssentials.AspNetCore.Swashbuckle](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.AspNetCore.Swashbuckle/Readme.MD), never both. Both write the same schemas (they are tested against the same golden files).
 
-Document generation benchmarks (50 Minimal API endpoints, 30 enums, plain `AddOpenApi` against the CSE conventions) are in [BENCHMARKS.md](./BENCHMARKS.md).
+Document generation benchmarks (50 Minimal API endpoints, 30 enums, plain `AddOpenApi` against the CSE conventions) are in [BENCHMARKS.md](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.AspNetCore.OpenApi/BENCHMARKS.md).
 
 ## Installation
 
@@ -12,57 +12,93 @@ Document generation benchmarks (50 Minimal API endpoints, 30 enums, plain `AddOp
 dotnet add package CSharpEssentials.AspNetCore.OpenApi
 ```
 
-Targets net10.0 with `Microsoft.AspNetCore.OpenApi` 10.x and `Microsoft.OpenApi` 2.x. A net11.0 target with `Microsoft.AspNetCore.OpenApi` 11.x needs `Microsoft.OpenApi` 3.x and will come later as a non-breaking addition.
+Targets net10.0 with `Microsoft.AspNetCore.OpenApi` 10.x and `Microsoft.OpenApi` 2.x.
+
+`Microsoft.AspNetCore.OpenApi` generates interceptors for XML comments, and its build file turns that on only in a project that references it directly. Since this package brings it in transitively, a host without a direct reference fails with `CS9137`. Add a direct reference, or enable the namespace in the host project:
+
+```xml
+<InterceptorsNamespaces>$(InterceptorsNamespaces);Microsoft.AspNetCore.OpenApi.Generated</InterceptorsNamespaces>
+```
+
+## Quick start
+
+```csharp Program.cs
+// dotnet add package CSharpEssentials.AspNetCore.OpenApi
+// dotnet add package Microsoft.AspNetCore.OpenApi
+using CSharpEssentials.AspNetCore;
+using CSharpEssentials.Enums;
+
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddAuthorization();
+builder.Services.AddEnumConventions();
+builder.Services.AddIdempotency();
+
+builder.Services.AddOpenApi("v1", o => o
+    .AddEnumConventions()
+    .AddIdempotencyConventions()
+    .AddOptionalRouteParameters()
+    .AddBearerSecurityScheme());
+
+WebApplication app = builder.Build();
+
+app.UseRouting();
+app.UseEnumBinding();
+app.UseIdempotency();
+app.MapOpenApi();                                    // GET /openapi/v1.json
+
+app.MapGet("/orders", (OrderStatus? status) => Array.Empty<Order>());
+app.MapGet("/orders/archive/{year:int?}", (int? year) => Array.Empty<Order>()).WithName("GetArchive");
+app.MapPost("/orders", (Order order) => Results.Created($"/orders/{order.Id}", order))
+    .WithIdempotency()
+    .RequireAuthorization();
+
+app.Run();
+
+[StringEnum]
+public enum OrderStatus { Pending, PendingApproval }
+
+public sealed record Order(int Id, OrderStatus Status);
+```
+
+All four methods are extension methods on `OpenApiOptions` in the `CSharpEssentials.AspNetCore` namespace and return the options, so they chain. Call them once per document.
 
 ## Enum schemas
 
-```csharp
-using CSharpEssentials.AspNetCore; // AddEnumConventions for IServiceCollection and OpenApiOptions
-
-builder.Services.AddEnumConventions();
-builder.Services.AddOpenApi("v1", o => o.AddEnumConventions());
-builder.Services.AddOpenApi("v2", o => o.AddEnumConventions());
-
-app.MapOpenApi();
-```
-
-`AddEnumConventions` adds a schema, an operation and a document transformer. Enums handled by the enum conventions (`[StringEnum]` or generated metadata) are described the way they are written:
+`o.AddEnumConventions()` adds a schema, an operation and a document transformer. Enums that the enum conventions handle (`[StringEnum]`, or metadata from the generator) are described the way the API writes them. Register `builder.Services.AddEnumConventions()` as well; it is what makes the API read and write the wire names.
 
 ```json
 "OrderStatus": {
   "type": "string",
-  "description": "Order lifecycle state.\n\n| value | number | description |\n|---|---|---|\n| `pending` | 0 | Created, waiting for payment. |\n| `unknown` | 99 | Response only: a value this API version does not know. |",
+  "description": "Order lifecycle state.\n\n| value | number | description |\n|---|---|---|\n| `pending` | 0 | Created, waiting for payment. |\n| `unknown` | 99 | Response only: A value this API version does not know. |",
   "enum": [ "pending", "unknown" ],
   "x-enum-varnames": [ "Pending", "Unknown" ],
-  "x-enum-descriptions": [ "Created, waiting for payment.", "Response only: a value this API version does not know." ],
+  "x-enum-descriptions": [ "Created, waiting for payment.", "Response only: A value this API version does not know." ],
   "x-enum-numeric-values": [ 0, 99 ]
 }
 ```
 
-- One component per enum. Your description (XML `<summary>` or `[Description]`) is kept and the value table is appended. Obsolete members are marked `(deprecated)`, the `[EnumFallback]` member `Response only:`. Aliases are accepted but not listed.
-- `default` is the wire name (`[DefaultValue]` on a property, a default parameter value).
-- An undefined enum default, such as `[DefaultValue((OrderStatus)42)]` or a parameter default `(OrderStatus)42`, is serialized by Microsoft.AspNetCore.OpenApi with the enum converter of a copy of the HTTP JSON options before any transformer runs. With CSharpEssentials.Json 8.0 the undefined value is written as its number, and the transformer then leaves the default out.
-- `[Flags]` enums are arrays with `uniqueItems: true`; collections are arrays of the component.
-- Nullable is written where the enum is used, by the document's OpenAPI version: `allOf` + `nullable: true` for 3.0, `oneOf` with `{ "type": "null" }` for 3.1.
-- A document whose operations all write numbers (`WithEnumWireFormat(EnumWireFormat.Number)` on the group, `[EnumWireFormat]` on the controller) describes the enums as `integer` (`int32`/`int64` by underlying type). A document that mixes formats describes strings and marks each number operation with `x-enum-wire-format: number` and a description note; it also logs one warning per enum used in both formats (once per document). One document per API version never mixes.
-- Operations with a header selected format (`WithEnumWireFormat("X-Enum-Format", ...)`) show the format of a request without the header, plus `x-enum-wire-format-header` and a note. A selector that throws for such a request is described with the global `WriteAs` format and logged once as a warning.
-- Enums without `[StringEnum]` or metadata keep the framework schema; nothing throws.
+- One component per enum. Your description (XML `<summary>` or `[Description]`) is kept and a value table is appended. Obsolete members are marked `(deprecated)`, the `[EnumFallback]` member `Response only:`. Aliases are accepted on input but not listed.
+- `default` is written as the wire name (`[DefaultValue]` on a property, a parameter default). An undefined default such as `(OrderStatus)42` is serialized by the framework before any transformer runs; with CSharpEssentials.Json it comes out as a number and the transformer then leaves the default out.
+- `[Flags]` enums are arrays with `uniqueItems: true`. Collections are arrays of the component.
+- Nullable is written where the enum is used: `allOf` plus `nullable: true` in OpenAPI 3.0, `oneOf` with `{ "type": "null" }` in 3.1.
+- A document whose operations all write numbers (`WithEnumWireFormat(EnumWireFormat.Number)` on the group, `[EnumWireFormat]` on the controller) describes the enums as `integer` (`int32` or `int64` by underlying type). A document that mixes formats uses strings, marks each number operation with `x-enum-wire-format: number` and a note, and logs one warning per enum used in both formats. One document per API version avoids the mix.
+- Operations whose format comes from a header (`WithEnumWireFormat("X-Enum-Format", ...)`) show the format of a request without the header, plus `x-enum-wire-format-header` and a note. If the selector throws for such a request, the global `WriteAs` format is shown and a warning is logged once.
+- Enums without `[StringEnum]` or metadata keep the framework schema.
 
-The Swashbuckle package produces the same enum schemas (both are compared with the same golden files).
+## Idempotency
+
+`o.AddIdempotencyConventions()` describes endpoints marked with `.WithIdempotency()` or `[Idempotent]` whose method is in `IdempotencyOptions.Methods` (POST and PATCH by default). In `Enforce` mode each such operation gets:
+
+- the `Idempotency-Key` header parameter (`IdempotencyOptions.HeaderName`), `required` when the endpoint's `RequireKey` resolves to true;
+- the `Idempotency-Replayed` header (`ReplayedHeaderName`) on every 2xx response;
+- `400` (`Idempotency.KeyMissing` when the key is required, `Idempotency.KeyInvalid`, and `Idempotency.ScopeRequired` when unscoped keys are rejected), `409` (`Idempotency.InFlight`, with a `Retry-After` header) and `422` (`Idempotency.KeyReused`), as `application/problem+json` with a `code` enum.
+
+An `Observe` endpoint gets only the key header with `required: false`, so clients can start sending keys before you switch to `Enforce`. `Off` endpoints, other methods and endpoints without idempotency are unchanged. If an endpoint already declares 400, 409 or 422, its description is kept and the idempotency text is appended; the content becomes a `oneOf` of both schemas. Header names are read from the options when the document is generated.
 
 ## Optional route parameters
 
-OpenAPI requires every path parameter to be `required: true`, so a route with an optional segment (`{id?}`, `{id:int?}`, `{page=1}`) cannot be described on one path. `AddOptionalRouteParameters` (opt-in, since 6.2.0) describes it on several paths, one per form:
-
-```csharp
-using CSharpEssentials.AspNetCore; // AddOptionalRouteParameters, OpenApiOptionalRouteParameterMode
-
-builder.Services.AddOpenApi("v1", o => o.AddOptionalRouteParameters());
-```
-
-```csharp
-[HttpGet("api/archive/{year?}/{month?}", Name = "GetArchive")]
-```
+OpenAPI requires every path parameter to be required, so `{id?}`, `{id:int?}` or `{page=1}` cannot be described on one path. `o.AddOptionalRouteParameters()` writes one path per form. For `api/archive/{year?}/{month?}` named `GetArchive`:
 
 | Path | operationId |
 |------|-------------|
@@ -70,51 +106,30 @@ builder.Services.AddOpenApi("v1", o => o.AddOptionalRouteParameters());
 | `/api/archive/{year}` | `GetArchiveWithoutMonth` |
 | `/api/archive/{year}/{month}` | `GetArchive` |
 
-- Each form is a full copy of the operation (tags, security, request body, responses, extensions) without the omitted parameters; every path parameter is `required: true`, without `allowEmptyValue`, a `null` type or default, or a `{"type": "null"}` member in `oneOf` or `anyOf` (a nullable enum such as `{status?}` in OpenAPI 3.1).
-- Only optional parameters at the end of the route are split, up to three. An optional parameter followed by a required segment (`api/{tenant?}/orders`), a route with more than three trailing optional parameters and a catch-all parameter (`{*rest}`, `{**path}`) keep one path with the parameters marked required. More than three trailing optional parameters also log a warning (once per document, path and method) through the host's `ILoggerFactory`, if one is registered.
-- A form whose path and method another operation already has (`[HttpGet("api/orders")]` next to `[HttpGet("api/orders/{id?}")]`) is skipped; the other operation stays.
-- The full form keeps the operationId; a shorter form gets `{operationId}Without{Param}` (`And` between parameters), or none when the full form has none. A generated operationId that another operation already uses throws `InvalidOperationException` when the document is generated; rename one of them or pass a selector.
-- Controller and Minimal API routes are handled the same way, on the paths `Microsoft.AspNetCore.OpenApi` writes (`/minimal/{id}` for `/minimal/{id:int?}`).
-
 ```csharp
-// Split paths with your own operationIds for the shorter forms
-builder.Services.AddOpenApi("v1", o => o.AddOptionalRouteParameters(
-    operationIdSelector: (operationId, omitted) => $"{operationId}_{string.Join("_", omitted)}"));
+// Your own operationIds for the shorter forms
+o.AddOptionalRouteParameters(operationIdSelector: (operationId, omitted) => $"{operationId}_{string.Join("_", omitted)}");
 
-// Or keep one path per operation and only mark the parameters required
-builder.Services.AddOpenApi("v1", o => o.AddOptionalRouteParameters(OpenApiOptionalRouteParameterMode.RequiredOnly));
+// One path per operation; the optional parameters are only marked required
+o.AddOptionalRouteParameters(OpenApiOptionalRouteParameterMode.RequiredOnly);
 ```
 
-A later call on the same options replaces the mode and selector of an earlier one; the transformer keeps the pipeline position of the first call. Each document is described from its own operations, so documents split by `GroupName` (`[ApiExplorerSettings(GroupName = "v2")]`) only get the forms of their own routes. Without `AddOptionalRouteParameters`, the document keeps the framework output: one path per operation (`/api/archive/{year}/{month}`). The Swashbuckle package describes the same routes the same way.
-
-## Idempotency
-
-`options.AddIdempotencyConventions()` describes the contract of idempotent endpoints (`.WithIdempotency()`, `[Idempotent]`) whose method is in `IdempotencyOptions.Methods`. An `Observe` endpoint gets only the `Idempotency-Key` header, always `required: false`, so clients can start sending keys before `Enforce` is switched on: no `Idempotency-Replayed` header and no 400, 409 or 422 responses. `Off` endpoints, other methods and non-idempotent endpoints are left unchanged. The rest of this section describes `Enforce`.
-
-```csharp
-builder.Services.AddIdempotency();
-builder.Services.AddOpenApi("v1", o => o.AddEnumConventions().AddIdempotencyConventions());
-```
-
-Each such operation gets:
-
-- the header parameter from `IdempotencyOptions.HeaderName` (default `Idempotency-Key`), `required` when the endpoint's resolved `RequireKey` is true;
-- the `ReplayedHeaderName` header (default `Idempotency-Replayed`) on every 2xx response;
-- `400` (`Idempotency.KeyMissing` when the key is required, `KeyInvalid`, and `ScopeRequired` when the endpoint rejects unscoped keys), `409` (`Idempotency.InFlight`, with a `Retry-After` header) and `422` (`Idempotency.KeyReused`) as `application/problem+json` with a `code` enum.
-
-An endpoint that already documents a 400, 409 or 422 keeps its description (ours is appended), headers and schema (the content becomes a `oneOf` of both). Header names are read from the options when the document is generated. `CSharpEssentials.AspNetCore.Swashbuckle` produces the same description.
+- `OpenApiOptionalRouteParameterMode`: `SplitPaths` (default) or `RequiredOnly`.
+- Each form is a full copy of the operation without the omitted parameters. Every path parameter is `required: true`, with no `allowEmptyValue`, no `null` type or default, and no `{"type": "null"}` member in `oneOf`/`anyOf`.
+- Only trailing optional parameters are split, up to three. A route with an optional parameter before a required segment (`api/{tenant?}/orders`), more than three trailing optional parameters, or a catch-all (`{*rest}`) keeps one path with the parameters marked required. More than three also logs a warning once per document, path and method.
+- A form whose path and method another operation already has is skipped.
+- The full form keeps the operationId. A shorter form gets `{operationId}Without{Param}` (`And` between names), or none when the full form has none. A generated id that another operation already uses throws `InvalidOperationException` when the document is generated.
+- A second call on the same options replaces the mode and selector.
+- Without this call the document keeps the framework output (`/api/archive/{year}/{month}` only).
 
 ## Bearer security
 
-`options.AddBearerSecurityScheme()` (opt-in) adds an HTTP `bearer` scheme to `components.securitySchemes` and a requirement for it to the operations that need authorization:
+`o.AddBearerSecurityScheme(schemeName = "Bearer", bearerFormat = "JWT", description = null)` adds an HTTP bearer scheme to `components.securitySchemes` and a requirement for it on operations that need authorization.
 
 ```csharp
-builder.Services.AddAuthorization();
-builder.Services.AddOpenApi("v1", o => o.AddBearerSecurityScheme());
-
-app.MapGet("/orders", GetOrders).RequireAuthorization();          // security: [{ "Bearer": [] }]
-app.MapGet("/health", GetHealth);                                 // no security
-app.MapGet("/status", GetStatus).RequireAuthorization().AllowAnonymous(); // no security
+app.MapGet("/orders", () => "...").RequireAuthorization();                 // security: [{ "Bearer": [] }]
+app.MapGet("/health", () => "ok");                                         // no security
+app.MapGet("/status", () => "ok").RequireAuthorization().AllowAnonymous(); // no security
 ```
 
 ```json
@@ -123,26 +138,23 @@ app.MapGet("/status", GetStatus).RequireAuthorization().AllowAnonymous(); // no 
 }
 ```
 
-- An operation gets the requirement when its endpoint metadata has `IAuthorizeData` (`[Authorize]` on the action, controller or a base class, any `.RequireAuthorization(...)` overload on the endpoint or its group, including the policy-object and policy-builder ones) and no `IAllowAnonymous` (`[AllowAnonymous]`, `.AllowAnonymous()`). Other operations get none.
-- The requirement is added whatever `IAuthorizeData.AuthenticationSchemes` names. An endpoint with `[Authorize(AuthenticationSchemes = "ApiKey")]` or a cookie scheme is still described as needing the bearer token, so call this only when bearer is the scheme your authorized endpoints accept.
-- The `FallbackPolicy` adds no endpoint metadata, so endpoints it alone protects are not described as secured. Add `[Authorize]` or `.RequireAuthorization()` to them.
-- `schemeName` (default `Bearer`), `bearerFormat` (default `JWT`) and `description` (default none) are parameters: `o.AddBearerSecurityScheme("Jwt", "JWT", "Access token from the identity server.")`. A scheme already registered under the same name is replaced; an operation that already requires the scheme is not given a second requirement.
-
-`CSharpEssentials.AspNetCore.Swashbuckle` produces the same description with `SwaggerGenOptions.AddBearerSecurityScheme()`, with the same parameters.
+- An operation gets the requirement when its endpoint metadata has `IAuthorizeData` (`[Authorize]` on the action, controller or a base class, or any `RequireAuthorization` overload on the endpoint or its group) and no `IAllowAnonymous`.
+- `IAuthorizeData.AuthenticationSchemes` is not checked. An endpoint that accepts only an API key or a cookie is still described as needing the bearer token, so use this only when bearer is the scheme your protected endpoints accept.
+- The authorization `FallbackPolicy` adds no endpoint metadata. Endpoints protected only by it are not marked; add `RequireAuthorization()` to them.
+- A scheme already registered under the same name is replaced. An operation that already requires the scheme does not get a second requirement.
 
 ## Scalar
 
-No helper is needed; list the documents:
+Scalar (the `Scalar.AspNetCore` package) needs no helper from this package. List the documents:
 
 ```csharp
 app.MapOpenApi();
 app.MapScalarApiReference(o => o.AddDocument("v1").AddDocument("v2"));
 ```
 
-## Interceptors namespace
+## See also
 
-`Microsoft.AspNetCore.OpenApi` intercepts `AddOpenApi` and reads XML doc comments through generated code. Its build file enables that only for a project that references `Microsoft.AspNetCore.OpenApi` itself, and this package brings it in as a transitive dependency. A host that does not reference `Microsoft.AspNetCore.OpenApi` directly fails with `CS9137` (the `interceptors` feature is not enabled in this namespace), on `Microsoft.NET.Sdk.Web` and on `Microsoft.NET.Sdk` alike. Enable the namespace in the host project (or add a direct `PackageReference` to `Microsoft.AspNetCore.OpenApi`):
-
-```xml
-<InterceptorsNamespaces>$(InterceptorsNamespaces);Microsoft.AspNetCore.OpenApi.Generated</InterceptorsNamespaces>
-```
+- Example: [examples/Examples.AspNetCore.OpenApi](https://github.com/senrecep/CSharpEssentials/tree/main/examples/Examples.AspNetCore.OpenApi) prints the generated document.
+- Agent skill: [csharpessentials-aspnetcore](https://github.com/senrecep/CSharpEssentials/blob/main/.well-known/agent-skills/csharpessentials-aspnetcore/SKILL.md)
+- [CSharpEssentials.AspNetCore](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.AspNetCore/Readme.MD) for the runtime side: enum binding, idempotency, conditional requests.
+- [CSharpEssentials.AspNetCore.Swashbuckle](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.AspNetCore.Swashbuckle/Readme.MD), the same conventions for Swashbuckle.
