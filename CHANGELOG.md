@@ -3,6 +3,98 @@
 All notable changes to the CSharpEssentials packages are listed here. All packages share one version number.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.0.0](https://github.com/senrecep/CSharpEssentials/compare/v8.0.0...v9.0.0) (2026-11-28)
+
+
+### ⚠ BREAKING CHANGES
+
+* typed results, gap report features and perf work (#280-#306)
+* **build:** CSharpEssentials.Results no longer exposes a public MemberNotNullWhenAttribute on netstandard2.1.
+* **efcore:** IDomainEventOutbox.StoreAsync takes the saving DbContext, and BaseDbContext stores after-save events in the outbox before the write instead of after it. Rows the outbox added are detached when the outbox or the save throws.
+* **results:** default(Result) and default(Result<T>) are failures with the Result.Default error. See docs/migration/v8-to-v9.md.
+* **errors:** Error.Exception(...) now produces ErrorType.Unexpected instead of ErrorType.Failure when no type is passed (problem title "Unexpected Error"; Mediator IdempotencyBehavior stores these failures for the failure retention). CSharpEssentials.Http maps a 422 response to ErrorType.Domain instead of ErrorType.Validation. 8.x readers that use the enum conventions reject the new "domain" name.
+* **errors:** when ExposeExceptionDetails is false (the default), a problem with status 500 or higher no longer returns error descriptions to clients. This includes errors created with Error.Failure, Error.Unexpected, Error.Exception and ErrorType.Unknown: detail and each 5xx error description become "An unexpected error occurred.", and exception metadata keys are removed. Use Validation, Conflict or Forbidden for business-rule errors the client must read.
+
+### Added
+
+* **aspnetcore:** add HttpResult for typed results ([40e817d](https://github.com/senrecep/CSharpEssentials/commit/40e817da393a35f6a0741b76e4f2880421babb01))
+* **aspnetcore:** declare the If-Match problem responses in OpenAPI ([59178dd](https://github.com/senrecep/CSharpEssentials/commit/59178ddbe330d792509faa50be454991ab693d78))
+* **core:** add Guider.NewGuid overloads for a DateTimeOffset and a TimeProvider ([b6d572c](https://github.com/senrecep/CSharpEssentials/commit/b6d572c05ed67332a4c4c505008a18258cd38c9c))
+* **core:** add Guider.NewGuidV5 and reuse it for IdempotencyKeys.ToUuidV5 ([9a9e79a](https://github.com/senrecep/CSharpEssentials/commit/9a9e79ae8b2ec3649fa04fab41d2ce21210bf7e5))
+* **efcore:** add ISqlSession over the DbContext transaction and a DbDataSource connection factory ([e5e4ce4](https://github.com/senrecep/CSharpEssentials/commit/e5e4ce40e7ba99edf40020ca7f08356318a520e8))
+* **efcore:** add MigrateDatabaseAsync with a migration lock hook and the EntityFrameworkCore.HealthChecks package ([f506713](https://github.com/senrecep/CSharpEssentials/commit/f506713815d5d5b4cfc8cfa95a9398aaa8f31b0a))
+* **efcore:** add the EF Core outbox store and write outbox rows in the same SaveChanges ([8c9b79d](https://github.com/senrecep/CSharpEssentials/commit/8c9b79dd94c3d006a57e2f7168d333f35b19cace))
+* **efcore:** add the outbox processor with claim leases, retries and dead letters, and the EntityFrameworkCore.Hosting package ([a931916](https://github.com/senrecep/CSharpEssentials/commit/a931916ae6f56e8a93b74d996374299ebdc72978))
+* **efcore:** run after-commit callbacks from EfCoreTransactionRunner through ITransactionCallbacks ([5598e6b](https://github.com/senrecep/CSharpEssentials/commit/5598e6be80e412ad3c4730099ad3be452a9ea198))
+* **entity:** add IIdentifiedDomainEvent and a DomainEvent base record with EventId and OccurredAt ([850abd5](https://github.com/senrecep/CSharpEssentials/commit/850abd5f7ebcddb0cb95e38a6f78a8be4c970cb4))
+* **errors:** add ErrorType.Domain mapped to 422 ([7badf29](https://github.com/senrecep/CSharpEssentials/commit/7badf2965048fe98f836a2c7b2d2560c29328835))
+* **errors:** add typed error kinds ([36baf84](https://github.com/senrecep/CSharpEssentials/commit/36baf847a012623a457110f7c421a4d4b275fe0a))
+* **json:** add a modifier that requires value-type constructor parameters and use it in StrictOptions ([ead18ee](https://github.com/senrecep/CSharpEssentials/commit/ead18eeb7436ec4282a6eac7748308c2dcb03459))
+* **mediator:** add a database-session IResourceLock in EntityFrameworkCore.Locking and the Mediator.Testing lock contract suite ([b8a4d7c](https://github.com/senrecep/CSharpEssentials/commit/b8a4d7ce95a02d30f7c663b68df6e6c6a1504f49))
+* **mediator:** support typed result responses ([b3df6ad](https://github.com/senrecep/CSharpEssentials/commit/b3df6add7ca5e890e3a988bed00c216c1c978ac7))
+* **openapi:** add bearer security transformer ([b9cb6ec](https://github.com/senrecep/CSharpEssentials/commit/b9cb6ecc6b3855e4981a24f893882db8f0d96243))
+* **resilience:** add UseJitter and MaxDelay to the retry builders and RetryOptions ([d52e6bc](https://github.com/senrecep/CSharpEssentials/commit/d52e6bcb8cf9c2b1f051d0027246858c06e7a518))
+* **results,endpoints:** add code fixes for CSE1013, CSE5002, CSE5005 and CSE5006 ([f8bd3d6](https://github.com/senrecep/CSharpEssentials/commit/f8bd3d68580e808225034bb2475849d2118f6eec))
+* **results:** add analyzers for typed results ([82e5ba3](https://github.com/senrecep/CSharpEssentials/commit/82e5ba3f68b86f25d4ca8e50554ce9839c69f953))
+* **results:** add async typed result combinators ([32dd7ad](https://github.com/senrecep/CSharpEssentials/commit/32dd7ad857b2032835314a53281477924c9a30bc))
+* **results:** add JSON support for typed results ([fb15ac5](https://github.com/senrecep/CSharpEssentials/commit/fb15ac562229de0cf8c214ec7b53d190a118238f))
+* **results:** add remaining typed result families ([eb183fd](https://github.com/senrecep/CSharpEssentials/commit/eb183fd2cf1912ab5c569a6ad60468407f37b829))
+* **results:** add typed-error Result&lt;T, E1..E3&gt; ([bff8e09](https://github.com/senrecep/CSharpEssentials/commit/bff8e0937225e1317e65571ec9305a3f4be45a94))
+* **results:** emit typed result combinators ([c1e48ee](https://github.com/senrecep/CSharpEssentials/commit/c1e48ee04c02b20721fa0702f43e0f873ad5caad))
+* **results:** register typed result JSON converters from a source generator for Native AOT ([cb592aa](https://github.com/senrecep/CSharpEssentials/commit/cb592aa289697e8a17440e728c02c565aca9e69d))
+* **swashbuckle:** add AddBearerSecurityScheme with the OpenApi package's per-operation behavior ([343ff21](https://github.com/senrecep/CSharpEssentials/commit/343ff21565892b2958d2992fe44bce2cfaf76308))
+* **testing:** add Results.Testing assertion helpers ([d377f61](https://github.com/senrecep/CSharpEssentials/commit/d377f61bb6be5aba51be45a26ce743f90b3f3ef8))
+* **time:** add TimeZones lookup and NowIn/TodayIn helpers, honor TimeProvider.LocalTimeZone ([e28f271](https://github.com/senrecep/CSharpEssentials/commit/e28f271f03f147c52d8902c1fd5963c5a6d5c949))
+* typed results, gap report features and perf work ([#280](https://github.com/senrecep/CSharpEssentials/issues/280)-[#306](https://github.com/senrecep/CSharpEssentials/issues/306)) ([4404982](https://github.com/senrecep/CSharpEssentials/commit/4404982b7ad52fadb035cba3c3aa8071d625f2d8))
+* v9 follow-ups (Swashbuckle bearer, analyzer code fixes, AOT typed JSON, If-Match OpenAPI responses) ([c562e72](https://github.com/senrecep/CSharpEssentials/commit/c562e721bd987aa5e140c16c3d0e22aa4154d26b))
+* **validation:** add field metadata and by-field error format ([60b58e8](https://github.com/senrecep/CSharpEssentials/commit/60b58e851ac0729cfdbc9b39f7994060c58f3c94))
+
+
+### Fixed
+
+* **aspnetcore:** address review on binding problem mapping ([1729c53](https://github.com/senrecep/CSharpEssentials/commit/1729c53f20fe7edbc7dbc485f0ebc666a159e7ab))
+* **aspnetcore:** declare If-Match responses for MVC actions with the WithIfMatch endpoint convention ([c6426c1](https://github.com/senrecep/CSharpEssentials/commit/c6426c111cea70e3c5049135eca922a9187ec05c))
+* **aspnetcore:** let nested typed results through the HTTP JSON guard ([58531d5](https://github.com/senrecep/CSharpEssentials/commit/58531d5779472ccc6483def31f602891c49d794c))
+* **aspnetcore:** map binding and JSON failures to field-keyed validation problems ([4d1bab4](https://github.com/senrecep/CSharpEssentials/commit/4d1bab44c304af4ceed230bb54dbc96f9e2474ba))
+* **aspnetcore:** redact server error details in 5xx problems ([dd463b1](https://github.com/senrecep/CSharpEssentials/commit/dd463b1d43246e2a3c47c772421dc984ed5ec9a4))
+* **aspnetcore:** use MVC naming policy for by-field keys in controller responses ([52901ca](https://github.com/senrecep/CSharpEssentials/commit/52901caeadf1d21c838f2ed2e3788190ad05a217))
+* **build:** remove package validation suppressions by fixing the breaks ([8560e64](https://github.com/senrecep/CSharpEssentials/commit/8560e642dedf711576447f47dd2655ea6fceef80))
+* **codefixes:** drop the null guards that Roslyn documents never reach ([34bbf4e](https://github.com/senrecep/CSharpEssentials/commit/34bbf4ec3607442b38466e964512084d7a201d00))
+* **efcore:** bound outbox claim read-back, release rows after a lapsed lease, and drop xunit from Mediator.Testing ([071d187](https://github.com/senrecep/CSharpEssentials/commit/071d18701a9c653fa025ddf26d4fa1628cbfb420))
+* **efcore:** copy caller JSON options in OutboxEventTypeRegistry.Add and record the DomainEvent name clash in the migration guide ([d87469e](https://github.com/senrecep/CSharpEssentials/commit/d87469e19da0062c0dc8f4469c2d3ef6ad081be8))
+* **efcore:** refuse after-commit callbacks inside an ambient TransactionScope and test that outbox storage is not deferred ([43d328c](https://github.com/senrecep/CSharpEssentials/commit/43d328ccc340b785e330a83e4227214ed3fca639))
+* **efcore:** run after-commit callbacks uncancelled, report pending model changes as degraded and reject a null migration lock handle ([13c3415](https://github.com/senrecep/CSharpEssentials/commit/13c3415745ae492e9f70d606f247dddd3b6595bb))
+* **errors:** address review on 5xx redaction docs ([c149bb2](https://github.com/senrecep/CSharpEssentials/commit/c149bb2e808c6e7197e1fe1fc1f31ca84a14e062))
+* **errors:** address review on typed error kinds ([8e813f1](https://github.com/senrecep/CSharpEssentials/commit/8e813f130e2738480520c6f23d57ca044b9ae0ac))
+* **json,resilience:** skip setter-less properties in RequireValueTypeConstructorParameters, add useJitter and maxDelay to RetryIfFailed ([5a6deca](https://github.com/senrecep/CSharpEssentials/commit/5a6decafa37777516daf057eb3ce6de641b2cc26))
+* **mediator:** do not store or cache a typed failure that holds an exception ([7822ead](https://github.com/senrecep/CSharpEssentials/commit/7822ead49c36e4beda69556644fbc40e098bfbf4))
+* **openapi:** correct bearer docs on policy overloads and pin them in goldens ([4b29de1](https://github.com/senrecep/CSharpEssentials/commit/4b29de12948f9ae4cbcef099c512c51857abbe45))
+* **results:** address review on typed-error Result&lt;T, E1..E3&gt; ([b077168](https://github.com/senrecep/CSharpEssentials/commit/b0771680ea963dcf19e8a425156acbd23928a706))
+* **results:** drop inline JIT comments on typed Match and Switch ([acfce0d](https://github.com/senrecep/CSharpEssentials/commit/acfce0d76955f5317f9992d7b7f515539ef6d9f2))
+* **results:** drop the RequiresDynamicCodeAttribute polyfill ([914201f](https://github.com/senrecep/CSharpEssentials/commit/914201f3f9ec64e6eeb0d30335664f4b45ede954))
+* **results:** give shared typed JSON cases and the AOT hint C# type names ([e09802e](https://github.com/senrecep/CSharpEssentials/commit/e09802e10fdc883c1f522229e79c90933350b26e))
+* **results:** give typed TapIfAsync the Result&lt;T&gt; cells and correct docs ([b5322cf](https://github.com/senrecep/CSharpEssentials/commit/b5322cf71feb210e20b66fab2515f21f684e15c4))
+* **results:** guard every error-forwarding overload against default ([3336550](https://github.com/senrecep/CSharpEssentials/commit/333655008d06f49c9a06f863a28e8cf1e0f0cecd))
+* **results:** narrow CSE5001 members and compare CSE5005 with Type ([90ab651](https://github.com/senrecep/CSharpEssentials/commit/90ab65148e15fbe32b66f13df4bbd84ae2724d11))
+* **results:** restore the typed Combine default-before-error precedence tests ([9f0eea9](https://github.com/senrecep/CSharpEssentials/commit/9f0eea979aa8662ce7e89cc6988246c56ea95e82))
+* **results:** skip the CSE5005 Type property fix when the base declares another kind ([74ede3e](https://github.com/senrecep/CSharpEssentials/commit/74ede3eeaf521b0dd403b389e9274f6787f3e53a))
+* **results:** stop typed MapErrorAsync from abandoning a running mapper ([04729a1](https://github.com/senrecep/CSharpEssentials/commit/04729a195771095940587a87d4b1f443b20153ca))
+* **results:** treat default Result as uninitialized ([e2c187f](https://github.com/senrecep/CSharpEssentials/commit/e2c187f9c7e9ae3a9aeb2d1231e40a334b01240f))
+* **testing:** use only public Results API in Results.Testing and limit ShouldBeFailureOf to typed results ([83df1b0](https://github.com/senrecep/CSharpEssentials/commit/83df1b0bf2e1ec04206c6aff6393a55694137934))
+* **tests:** address review on typed result test infrastructure ([01e0b1f](https://github.com/senrecep/CSharpEssentials/commit/01e0b1f832ce5e6b9e5ebfafeb039f0b380eae22))
+* **validation:** apply naming policy to by-field keys and pin field metadata output ([6df3dd9](https://github.com/senrecep/CSharpEssentials/commit/6df3dd990e6bbed1266ea2ca44c7ae738c761396))
+
+
+### Changed
+
+* **mediator:** read result failure without boxing on net8 and net9 ([dcc2f3a](https://github.com/senrecep/CSharpEssentials/commit/dcc2f3aadd1b085f9d756d5b36657ff81169d1d3))
+* **results:** add typed result benchmarks ([0bbc4fe](https://github.com/senrecep/CSharpEssentials/commit/0bbc4fe01e3694fd4f5dd2a259b1dcf7d33ba423))
+* **results:** drop AggressiveInlining from typed MapError, Recover and Compensate ([3d28b0e](https://github.com/senrecep/CSharpEssentials/commit/3d28b0ec33ba2b6fa3eebbb7c17c01bea89663f3))
+* **results:** inline the handler await in every typed Task and ValueTask async extension ([4a98588](https://github.com/senrecep/CSharpEssentials/commit/4a985888dd0272b61c28d5d6192770ea092ffe28))
+* **results:** inline the step await in typed Task and ValueTask BindAsync ([4ad310b](https://github.com/senrecep/CSharpEssentials/commit/4ad310bb7ac303f4daf9e3c1be35f59541a65918))
+* **results:** inline typed MapError, Recover and Compensate for two and three error slots ([1af3023](https://github.com/senrecep/CSharpEssentials/commit/1af302344b6daf043e5de0b998e726100110e19f))
+* **results:** inline typed Match and Switch for two and three error slots ([c95c457](https://github.com/senrecep/CSharpEssentials/commit/c95c457b15eb5a319ce02370ae219c7ffe137d25))
+
 ## [8.0.0](https://github.com/senrecep/CSharpEssentials/compare/v7.0.0...v8.0.0) (2026-11-09)
 
 
